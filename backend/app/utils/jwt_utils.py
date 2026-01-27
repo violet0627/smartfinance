@@ -111,3 +111,32 @@ def verify_password_reset_token(token):
         'user_id': payload['user_id'],
         'email': payload['email']
     }
+
+
+def generate_email_verification_token(user_id, email):
+    """Generate email verification token (24-hour expiry)"""
+    payload = {
+        'user_id': user_id,
+        'email': email,
+        'type': 'email_verification',
+        'exp': datetime.utcnow() + timedelta(hours=24),  # 24 hour expiry
+        'iat': datetime.utcnow()
+    }
+    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return token
+
+
+def verify_email_verification_token(token):
+    """Verify email verification token"""
+    payload = decode_token(token)
+
+    if not payload:
+        return None
+
+    if payload.get('type') != 'email_verification':
+        return None
+
+    return {
+        'user_id': payload['user_id'],
+        'email': payload['email']
+    }

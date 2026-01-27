@@ -33,7 +33,7 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
     return Column(
       children: [
         SizedBox(
-          height: 250,
+          height: 160,
           child: PieChart(
             PieChartData(
               pieTouchData: PieTouchData(
@@ -51,13 +51,17 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
               ),
               borderData: FlBorderData(show: false),
               sectionsSpace: 2,
-              centerSpaceRadius: 50,
+              centerSpaceRadius: 40,
               sections: _getSections(total),
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        _buildLegend(),
+        const SizedBox(height: 12),
+        Expanded(
+          child: SingleChildScrollView(
+            child: _buildLegend(),
+          ),
+        ),
       ],
     );
   }

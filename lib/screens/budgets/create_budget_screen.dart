@@ -6,7 +6,9 @@ import '../../utils/categories.dart';
 import '../../utils/colors.dart';
 
 class CreateBudgetScreen extends StatefulWidget {
-  const CreateBudgetScreen({super.key});
+  final BudgetModel? budget;
+
+  const CreateBudgetScreen({super.key, this.budget});
 
   @override
   State<CreateBudgetScreen> createState() => _CreateBudgetScreenState();
@@ -22,12 +24,40 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
 
   final List<String> _expenseCategories = TransactionCategories.expenseCategories.keys.toList();
 
+  bool get _isEditing => widget.budget != null;
+
   @override
   void initState() {
     super.initState();
-    // Initialize all categories with 0
-    for (var category in _expenseCategories) {
-      _categoryAllocations[category] = 0.0;
+
+    if (_isEditing && widget.budget != null) {
+      // Load existing budget data
+      _totalBudgetController.text = widget.budget!.totalBudget.toString();
+
+      // Parse monthYear string (YYYY-MM) to DateTime
+      final parts = widget.budget!.monthYear.split('-');
+      if (parts.length == 2) {
+        final year = int.parse(parts[0]);
+        final month = int.parse(parts[1]);
+        _selectedMonth = DateTime(year, month);
+      }
+
+      // Load category allocations
+      for (var category in widget.budget!.categories) {
+        _categoryAllocations[category.categoryName] = category.allocatedAmount;
+      }
+
+      // Initialize missing categories with 0
+      for (var category in _expenseCategories) {
+        if (!_categoryAllocations.containsKey(category)) {
+          _categoryAllocations[category] = 0.0;
+        }
+      }
+    } else {
+      // Initialize all categories with 0
+      for (var category in _expenseCategories) {
+        _categoryAllocations[category] = 0.0;
+      }
     }
   }
 
@@ -133,7 +163,9 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
       'categories': categories,
     };
 
-    final result = await ApiService.createBudget(budgetData);
+    final result = _isEditing && widget.budget?.budgetId != null
+        ? await ApiService.updateBudget(widget.budget!.budgetId!, budgetData)
+        : await ApiService.createBudget(budgetData);
 
     setState(() => _isLoading = false);
 
@@ -142,15 +174,15 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     if (result['success']) {
       Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Budget created successfully!'),
+        SnackBar(
+          content: Text(_isEditing ? 'Budget updated successfully!' : 'Budget created successfully!'),
           backgroundColor: AppColors.success,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['error'] ?? 'Failed to create budget'),
+          content: Text(result['error'] ?? (_isEditing ? 'Failed to update budget' : 'Failed to create budget')),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -162,7 +194,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Create Budget'),
+        title: Text(_isEditing ? 'Edit Budget' : 'Create Budget'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
@@ -403,9 +435,9 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
               ),
               child: _isLoading
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
-                      'Create Budget',
-                      style: TextStyle(
+                  : Text(
+                      _isEditing ? 'Update Budget' : 'Create Budget',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),

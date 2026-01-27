@@ -28,29 +28,45 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
   Future<void> _loadPortfolio() async {
     setState(() => _isLoading = true);
 
-    final userId = await ApiService.getCurrentUserId();
-    if (userId == null) return;
+    try {
+      final userId = await ApiService.getCurrentUserId();
+      if (userId == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
 
-    // Load portfolio summary
-    final portfolioResult = await ApiService.getPortfolioSummary(userId);
-    if (portfolioResult['success']) {
-      setState(() {
-        _portfolio = PortfolioSummary.fromJson(portfolioResult['portfolio']);
-      });
+      // Load portfolio summary
+      try {
+        final portfolioResult = await ApiService.getPortfolioSummary(userId);
+        if (portfolioResult['success'] && portfolioResult['portfolio'] != null) {
+          setState(() {
+            _portfolio = PortfolioSummary.fromJson(portfolioResult['portfolio']);
+          });
+        }
+      } catch (e) {
+        print('Error loading portfolio summary: $e');
+      }
+
+      // Load investments
+      try {
+        final investmentsResult = await ApiService.getUserInvestments(userId, type: _filterType);
+        if (investmentsResult['success']) {
+          final investmentsList = investmentsResult['investments'] as List;
+          setState(() {
+            _investments = investmentsList
+                .map((json) => InvestmentModel.fromJson(json))
+                .toList();
+          });
+        }
+      } catch (e) {
+        print('Error loading investments: $e');
+      }
+    } catch (e) {
+      print('Error in _loadPortfolio: $e');
+    } finally {
+      // Always stop loading, even if there's an error
+      setState(() => _isLoading = false);
     }
-
-    // Load investments
-    final investmentsResult = await ApiService.getUserInvestments(userId, type: _filterType);
-    if (investmentsResult['success']) {
-      final investmentsList = investmentsResult['investments'] as List;
-      setState(() {
-        _investments = investmentsList
-            .map((json) => InvestmentModel.fromJson(json))
-            .toList();
-      });
-    }
-
-    setState(() => _isLoading = false);
   }
 
   Future<void> _deleteInvestment(int investmentId) async {

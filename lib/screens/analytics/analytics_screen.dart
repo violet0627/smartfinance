@@ -134,6 +134,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
                     // Top Spending Categories
                     _buildTopCategories(),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -150,14 +151,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        children: ranges.map((range) {
-          final isSelected = _selectedRange == range;
-          return Expanded(
-            child: GestureDetector(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: ranges.map((range) {
+            final isSelected = _selectedRange == range;
+            return GestureDetector(
               onTap: () => _changeRange(range),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
@@ -172,9 +175,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ),
                 ),
               ),
-            ),
-          );
-        }).toList(),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

@@ -3,6 +3,8 @@ class UserModel {
   final String email;
   final String fullName;
   final String? phoneNumber;
+  final bool emailVerified;
+  final bool twoFactorEnabled;
   final DateTime? createdAt;
   final DateTime? lastLogin;
   final int experiencePts;
@@ -13,6 +15,8 @@ class UserModel {
     required this.email,
     required this.fullName,
     this.phoneNumber,
+    this.emailVerified = false,
+    this.twoFactorEnabled = false,
     this.createdAt,
     this.lastLogin,
     required this.experiencePts,
@@ -25,6 +29,8 @@ class UserModel {
       email: json['email'],
       fullName: json['fullName'],
       phoneNumber: json['phoneNumber'],
+      emailVerified: json['emailVerified'] ?? false,
+      twoFactorEnabled: json['twoFactorEnabled'] ?? false,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : null,
@@ -42,6 +48,8 @@ class UserModel {
       'email': email,
       'fullName': fullName,
       'phoneNumber': phoneNumber,
+      'emailVerified': emailVerified,
+      'twoFactorEnabled': twoFactorEnabled,
       'createdAt': createdAt?.toIso8601String(),
       'lastLogin': lastLogin?.toIso8601String(),
       'experiencePts': experiencePts,

@@ -10,6 +10,8 @@ class User(db.Model):
     PasswordHash = db.Column(db.String(255), nullable=False)
     FullName = db.Column(db.String(255), nullable=False)
     PhoneNumber = db.Column(db.String(20))
+    EmailVerified = db.Column(db.Boolean, default=False)
+    TwoFactorEnabled = db.Column(db.Boolean, default=False)
     CreatedAt = db.Column(db.DateTime, default=datetime.utcnow)
     LastLogin = db.Column(db.DateTime)
     ExperiencePts = db.Column(db.Integer, default=0)
@@ -35,6 +37,8 @@ class User(db.Model):
             'email': self.Email,
             'fullName': self.FullName,
             'phoneNumber': self.PhoneNumber,
+            'emailVerified': self.EmailVerified,
+            'twoFactorEnabled': self.TwoFactorEnabled,
             'createdAt': self.CreatedAt.isoformat() if self.CreatedAt else None,
             'lastLogin': self.LastLogin.isoformat() if self.LastLogin else None,
             'experiencePts': self.ExperiencePts,

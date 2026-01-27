@@ -5,11 +5,16 @@ import '../../models/transaction_model.dart';
 import '../../models/gamification_model.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/receipt_scanner_service.dart';
 import '../../utils/categories.dart';
 import '../../utils/colors.dart';
+import '../../utils/app_gradients.dart';
+import '../../widgets/animated_button.dart';
 
 class AddTransactionScreen extends StatefulWidget {
-  const AddTransactionScreen({super.key});
+  final TransactionModel? transaction;
+
+  const AddTransactionScreen({super.key, this.transaction});
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -24,6 +29,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // If editing, populate fields with transaction data
+    if (widget.transaction != null) {
+      _amountController.text = widget.transaction!.amount.toString();
+      _descriptionController.text = widget.transaction!.description ?? '';
+      _transactionType = widget.transaction!.transactionType;
+      _selectedCategory = widget.transaction!.category;
+      _selectedDate = widget.transaction!.transactionDate;
+    }
+  }
 
   @override
   void dispose() {
@@ -42,6 +60,181 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     if (picked != null && picked != _selectedDate) {
       setState(() => _selectedDate = picked);
     }
+  }
+
+  Future<void> _scanReceipt() async {
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // Get image from camera or gallery
+      final imageFile = await ReceiptScannerService.showSourceSelectionDialog(context);
+
+      if (imageFile == null) {
+        if (!mounted) return;
+        Navigator.pop(context); // Close loading dialog
+        return;
+      }
+
+      // Scan the receipt
+      final receiptData = await ReceiptScannerService.scanReceipt(imageFile);
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      if (receiptData == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to scan receipt. Please try again or enter manually.'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        return;
+      }
+
+      // Show results and prefill form
+      _showScanResults(receiptData);
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error scanning receipt: $e'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    }
+  }
+
+  void _showScanResults(ReceiptData data) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Receipt Scanned'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'We found the following information:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              if (data.merchantName != null) ...[
+                _resultRow('Merchant', data.merchantName!),
+                const Divider(),
+              ],
+              if (data.amount != null) ...[
+                _resultRow('Amount', 'RM ${data.amount!.toStringAsFixed(2)}'),
+                const Divider(),
+              ],
+              if (data.date != null) ...[
+                _resultRow('Date', DateFormat('MMM dd, yyyy').format(data.date!)),
+                const Divider(),
+              ],
+              if (data.category != null) ...[
+                _resultRow('Suggested Category', data.category!),
+                const Divider(),
+              ],
+              const SizedBox(height: 8),
+              const Text(
+                'Tap "Use Data" to fill the form, or "Cancel" to enter manually.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _prefillForm(data);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Use Data'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _resultRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _prefillForm(ReceiptData data) {
+    setState(() {
+      // Prefill amount
+      if (data.amount != null) {
+        _amountController.text = data.amount!.toStringAsFixed(2);
+      }
+
+      // Prefill description (merchant name)
+      if (data.merchantName != null) {
+        _descriptionController.text = data.merchantName!;
+      }
+
+      // Set date
+      if (data.date != null) {
+        _selectedDate = data.date!;
+      }
+
+      // Set category
+      if (data.category != null) {
+        _selectedCategory = data.category;
+      }
+
+      // Usually receipts are expenses
+      _transactionType = 'expense';
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Form filled with scanned data. Please review and submit.'),
+        backgroundColor: AppColors.success,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _handleSubmit() async {
@@ -70,6 +263,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
 
     final transaction = TransactionModel(
+      transactionId: widget.transaction?.transactionId,
       amount: double.parse(_amountController.text),
       category: _selectedCategory!,
       description: _descriptionController.text,
@@ -78,7 +272,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       userId: userId,
     );
 
-    final result = await ApiService.createTransaction(transaction.toJson());
+    // Call update or create based on whether we're editing
+    final result = widget.transaction != null
+        ? await ApiService.updateTransaction(widget.transaction!.transactionId!, transaction.toJson())
+        : await ApiService.createTransaction(transaction.toJson());
 
     setState(() => _isLoading = false);
 
@@ -128,15 +325,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       if (!mounted) return;
       Navigator.pop(context, true); // Return true to indicate success
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Transaction added successfully!'),
+        SnackBar(
+          content: Text(widget.transaction != null
+              ? 'Transaction updated successfully!'
+              : 'Transaction added successfully!'),
           backgroundColor: AppColors.success,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['error'] ?? 'Failed to add transaction'),
+          content: Text(result['error'] ?? (widget.transaction != null
+              ? 'Failed to update transaction'
+              : 'Failed to add transaction')),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -150,9 +351,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Add Transaction'),
+        title: Text(widget.transaction != null ? 'Edit Transaction' : 'Add Transaction'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: widget.transaction == null ? [
+          IconButton(
+            icon: const Icon(Icons.camera_alt),
+            onPressed: _scanReceipt,
+            tooltip: 'Scan Receipt',
+          ),
+        ] : null,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -391,29 +599,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 ),
                 const SizedBox(height: 24),
                 // Submit Button
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleSubmit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _transactionType == 'expense'
-                          ? AppColors.expense
-                          : AppColors.income,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : Text(
-                            'Add ${_transactionType == "expense" ? "Expense" : "Income"}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
+                AnimatedButton(
+                  text: '${widget.transaction != null ? "Update" : "Add"} ${_transactionType == "expense" ? "Expense" : "Income"}',
+                  onPressed: _handleSubmit,
+                  gradient: _transactionType == 'expense'
+                      ? AppGradients.expenseGradient
+                      : AppGradients.incomeGradient,
+                  isLoading: _isLoading,
+                  icon: _transactionType == 'expense' ? Icons.remove_circle : Icons.add_circle,
                 ),
               ],
             ),

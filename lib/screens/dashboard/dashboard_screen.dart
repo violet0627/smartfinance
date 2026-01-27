@@ -12,6 +12,10 @@ import '../../utils/colors.dart';
 import '../../utils/investment_types.dart';
 import '../../widgets/level_progress_widget.dart';
 import '../../widgets/goal_progress_card.dart';
+import '../../widgets/email_verification_banner.dart';
+import '../../widgets/shimmer_loading.dart';
+import '../../widgets/dashboard_summary_card.dart';
+import '../../utils/app_gradients.dart';
 import '../auth/login_screen.dart';
 import '../transactions/add_transaction_screen.dart';
 import '../transactions/transaction_history_screen.dart';
@@ -39,8 +43,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   PortfolioSummary? _portfolio;
   UserStats? _userStats;
   Map<String, dynamic>? _goalsSummary;
+  List<Map<String, dynamic>> _upcomingBills = [];
   bool _isLoading = true;
   String _userName = '';
+  String _userEmail = '';
+  bool _emailVerified = true; // Default to true to avoid showing banner unnecessarily
+
+  // Helper function to safely convert dynamic values to double
+  double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
 
   @override
   void initState() {
@@ -52,80 +67,138 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
-    final userId = await ApiService.getCurrentUserId();
-    if (userId == null) return;
-
-    // Get user name from shared preferences
-    final prefs = await Future(() async {
-      final sp = await SharedPreferences.getInstance();
-      return sp;
-    });
-    setState(() {
-      _userName = prefs.getString('userFullName') ?? 'User';
-    });
-
-    // Load recent transactions
-    final transactionsResult = await ApiService.getUserTransactions(
-      userId,
-      limit: 5,
-    );
-
-    if (transactionsResult['success']) {
-      final transactionsList = transactionsResult['transactions'] as List;
-      setState(() {
-        _recentTransactions = transactionsList
-            .map((json) => TransactionModel.fromJson(json))
-            .toList();
-      });
-    }
-
-    // Load summary
-    final summaryResult = await ApiService.getTransactionSummary(userId);
-    if (summaryResult['success']) {
-      setState(() {
-        _summary = summaryResult;
-      });
-    }
-
-    // Load current budget
-    final budgetResult = await ApiService.getCurrentBudget(userId);
-    if (budgetResult['success'] && budgetResult['budget'] != null) {
-      final budget = BudgetModel.fromJson(budgetResult['budget']);
-      setState(() {
-        _currentBudget = budget;
-      });
-
-      // Check budget and send alerts if needed (only for critical alerts on dashboard)
-      if (budget.isOverBudget || budget.percentageUsed >= 90) {
-        await NotificationService.checkBudgetAndAlert(budget);
+    try {
+      final userId = await ApiService.getCurrentUserId();
+      if (userId == null) {
+        setState(() => _isLoading = false);
+        return;
       }
-    }
 
-    // Load portfolio summary
-    final portfolioResult = await ApiService.getPortfolioSummary(userId);
-    if (portfolioResult['success']) {
+      // Get user name from shared preferences
+      final prefs = await SharedPreferences.getInstance();
       setState(() {
-        _portfolio = PortfolioSummary.fromJson(portfolioResult['portfolio']);
+        _userName = prefs.getString('userFullName') ?? 'User';
       });
-    }
 
-    // Load user stats (gamification)
-    final statsResult = await ApiService.getUserStats(userId);
-    if (statsResult['success']) {
-      setState(() {
-        _userStats = UserStats.fromJson(statsResult['stats']);
-      });
-    }
+      // Load recent transactions
+      try {
+        final transactionsResult = await ApiService.getUserTransactions(
+          userId,
+          limit: 5,
+        );
 
-    // Load goals summary
-    final goalsResult = await ApiService.getGoalsSummary(userId);
-    if (goalsResult['success']) {
-      setState(() {
-        _goalsSummary = goalsResult['summary'];
-      });
-    }
+        if (transactionsResult['success']) {
+          final transactionsList = transactionsResult['transactions'] as List;
+          setState(() {
+            _recentTransactions = transactionsList
+                .map((json) => TransactionModel.fromJson(json))
+                .toList();
+          });
+        }
+      } catch (e) {
+        print('Error loading transactions: $e');
+      }
 
-    setState(() => _isLoading = false);
+      // Load summary
+      try {
+        final summaryResult = await ApiService.getTransactionSummary(userId);
+        if (summaryResult['success']) {
+          setState(() {
+            _summary = summaryResult;
+          });
+        }
+      } catch (e) {
+        print('Error loading summary: $e');
+      }
+
+      // Load current budget
+      try {
+        final budgetResult = await ApiService.getCurrentBudget(userId);
+        if (budgetResult['success'] && budgetResult['budget'] != null) {
+          final budget = BudgetModel.fromJson(budgetResult['budget']);
+          setState(() {
+            _currentBudget = budget;
+          });
+
+          // Check budget and send alerts if needed (only for critical alerts on dashboard)
+          if (budget.isOverBudget || budget.percentageUsed >= 90) {
+            await NotificationService.checkBudgetAndAlert(budget);
+          }
+        }
+      } catch (e) {
+        print('Error loading budget: $e');
+      }
+
+      // Load portfolio summary
+      try {
+        final portfolioResult = await ApiService.getPortfolioSummary(userId);
+        if (portfolioResult['success'] && portfolioResult['portfolio'] != null) {
+          setState(() {
+            _portfolio = PortfolioSummary.fromJson(portfolioResult['portfolio']);
+          });
+        }
+      } catch (e) {
+        print('Error loading portfolio: $e');
+      }
+
+      // Load user stats (gamification)
+      try {
+        final statsResult = await ApiService.getUserStats(userId);
+        if (statsResult['success'] && statsResult['stats'] != null) {
+          setState(() {
+            _userStats = UserStats.fromJson(statsResult['stats']);
+          });
+        }
+      } catch (e) {
+        print('Error loading stats: $e');
+      }
+
+      // Load goals summary
+      try {
+        final goalsResult = await ApiService.getGoalsSummary(userId);
+        if (goalsResult['success']) {
+          setState(() {
+            _goalsSummary = goalsResult['summary'];
+          });
+        }
+      } catch (e) {
+        print('Error loading goals: $e');
+      }
+
+      // Load recurring transactions for upcoming bills
+      try {
+        final recurringResult = await ApiService.getRecurringTransactions(userId);
+        if (recurringResult['success']) {
+          final recurringList = List<Map<String, dynamic>>.from(recurringResult['recurring'] ?? []);
+          final upcomingReminders = await NotificationService.getUpcomingReminders(recurringList);
+          setState(() {
+            _upcomingBills = upcomingReminders;
+          });
+        }
+      } catch (e) {
+        print('Error loading recurring transactions: $e');
+      }
+
+      // Check email verification status
+      try {
+        final userEmail = prefs.getString('userEmail') ?? '';
+        final verificationResult = await ApiService.checkVerificationStatus(userId);
+
+        setState(() {
+          _userEmail = userEmail;
+          if (verificationResult['success']) {
+            _emailVerified = verificationResult['emailVerified'] ?? true;
+          }
+        });
+      } catch (e) {
+        print('Error checking email verification: $e');
+      }
+    } catch (e) {
+      print('Error in _loadData: $e');
+    } finally {
+      // Always stop loading, even if there's an error
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _handleLogout() async {
@@ -160,7 +233,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonBox(
+                    width: 200,
+                    height: 24,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  const SizedBox(height: 24),
+                  const DashboardCardSkeleton(),
+                  const SizedBox(height: 24),
+                  const DashboardCardSkeleton(),
+                  const SizedBox(height: 24),
+                  const DashboardCardSkeleton(),
+                ],
+              ),
+            )
           : RefreshIndicator(
               onRefresh: _loadData,
               child: SingleChildScrollView(
@@ -176,74 +267,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                     ),
                     const SizedBox(height: 24),
-                    // Summary Card
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                    // Email Verification Banner
+                    if (!_emailVerified && _userEmail.isNotEmpty) ...[
+                      FutureBuilder<int?>(
+                        future: ApiService.getCurrentUserId(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData && snapshot.data != null) {
+                            return EmailVerificationBanner(
+                              userId: snapshot.data!,
+                              email: _userEmail,
+                              onVerified: _loadData,
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Financial Summary',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                      const SizedBox(height: 16),
+                    ],
+                    // Financial Summary with Beautiful Gradient Cards
+                    Text(
+                      'Financial Summary',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
                           ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              _buildSummaryItem(
-                                'Income',
-                                _summary?['totalIncome'] ?? 0.0,
-                                AppColors.income,
-                                Icons.arrow_downward,
-                              ),
-                              _buildSummaryItem(
-                                'Expense',
-                                _summary?['totalExpense'] ?? 0.0,
-                                AppColors.expense,
-                                Icons.arrow_upward,
-                              ),
-                            ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Balance Card (Primary)
+                    AnimatedDashboardCard(
+                      title: 'Current Balance',
+                      amount: 'RM ${_toDouble(_summary?['balance'] ?? 0).toStringAsFixed(2)}',
+                      subtitle: 'Total available funds',
+                      icon: Icons.account_balance_wallet,
+                      gradient: AppGradients.balanceCardGradient,
+                    ),
+                    const SizedBox(height: 16),
+                    // Income and Expense Row
+                    Row(
+                      children: [
+                        // Income Card
+                        Expanded(
+                          child: AnimatedDashboardCard(
+                            title: 'Income',
+                            amount: 'RM ${_toDouble(_summary?['totalIncome'] ?? 0).toStringAsFixed(2)}',
+                            icon: Icons.trending_up,
+                            gradient: AppGradients.incomeCardGradient,
                           ),
-                          const SizedBox(height: 16),
-                          Divider(color: Colors.grey[300]),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Balance',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                              Text(
-                                'RM ${(_summary?['balance'] ?? 0.0).toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: (_summary?['balance'] ?? 0.0) >= 0
-                                      ? AppColors.income
-                                      : AppColors.expense,
-                                ),
-                              ),
-                            ],
+                        ),
+                        const SizedBox(width: 16),
+                        // Expense Card
+                        Expanded(
+                          child: AnimatedDashboardCard(
+                            title: 'Expenses',
+                            amount: 'RM ${_toDouble(_summary?['totalExpense'] ?? 0).toStringAsFixed(2)}',
+                            icon: Icons.trending_down,
+                            gradient: AppGradients.expenseCardGradient,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 24),
                     // Budget Progress Card
@@ -274,6 +354,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(height: 24),
                     ],
+                    // Upcoming Bills Card
+                    if (_upcomingBills.isNotEmpty) ...[
+                      _buildUpcomingBillsCard(),
+                      const SizedBox(height: 24),
+                    ],
                     Text(
                       'Quick Actions',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -284,12 +369,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildQuickActionCard(
-                            context,
-                            'Add Transaction',
-                            Icons.add_circle,
-                            AppColors.primary,
-                            () async {
+                          child: QuickActionCard(
+                            title: 'Add Transaction',
+                            icon: Icons.add_circle,
+                            color: AppColors.primary,
+                            onTap: () async {
                               final result = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -304,12 +388,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _buildQuickActionCard(
-                            context,
-                            'History',
-                            Icons.history,
-                            AppColors.secondary,
-                            () {
+                          child: QuickActionCard(
+                            title: 'History',
+                            icon: Icons.history,
+                            color: AppColors.secondary,
+                            onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -325,12 +408,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildQuickActionCard(
-                            context,
-                            'Analytics',
-                            Icons.bar_chart,
-                            const Color(0xFF9C27B0),
-                            () {
+                          child: QuickActionCard(
+                            title: 'Analytics',
+                            icon: Icons.bar_chart,
+                            color: const Color(0xFF9C27B0),
+                            onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -342,12 +424,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _buildQuickActionCard(
-                            context,
-                            'Budget',
-                            Icons.account_balance_wallet,
-                            const Color(0xFFFF9800),
-                            () {
+                          child: QuickActionCard(
+                            title: 'Budget',
+                            icon: Icons.account_balance_wallet,
+                            color: const Color(0xFFFF9800),
+                            onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -365,12 +446,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildQuickActionCard(
-                            context,
-                            'Reports',
-                            Icons.description,
-                            const Color(0xFF00BCD4),
-                            () {
+                          child: QuickActionCard(
+                            title: 'Reports',
+                            icon: Icons.description,
+                            color: const Color(0xFF00BCD4),
+                            onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -382,12 +462,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _buildQuickActionCard(
-                            context,
-                            'Portfolio',
-                            Icons.trending_up,
-                            const Color(0xFF4CAF50),
-                            () {
+                          child: QuickActionCard(
+                            title: 'Portfolio',
+                            icon: Icons.trending_up,
+                            color: const Color(0xFF4CAF50),
+                            onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -403,12 +482,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildQuickActionCard(
-                            context,
-                            'Goals',
-                            Icons.flag,
-                            const Color(0xFF9C27B0),
-                            () {
+                          child: QuickActionCard(
+                            title: 'Goals',
+                            icon: Icons.flag,
+                            color: const Color(0xFF9C27B0),
+                            onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -420,12 +498,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _buildQuickActionCard(
-                            context,
-                            'Achievements',
-                            Icons.emoji_events,
-                            const Color(0xFFFF9800),
-                            () {
+                          child: QuickActionCard(
+                            title: 'Achievements',
+                            icon: Icons.emoji_events,
+                            color: const Color(0xFFFF9800),
+                            onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -573,7 +650,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: (index) {
+        onTap: (index) async {
           setState(() => _selectedIndex = index);
           switch (index) {
             case 0:
@@ -581,32 +658,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
               break;
             case 1:
               // Navigate to Analytics
-              Navigator.push(
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => const AnalyticsScreen(),
                 ),
               );
+              // Reset to home when returning
+              setState(() => _selectedIndex = 0);
               break;
             case 2:
               // Navigate to Budget
-              Navigator.push(
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => _currentBudget != null
                       ? const BudgetOverviewScreen()
                       : const CreateBudgetScreen(),
                 ),
-              ).then((_) => _loadData());
+              );
+              _loadData();
+              // Reset to home when returning
+              setState(() => _selectedIndex = 0);
               break;
             case 3:
               // Navigate to Portfolio/Investments
-              Navigator.push(
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => const PortfolioOverviewScreen(),
                 ),
-              ).then((_) => _loadData());
+              );
+              _loadData();
+              // Reset to home when returning
+              setState(() => _selectedIndex = 0);
               break;
           }
         },
@@ -663,39 +748,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionCard(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 32, color: Colors.white),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -800,7 +852,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color: budget.isOverBudget ? AppColors.danger : AppColors.income,
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -1028,6 +1080,182 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildUpcomingBillsCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.notifications_active, color: AppColors.primary, size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Upcoming Bills',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_upcomingBills.length}',
+                  style: const TextStyle(
+                    color: AppColors.warning,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _upcomingBills.length > 3 ? 3 : _upcomingBills.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final bill = _upcomingBills[index];
+              final daysUntil = bill['daysUntil'] as int;
+              final nextExecution = bill['nextExecution'] as DateTime;
+              final amount = (bill['amount'] ?? 0.0).toDouble();
+              final type = bill['type']?.toString() ?? 'expense';
+              final isIncome = type.toLowerCase() == 'income';
+
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: daysUntil <= 3 ? AppColors.danger.withOpacity(0.3) : Colors.grey.shade200,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: (isIncome ? AppColors.income : AppColors.expense).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+                        color: isIncome ? AppColors.income : AppColors.expense,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            bill['name'] ?? 'Unnamed',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.schedule,
+                                size: 12,
+                                color: daysUntil <= 3 ? AppColors.danger : Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                daysUntil == 0
+                                    ? 'Due today'
+                                    : daysUntil == 1
+                                        ? 'Due tomorrow'
+                                        : 'Due in $daysUntil days',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: daysUntil <= 3 ? AppColors.danger : Colors.grey.shade600,
+                                  fontWeight: daysUntil <= 3 ? FontWeight.w600 : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'RM ${amount.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: isIncome ? AppColors.income : AppColors.expense,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          DateFormat('MMM dd').format(nextExecution),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          if (_upcomingBills.length > 3) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  // Navigate to recurring transactions screen
+                  Navigator.pushNamed(context, '/recurring-transactions').then((_) => _loadData());
+                },
+                child: Text(
+                  'View all ${_upcomingBills.length} upcoming bills',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

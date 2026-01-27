@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
 import '../../utils/colors.dart';
+import '../../providers/theme_provider.dart';
 import '../auth/login_screen.dart';
+import '../auth/verify_email_screen.dart';
 import 'profile_edit_screen.dart';
+import 'security_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,6 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Map<String, dynamic>? _profile;
   bool _isLoading = true;
   String _error = '';
+  bool _emailVerified = false;
 
   @override
   void initState() {
@@ -43,6 +48,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final results = await Future.wait([
         ApiService.getUserSettings(userId),
         ApiService.getUserProfile(userId),
+        ApiService.checkVerificationStatus(userId),
       ]);
 
       setState(() {
@@ -51,6 +57,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
         if (results[1]['success']) {
           _profile = results[1]['profile'];
+        }
+        if (results[2]['success']) {
+          _emailVerified = results[2]['emailVerified'] ?? false;
         }
         _isLoading = false;
       });
@@ -311,11 +320,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: _settings?['currency'] ?? 'RM',
                         onTap: () => _showCurrencyPicker(),
                       ),
-                      _buildSettingTile(
-                        icon: Icons.dark_mode,
-                        title: 'Theme',
-                        subtitle: _getThemeLabel(_settings?['themeMode'] ?? 'system'),
-                        onTap: () => _showThemePicker(),
+                      Consumer<ThemeProvider>(
+                        builder: (context, themeProvider, child) {
+                          return _buildSettingTile(
+                            icon: Icons.dark_mode,
+                            title: 'Theme',
+                            subtitle: _getThemeLabelFromMode(themeProvider.themeMode),
+                            onTap: () => _showThemePicker(themeProvider),
+                          );
+                        },
                       ),
                       _buildSettingTile(
                         icon: Icons.language,
@@ -340,6 +353,85 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                       // Security Section
                       _buildSectionHeader('Security'),
+                      _buildSettingTile(
+                        icon: Icons.security,
+                        title: 'Security Settings',
+                        subtitle: 'Manage your account security',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SecuritySettingsScreen(),
+                            ),
+                          ).then((_) => _loadData());
+                        },
+                      ),
+                      _buildSettingTile(
+                        icon: Icons.verified_user,
+                        title: 'Email Verification',
+                        subtitle: _emailVerified
+                            ? 'Your email is verified'
+                            : 'Email not verified - Click to verify',
+                        trailing: _emailVerified
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppColors.success),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.check_circle, size: 16, color: AppColors.success),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Verified',
+                                      style: TextStyle(
+                                        color: AppColors.success,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.orange),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.warning_amber, size: 16, color: Colors.orange),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Verify',
+                                      style: TextStyle(
+                                        color: Colors.orange,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                        onTap: _emailVerified
+                            ? null
+                            : () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => VerifyEmailScreen(
+                                      email: _profile?['email'],
+                                    ),
+                                  ),
+                                ).then((_) => _loadData());
+                              },
+                      ),
                       _buildSettingTile(
                         icon: Icons.lock,
                         title: 'Change Password',
@@ -413,6 +505,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  String _getThemeLabelFromMode(ThemeMode themeMode) {
+    switch (themeMode) {
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
+      case ThemeMode.system:
+      default:
+        return 'System Default';
+    }
+  }
+
   String _getLanguageLabel(String code) {
     switch (code) {
       case 'en':
@@ -462,33 +566,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _showThemePicker() async {
-    final themes = [
-      {'label': 'Light', 'value': 'light'},
-      {'label': 'Dark', 'value': 'dark'},
-      {'label': 'System Default', 'value': 'system'},
-    ];
+  Future<void> _showThemePicker(ThemeProvider themeProvider) async {
+    // Ensure app is in light mode
+    if (themeProvider.themeMode != ThemeMode.light) {
+      themeProvider.setThemeMode(ThemeMode.light);
+    }
 
+    // Show info dialog
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Select Theme'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: themes.map((theme) {
-            return RadioListTile<String>(
-              title: Text(theme['label']!),
-              value: theme['value']!,
-              groupValue: _settings?['themeMode'] ?? 'system',
-              onChanged: (value) {
-                Navigator.pop(context);
-                if (value != null) {
-                  _updateSetting('themeMode', value);
-                }
-              },
-            );
-          }).toList(),
+        title: const Text('Theme'),
+        content: const Text(
+          'The app is currently set to Light mode only. '
+          'Dark mode has been temporarily disabled due to visibility issues '
+          'and will be improved in a future update.',
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../../services/api_service.dart';
+import '../../services/export_service.dart';
 import '../../utils/colors.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -11,7 +13,7 @@ class ReportsScreen extends StatefulWidget {
   State<ReportsScreen> createState() => _ReportsScreenState();
 }
 
-class _ReportsScreenState extends State<ReportsScreen> {
+class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProviderStateMixin {
   String _selectedPeriod = 'this_month';
   Map<String, dynamic>? _spendingReport;
   Map<String, dynamic>? _budgetReport;
@@ -19,6 +21,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
   bool _isLoading = false;
   String _error = '';
   int _selectedTab = 0;
+  late TabController _tabController;
+
+  // Helper function to safely convert dynamic values to double
+  double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
 
   final List<Map<String, String>> _periods = [
     {'label': 'This Month', 'value': 'this_month'},
@@ -32,7 +43,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      setState(() {
+        _selectedTab = _tabController.index;
+      });
+    });
     _loadReports();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadReports() async {
@@ -112,6 +135,126 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
+  Future<void> _exportToPDF(String type) async {
+    if (_spendingReport == null && _budgetReport == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No data to export'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      String? filePath;
+      if (type == 'spending') {
+        if (_spendingReport != null) {
+          filePath = await ExportService.exportReportToPDF(
+            summary: _spendingReport!['summary'] ?? {},
+            categoryBreakdown: _spendingReport!['categories'] != null
+                ? List<Map<String, dynamic>>.from(_spendingReport!['categories'])
+                : null,
+            filename: 'spending_report_${_selectedPeriod}_${DateFormat('yyyy-MM-dd').format(DateTime.now())}.pdf',
+          );
+        }
+      } else if (type == 'budget') {
+        if (_budgetReport != null) {
+          filePath = await ExportService.exportBudgetReportToPDF(
+            budgetData: _budgetReport!,
+            filename: 'budget_report_${_selectedPeriod}_${DateFormat('yyyy-MM-dd').format(DateTime.now())}.pdf',
+          );
+        }
+      }
+
+      // Close loading
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      if (filePath != null) {
+        // Show success dialog with options
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Export Successful'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Exported ${type == "spending" ? "spending report" : "budget report"} to PDF'),
+                const SizedBox(height: 8),
+                Text(
+                  'File: ${filePath!.split('/').last}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Size: ${ExportService.getFileSize(filePath!)}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  final success = await ExportService.shareFile(
+                    filePath!,
+                    subject: 'SmartFinance Report Export',
+                  );
+                  if (!mounted) return;
+                  if (success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('File shared successfully'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.share),
+                label: const Text('Share'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to export report'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    }
+  }
+
   Widget _buildPeriodSelector() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -165,23 +308,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                _buildSummaryRow('Total Income', summary['totalIncome'], AppColors.income),
+                _buildSummaryRow('Total Income', _toDouble(summary['totalIncome']), AppColors.income),
                 const SizedBox(height: 12),
-                _buildSummaryRow('Total Expense', summary['totalExpense'], AppColors.expense),
+                _buildSummaryRow('Total Expense', _toDouble(summary['totalExpense']), AppColors.expense),
                 const Divider(height: 24),
-                _buildSummaryRow('Net Savings', summary['netSavings'],
-                    summary['netSavings'] >= 0 ? AppColors.success : AppColors.danger),
+                _buildSummaryRow('Net Savings', _toDouble(summary['netSavings']),
+                    _toDouble(summary['netSavings']) >= 0 ? AppColors.success : AppColors.danger),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Savings Rate'),
                     Text(
-                      '${summary['savingsRate'].toStringAsFixed(1)}%',
+                      '${_toDouble(summary['savingsRate']).toStringAsFixed(1)}%',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: summary['savingsRate'] >= 0 ? AppColors.success : AppColors.danger,
+                        color: _toDouble(summary['savingsRate']) >= 0 ? AppColors.success : AppColors.danger,
                       ),
                     ),
                   ],
@@ -192,7 +335,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   children: [
                     Text('Avg. Daily Expense', style: TextStyle(color: Colors.grey.shade700)),
                     Text(
-                      'RM ${summary['avgDailyExpense'].toStringAsFixed(2)}',
+                      'RM ${_toDouble(summary['avgDailyExpense']).toStringAsFixed(2)}',
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                     ),
                   ],
@@ -213,6 +356,100 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         ),
         const SizedBox(height: 16),
+
+        // Pie Chart
+        if (categoryBreakdown.isNotEmpty) ...[
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Spending Distribution',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 250,
+                    child: PieChart(
+                      PieChartData(
+                        sectionsSpace: 2,
+                        centerSpaceRadius: 60,
+                        sections: categoryBreakdown.map<PieChartSectionData>((category) {
+                          final percentage = _toDouble(category['percentage']);
+                          final colors = [
+                            AppColors.primary,
+                            AppColors.expense,
+                            Colors.orange,
+                            Colors.purple,
+                            Colors.teal,
+                            Colors.amber,
+                            Colors.pink,
+                            Colors.indigo,
+                          ];
+                          final colorIndex = categoryBreakdown.indexOf(category) % colors.length;
+
+                          return PieChartSectionData(
+                            color: colors[colorIndex],
+                            value: percentage,
+                            title: '${percentage.toStringAsFixed(1)}%',
+                            radius: 80,
+                            titleStyle: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Legend
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: categoryBreakdown.map<Widget>((category) {
+                      final colors = [
+                        AppColors.primary,
+                        AppColors.expense,
+                        Colors.orange,
+                        Colors.purple,
+                        Colors.teal,
+                        Colors.amber,
+                        Colors.pink,
+                        Colors.indigo,
+                      ];
+                      final colorIndex = categoryBreakdown.indexOf(category) % colors.length;
+
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: colors[colorIndex],
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            category['category'],
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
 
         // Category Breakdown
         const Text(
@@ -244,7 +481,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          'RM ${category['amount'].toStringAsFixed(2)}',
+                          'RM ${_toDouble(category['amount']).toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -255,7 +492,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
-                      value: category['percentage'] / 100,
+                      value: _toDouble(category['percentage']) / 100,
                       backgroundColor: Colors.grey.shade200,
                       valueColor: const AlwaysStoppedAnimation<Color>(AppColors.expense),
                       minHeight: 8,
@@ -270,7 +507,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                         ),
                         Text(
-                          '${category['percentage'].toStringAsFixed(1)}%',
+                          '${_toDouble(category['percentage']).toStringAsFixed(1)}%',
                           style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                         ),
                       ],
@@ -308,20 +545,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                _buildSummaryRow('Total Budgeted', summary['totalBudgeted'], AppColors.primary),
+                _buildSummaryRow('Total Budgeted', _toDouble(summary['totalBudgeted']), AppColors.primary),
                 const SizedBox(height: 12),
-                _buildSummaryRow('Total Spent', summary['totalSpent'], AppColors.expense),
+                _buildSummaryRow('Total Spent', _toDouble(summary['totalSpent']), AppColors.expense),
                 const Divider(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Adherence Rate'),
                     Text(
-                      '${summary['adherenceRate'].toStringAsFixed(1)}%',
+                      '${_toDouble(summary['adherenceRate']).toStringAsFixed(1)}%',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: summary['adherenceRate'] >= 0 ? AppColors.success : AppColors.danger,
+                        color: _toDouble(summary['adherenceRate']) >= 0 ? AppColors.success : AppColors.danger,
                       ),
                     ),
                   ],
@@ -331,6 +568,103 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         ),
         const SizedBox(height: 16),
+
+        // Budget Distribution Pie Chart
+        if (budgets.isNotEmpty && budgets.first['categories'] != null) ...[
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Budget Distribution',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 250,
+                    child: PieChart(
+                      PieChartData(
+                        sectionsSpace: 2,
+                        centerSpaceRadius: 60,
+                        sections: (budgets.first['categories'] as List).map<PieChartSectionData>((category) {
+                          final totalBudget = _toDouble(summary['totalBudgeted']);
+                          final categoryBudget = _toDouble(category['budget']);
+                          final percentage = totalBudget > 0 ? (categoryBudget / totalBudget * 100) : 0.0;
+
+                          final colors = [
+                            AppColors.primary,
+                            AppColors.success,
+                            Colors.orange,
+                            Colors.purple,
+                            Colors.teal,
+                            Colors.amber,
+                            Colors.pink,
+                            Colors.indigo,
+                          ];
+                          final colorIndex = (budgets.first['categories'] as List).indexOf(category) % colors.length;
+
+                          return PieChartSectionData(
+                            color: colors[colorIndex],
+                            value: percentage.toDouble(),
+                            title: '${percentage.toStringAsFixed(1)}%',
+                            radius: 80,
+                            titleStyle: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Legend
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: (budgets.first['categories'] as List).map<Widget>((category) {
+                      final colors = [
+                        AppColors.primary,
+                        AppColors.success,
+                        Colors.orange,
+                        Colors.purple,
+                        Colors.teal,
+                        Colors.amber,
+                        Colors.pink,
+                        Colors.indigo,
+                      ];
+                      final colorIndex = (budgets.first['categories'] as List).indexOf(category) % colors.length;
+
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: colors[colorIndex],
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            category['categoryName'],
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
 
         // Monthly Budgets
         const Text(
@@ -384,7 +718,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                   const SizedBox(height: 12),
                   LinearProgressIndicator(
-                    value: (percentage / 100).clamp(0.0, 1.0),
+                    value: (_toDouble(percentage) / 100).clamp(0.0, 1.0),
                     backgroundColor: Colors.grey.shade200,
                     valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                     minHeight: 8,
@@ -395,11 +729,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'RM ${budget['totalSpent'].toStringAsFixed(2)} / RM ${budget['totalBudget'].toStringAsFixed(2)}',
+                        'RM ${_toDouble(budget['totalSpent']).toStringAsFixed(2)} / RM ${_toDouble(budget['totalBudget']).toStringAsFixed(2)}',
                         style: const TextStyle(fontSize: 14),
                       ),
                       Text(
-                        '${percentage.toStringAsFixed(0)}%',
+                        '${_toDouble(percentage).toStringAsFixed(0)}%',
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: progressColor),
                       ),
                     ],
@@ -439,7 +773,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'RM ${_categoryAnalysis!['totalExpense'].toStringAsFixed(2)}',
+                  'RM ${_toDouble(_categoryAnalysis!['totalExpense']).toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -477,7 +811,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           children: [
                             Text('Total', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                             Text(
-                              'RM ${category['total'].toStringAsFixed(2)}',
+                              'RM ${_toDouble(category['total']).toStringAsFixed(2)}',
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                           ],
@@ -489,7 +823,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           children: [
                             Text('Average', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                             Text(
-                              'RM ${category['average'].toStringAsFixed(2)}',
+                              'RM ${_toDouble(category['average']).toStringAsFixed(2)}',
                               style: const TextStyle(fontSize: 14),
                             ),
                           ],
@@ -518,7 +852,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           children: [
                             Text('Max', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                             Text(
-                              'RM ${category['max'].toStringAsFixed(2)}',
+                              'RM ${_toDouble(category['max']).toStringAsFixed(2)}',
                               style: const TextStyle(fontSize: 14),
                             ),
                           ],
@@ -530,7 +864,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           children: [
                             Text('Min', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                             Text(
-                              'RM ${category['min'].toStringAsFixed(2)}',
+                              'RM ${_toDouble(category['min']).toStringAsFixed(2)}',
                               style: const TextStyle(fontSize: 14),
                             ),
                           ],
@@ -542,7 +876,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           children: [
                             Text('% of Total', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                             Text(
-                              '${category['percentage'].toStringAsFixed(1)}%',
+                              '${_toDouble(category['percentage']).toStringAsFixed(1)}%',
                               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                             ),
                           ],
@@ -565,7 +899,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       children: [
         Text(label, style: const TextStyle(fontSize: 14)),
         Text(
-          'RM ${amount.toStringAsFixed(2)}',
+          'RM ${_toDouble(amount).toStringAsFixed(2)}',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
         ),
       ],
@@ -590,24 +924,64 @@ class _ReportsScreenState extends State<ReportsScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          PopupMenuButton<String>(
+          PopupMenuButton<Map<String, String>>(
             icon: const Icon(Icons.download),
-            onSelected: _downloadCSV,
+            onSelected: (value) {
+              final type = value['type']!;
+              final format = value['format']!;
+              if (format == 'csv') {
+                _downloadCSV(type);
+              } else {
+                _exportToPDF(type);
+              }
+            },
             itemBuilder: (context) => [
               const PopupMenuItem(
-                value: 'transactions',
-                child: Text('Export Transactions (CSV)'),
+                value: {'type': 'transactions', 'format': 'csv'},
+                child: Row(
+                  children: [
+                    Icon(Icons.table_chart, size: 18, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text('Transactions (CSV)'),
+                  ],
+                ),
               ),
               const PopupMenuItem(
-                value: 'spending_report',
-                child: Text('Export Spending Report (CSV)'),
+                value: {'type': 'spending_report', 'format': 'csv'},
+                child: Row(
+                  children: [
+                    Icon(Icons.table_chart, size: 18, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text('Spending Report (CSV)'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: {'type': 'spending', 'format': 'pdf'},
+                child: Row(
+                  children: [
+                    Icon(Icons.picture_as_pdf, size: 18, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Spending Report (PDF)'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: {'type': 'budget', 'format': 'pdf'},
+                child: Row(
+                  children: [
+                    Icon(Icons.picture_as_pdf, size: 18, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Budget Report (PDF)'),
+                  ],
+                ),
               ),
             ],
           ),
         ],
         bottom: TabBar(
-          controller: TabController(length: 3, vsync: this),
-          onTap: (index) => setState(() => _selectedTab = index),
+          controller: _tabController,
           indicatorColor: Colors.white,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
@@ -641,7 +1015,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     _buildPeriodSelector(),
                     Expanded(
                       child: TabBarView(
-                        controller: TabController(length: 3, vsync: this, initialIndex: _selectedTab),
+                        controller: _tabController,
                         children: [
                           _buildSpendingReportTab(),
                           _buildBudgetReportTab(),

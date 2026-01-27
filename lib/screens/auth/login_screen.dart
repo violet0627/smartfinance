@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../utils/colors.dart';
+import '../../utils/app_gradients.dart';
 import '../dashboard/dashboard_screen.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
+import 'verify_email_screen.dart';
+import '../../widgets/two_factor_verification_dialog.dart';
+import '../../widgets/animated_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -41,6 +45,31 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (result['success']) {
+      // Check if user has 2FA enabled
+      final user = result['user'];
+      final bool twoFactorEnabled = user.twoFactorEnabled;
+
+      if (twoFactorEnabled) {
+        // Show 2FA verification dialog
+        final userId = user.userId;
+        final verified = await show2FAVerificationDialog(context, userId);
+
+        if (!verified) {
+          // 2FA verification failed or cancelled - logout and show error
+          await ApiService.logout();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Two-factor authentication required'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+          return;
+        }
+      }
+
+      // Login successful (with or without 2FA)
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
@@ -99,10 +128,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
+                      return 'Email is required';
                     }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
+                    // Proper email validation
+                    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                    if (!emailRegex.hasMatch(value)) {
+                      return 'Please enter a valid email address';
                     }
                     return null;
                   },
@@ -150,27 +181,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            'Login',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
+                AnimatedButton(
+                  text: 'Login',
+                  onPressed: _handleLogin,
+                  gradient: AppGradients.primaryGradient,
+                  isLoading: _isLoading,
+                  icon: Icons.login,
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -189,6 +205,29 @@ class _LoginScreenState extends State<LoginScreen> {
                         );
                       },
                       child: const Text('Sign Up'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Need to verify your email? ",
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const VerifyEmailScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'Verify Now',
+                        style: TextStyle(fontSize: 14),
+                      ),
                     ),
                   ],
                 ),

@@ -1,22 +1,14 @@
 name: smartfinance2
-description: "A new Flutter project."
+description: "SmartFinance - Your complete personal finance management solution with advanced features like receipt scanning, bill reminders, budget tracking, and comprehensive analytics."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-# The following defines the version and build number for your application.
-# A version number is three numbers separated by dots, like 1.2.43
-# followed by an optional build number separated by a +.
-# Both the version and the builder number may be overridden in flutter
-# build by specifying --build-name and --build-number, respectively.
-# In Android, build-name is used as versionName while build-number used as versionCode.
-# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
-# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
-# Read more about iOS versioning at
-# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-# In Windows, build-name is used as the major, minor, and patch parts
-# of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+# Version: MAJOR.MINOR.PATCH+BUILD_NUMBER
+# 1.0.0 - Initial release with all core features
+# 1.0.5 - Bug fixes: edit budget, navigation state, analytics overflow, recurring transactions, etc. (18+ fixes)
+# +5 - Build number (increment for each release)
+version: 1.0.5+5
 
 environment:
   sdk: ^3.8.1
@@ -38,6 +30,9 @@ dependencies:
   # HTTP requests
   http: ^1.2.0
 
+  # Beautiful fonts
+  google_fonts: ^6.1.0
+
   # State management
   provider: ^6.1.1
 
@@ -56,8 +51,26 @@ dependencies:
   # URL launcher for CSV downloads
   url_launcher: ^6.2.5
 
+  # Export to CSV
+  csv: ^6.0.0
+
+  # Export to PDF
+  pdf: ^3.11.1
+
+  # File system access
+  path_provider: ^2.1.2
+
+  # Share files
+  share_plus: ^7.2.2
+
+  # Receipt scanning - Camera and OCR
+  image_picker: ^1.0.7
+  google_mlkit_text_recognition: ^0.15.0
+
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to

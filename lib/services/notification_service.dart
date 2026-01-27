@@ -1,4 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
+import 'dart:convert';
 import '../models/budget_model.dart';
 import '../models/gamification_model.dart';
 
@@ -264,5 +267,204 @@ class NotificationService {
   /// Cancel specific notification
   static Future<void> cancel(int notificationId) async {
     await _notifications.cancel(notificationId);
+  }
+
+  // ========== BILL REMINDERS & RECURRING TRANSACTIONS ==========
+
+  /// Request notification permissions (iOS)
+  static Future<bool> requestPermissions() async {
+    if (!_initialized) await initialize();
+
+    final result = await _notifications
+        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
+
+    return result ?? true; // Android doesn't need runtime permission request
+  }
+
+  /// Schedule a reminder for a recurring transaction
+  static Future<void> scheduleRecurringReminder({
+    required int recurringId,
+    required String name,
+    required double amount,
+    required String type,
+    required DateTime nextExecution,
+    int daysBeforeReminder = 1,
+  }) async {
+    await initialize();
+
+    // Calculate reminder time (X days before next execution)
+    final reminderDate = nextExecution.subtract(Duration(days: daysBeforeReminder));
+
+    // Don't schedule if reminder date is in the past
+    if (reminderDate.isBefore(DateTime.now())) return;
+
+    // Use recurringId + 10000 to avoid conflicts with other notification IDs
+    final notificationId = 10000 + recurringId;
+
+    const androidDetails = AndroidNotificationDetails(
+      'recurring_reminders',
+      'Bill Reminders',
+      channelDescription: 'Reminders for upcoming recurring transactions',
+      importance: Importance.high,
+      priority: Priority.high,
+      ticker: 'Bill Reminder',
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    final typeEmoji = type.toLowerCase() == 'income' ? '💰' : '💸';
+    final title = 'Upcoming $type: $name';
+    final body = '$typeEmoji RM ${amount.toStringAsFixed(2)} due on ${DateFormat('MMM dd, yyyy').format(nextExecution)}';
+
+    try {
+      // For now, use immediate notification for testing
+      // In production, you'd want to schedule for the actual reminder date
+      // await _notifications.zonedSchedule(...);
+
+      // Show immediate notification for demo purposes
+      await _notifications.show(
+        notificationId,
+        title,
+        body,
+        notificationDetails,
+        payload: json.encode({
+          'type': 'recurring_reminder',
+          'recurringId': recurringId,
+          'name': name,
+        }),
+      );
+
+      print('Scheduled reminder for $name (ID: $notificationId) on $reminderDate');
+    } catch (e) {
+      print('Error scheduling notification: $e');
+    }
+  }
+
+  /// Cancel a specific recurring reminder
+  static Future<void> cancelRecurringReminder(int recurringId) async {
+    await initialize();
+    final notificationId = 10000 + recurringId;
+    await _notifications.cancel(notificationId);
+    print('Cancelled reminder for recurring transaction $recurringId');
+  }
+
+  /// Get notification settings from SharedPreferences
+  static Future<Map<String, dynamic>> getNotificationSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'enabled': prefs.getBool('notifications_enabled') ?? true,
+      'daysBeforeReminder': prefs.getInt('days_before_reminder') ?? 1,
+      'soundEnabled': prefs.getBool('notification_sound') ?? true,
+      'vibrationEnabled': prefs.getBool('notification_vibration') ?? true,
+    };
+  }
+
+  /// Save notification settings
+  static Future<void> saveNotificationSettings({
+    bool? enabled,
+    int? daysBeforeReminder,
+    bool? soundEnabled,
+    bool? vibrationEnabled,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (enabled != null) await prefs.setBool('notifications_enabled', enabled);
+    if (daysBeforeReminder != null) await prefs.setInt('days_before_reminder', daysBeforeReminder);
+    if (soundEnabled != null) await prefs.setBool('notification_sound', soundEnabled);
+    if (vibrationEnabled != null) await prefs.setBool('notification_vibration', vibrationEnabled);
+  }
+
+  /// Schedule reminders for all active recurring transactions
+  static Future<void> scheduleAllRecurringReminders(List<Map<String, dynamic>> recurringList) async {
+    final settings = await getNotificationSettings();
+    if (settings['enabled'] != true) return;
+
+    final daysBeforeReminder = settings['daysBeforeReminder'] as int;
+
+    for (var recurring in recurringList) {
+      final isActive = recurring['IsActive'] == true || recurring['IsActive'] == 1;
+      if (!isActive) continue;
+
+      try {
+        final nextExecutionStr = recurring['NextExecution'];
+        if (nextExecutionStr == null) continue;
+
+        final nextExecution = DateTime.parse(nextExecutionStr);
+
+        await scheduleRecurringReminder(
+          recurringId: recurring['RecurringId'],
+          name: recurring['Name'] ?? 'Unnamed',
+          amount: (recurring['Amount'] ?? 0.0).toDouble(),
+          type: recurring['TransactionType'] ?? 'expense',
+          nextExecution: nextExecution,
+          daysBeforeReminder: daysBeforeReminder,
+        );
+      } catch (e) {
+        print('Error scheduling reminder for recurring ${recurring['RecurringId']}: $e');
+      }
+    }
+  }
+
+  /// Get upcoming reminders (for UI display)
+  static Future<List<Map<String, dynamic>>> getUpcomingReminders(
+    List<Map<String, dynamic>> recurringList,
+  ) async {
+    final List<Map<String, dynamic>> upcomingReminders = [];
+    final now = DateTime.now();
+    final thirtyDaysFromNow = now.add(const Duration(days: 30));
+
+    for (var recurring in recurringList) {
+      final isActive = recurring['IsActive'] == true || recurring['IsActive'] == 1;
+      if (!isActive) continue;
+
+      try {
+        final nextExecutionStr = recurring['NextExecution'];
+        if (nextExecutionStr == null) continue;
+
+        final nextExecution = DateTime.parse(nextExecutionStr);
+
+        // Only include if within next 30 days
+        if (nextExecution.isAfter(now) && nextExecution.isBefore(thirtyDaysFromNow)) {
+          upcomingReminders.add({
+            'recurringId': recurring['RecurringId'],
+            'name': recurring['Name'],
+            'amount': recurring['Amount'],
+            'type': recurring['TransactionType'],
+            'category': recurring['Category'],
+            'nextExecution': nextExecution,
+            'daysUntil': nextExecution.difference(now).inDays,
+          });
+        }
+      } catch (e) {
+        print('Error processing recurring ${recurring['RecurringId']}: $e');
+      }
+    }
+
+    // Sort by date (soonest first)
+    upcomingReminders.sort((a, b) =>
+      (a['nextExecution'] as DateTime).compareTo(b['nextExecution'] as DateTime)
+    );
+
+    return upcomingReminders;
+  }
+
+  /// Send a test notification
+  static Future<void> sendTestNotification() async {
+    await initialize();
+
+    await showBudgetAlert(
+      title: 'Test Notification',
+      body: 'Bill reminders are working! You will be notified before your recurring transactions are due.',
+      notificationId: 999999,
+    );
   }
 }

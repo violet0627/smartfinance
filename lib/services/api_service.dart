@@ -7,7 +7,7 @@ class ApiService {
   // Change this to your computer's IP address when testing on a physical device
   // For emulator, use 10.0.2.2
   // For web, use localhost or 127.0.0.1
-  static const String baseUrl = 'http://127.0.0.1:5000/api';
+  static const String baseUrl = 'http://192.168.1.38:5000/api';
 
   // Authentication endpoints
   static Future<Map<String, dynamic>> register({
@@ -26,19 +26,12 @@ class ApiService {
           'fullName': fullName,
           'phoneNumber': phoneNumber,
         }),
-      );
+      ).timeout(const Duration(seconds: 10));
 
       final data = json.decode(response.body);
 
       if (response.statusCode == 201) {
-        // Save user data and tokens
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('userId', data['user']['userId']);
-        await prefs.setString('userEmail', data['user']['email']);
-        await prefs.setString('userFullName', data['user']['fullName']);
-        await prefs.setString('accessToken', data['accessToken']);
-        await prefs.setString('refreshToken', data['refreshToken']);
-
+        // Don't auto-login on registration - user should login manually
         return {'success': true, 'user': UserModel.fromJson(data['user'])};
       } else {
         return {'success': false, 'error': data['error'] ?? 'Registration failed'};
@@ -60,7 +53,7 @@ class ApiService {
           'email': email,
           'password': password,
         }),
-      );
+      ).timeout(const Duration(seconds: 10));
 
       final data = json.decode(response.body);
 
@@ -213,6 +206,73 @@ class ApiService {
     }
   }
 
+  // Email Verification endpoints
+  static Future<Map<String, dynamic>> verifyEmail(String token) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/verify-email'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'token': token}),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': data['message'], 'user': data['user']};
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to verify email'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> resendVerification(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/resend-verification'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email}),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'],
+          'verificationToken': data['verificationToken'], // For development
+        };
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to resend verification'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> checkVerificationStatus(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/auth/check-verification/$userId'),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'emailVerified': data['emailVerified'],
+          'email': data['email'],
+        };
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to check status'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
   // Transaction endpoints
   static Future<Map<String, dynamic>> createTransaction(Map<String, dynamic> transactionData) async {
     try {
@@ -228,6 +288,26 @@ class ApiService {
         return {'success': true, 'transaction': data['transaction']};
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to create transaction'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateTransaction(int transactionId, Map<String, dynamic> transactionData) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/transactions/$transactionId'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(transactionData),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'transaction': data['transaction']};
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to update transaction'};
       }
     } catch (e) {
       return {'success': false, 'error': 'Network error: $e'};
@@ -1101,6 +1181,455 @@ class ApiService {
         return {'success': true, 'categories': data['categories']};
       } else {
         return {'success': false, 'error': 'Failed to fetch categories'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  // Two-Factor Authentication endpoints
+  static Future<Map<String, dynamic>> setup2FA(int userId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/2fa/setup'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'userId': userId}),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'qrCode': data['qrCode'],
+          'secret': data['secret'],
+          'backupCodes': data['backupCodes'],
+          'message': data['message']
+        };
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to setup 2FA'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> verify2FASetup(int userId, String code) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/2fa/verify-setup'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'userId': userId, 'code': code}),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'],
+          'user': data['user']
+        };
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Invalid verification code'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> verify2FACode(int userId, String code) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/2fa/verify'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'userId': userId, 'code': code}),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'verified': data['verified'],
+          'message': data['message']
+        };
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to verify code'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> verify2FABackupCode(int userId, String backupCode) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/2fa/verify-backup'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'userId': userId, 'backupCode': backupCode}),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'verified': data['verified'],
+          'message': data['message']
+        };
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Invalid backup code'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> disable2FA(int userId, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/2fa/disable'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'userId': userId, 'password': password}),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'],
+          'user': data['user']
+        };
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to disable 2FA'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> get2FAStatus(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/auth/2fa/status/$userId'),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'twoFactorEnabled': data['twoFactorEnabled'],
+          'hasBackupCodes': data['hasBackupCodes'],
+          'lastUsedAt': data['lastUsedAt']
+        };
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to get 2FA status'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> regenerateBackupCodes(int userId, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/2fa/regenerate-backup-codes'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'userId': userId, 'password': password}),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'backupCodes': data['backupCodes'],
+          'message': data['message']
+        };
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to regenerate backup codes'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  // Recurring Transactions endpoints
+  static Future<Map<String, dynamic>> createRecurringTransaction({
+    required int userId,
+    required String name,
+    required String transactionType,
+    required String category,
+    required double amount,
+    String? description,
+    required String frequency,
+    required String startDate,
+    String? endDate,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/recurring/user/$userId'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'name': name,
+          'transactionType': transactionType,
+          'category': category,
+          'amount': amount,
+          'description': description,
+          'frequency': frequency,
+          'startDate': startDate,
+          'endDate': endDate,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 201) {
+        return {'success': true, 'recurring': data['recurring']};
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to create recurring transaction'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getRecurringTransactions(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/recurring/user/$userId'),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'recurring': data['recurring']};
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to fetch recurring transactions'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateRecurringTransaction({
+    required int recurringId,
+    String? name,
+    String? category,
+    double? amount,
+    String? description,
+    String? frequency,
+    String? endDate,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/recurring/$recurringId'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          if (name != null) 'name': name,
+          if (category != null) 'category': category,
+          if (amount != null) 'amount': amount,
+          if (description != null) 'description': description,
+          if (frequency != null) 'frequency': frequency,
+          if (endDate != null) 'endDate': endDate,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'recurring': data['recurring']};
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to update recurring transaction'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteRecurringTransaction(int recurringId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/recurring/$recurringId'),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': data['message']};
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to delete recurring transaction'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> toggleRecurringTransaction(int recurringId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/recurring/$recurringId/toggle'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'recurring': data['recurring'], 'isActive': data['isActive']};
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to toggle recurring transaction'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> executeRecurringTransaction(int recurringId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/recurring/$recurringId/execute'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 201) {
+        return {
+          'success': true,
+          'transaction': data['transaction'],
+          'recurring': data['recurring'],
+          'message': data['message']
+        };
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to execute recurring transaction'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> executeDueRecurringTransactions(int userId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/recurring/user/$userId/execute-due'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 201) {
+        return {
+          'success': true,
+          'executed': data['executed'],
+          'count': data['count'],
+          'message': data['message']
+        };
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to execute due transactions'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  // Security endpoints
+  static Future<Map<String, dynamic>> getActiveSessions(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/security/sessions/user/$userId'),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'sessions': data['sessions']};
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to fetch sessions'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> revokeSession(int sessionId, int userId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/security/sessions/$sessionId/revoke'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'userId': userId}),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': data['message']};
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to revoke session'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> revokeAllSessions(int userId, int? currentSessionId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/security/sessions/user/$userId/revoke-all'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'currentSessionId': currentSessionId}),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': data['message'], 'revokedCount': data['revokedCount']};
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to revoke all sessions'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getSecurityActivityLog(int userId, {int limit = 20, int offset = 0}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/security/activity/user/$userId?limit=$limit&offset=$offset'),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'logs': data['logs']};
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to fetch activity log'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteAccount(int userId, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/security/account/delete'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'userId': userId, 'password': password}),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        // Clear all stored data
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.clear();
+
+        return {'success': true, 'message': data['message']};
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to delete account'};
       }
     } catch (e) {
       return {'success': false, 'error': 'Network error: $e'};

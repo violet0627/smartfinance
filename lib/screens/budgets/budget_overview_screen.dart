@@ -29,27 +29,42 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
   Future<void> _loadCurrentBudget() async {
     setState(() => _isLoading = true);
 
-    final userId = await ApiService.getCurrentUserId();
-    if (userId == null) return;
+    try {
+      final userId = await ApiService.getCurrentUserId();
+      if (userId == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
 
-    final result = await ApiService.getCurrentBudget(userId);
+      final result = await ApiService.getCurrentBudget(userId);
 
-    if (result['success'] && result['budget'] != null) {
-      final budget = BudgetModel.fromJson(result['budget']);
+      if (result['success'] && result['budget'] != null) {
+        final budget = BudgetModel.fromJson(result['budget']);
 
-      setState(() {
-        _currentBudget = budget;
-        _hasBudget = true;
-        _isLoading = false;
-      });
+        setState(() {
+          _currentBudget = budget;
+          _hasBudget = true;
+        });
 
-      // Check budget status and show notifications if needed
-      await NotificationService.checkBudgetAndAlert(budget);
-    } else {
+        // Check budget status and show notifications if needed
+        try {
+          await NotificationService.checkBudgetAndAlert(budget);
+        } catch (e) {
+          print('Error checking budget alerts: $e');
+        }
+      } else {
+        setState(() {
+          _hasBudget = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading budget: $e');
       setState(() {
         _hasBudget = false;
-        _isLoading = false;
       });
+    } finally {
+      // Always stop loading, even if there's an error
+      setState(() => _isLoading = false);
     }
   }
 
@@ -57,6 +72,66 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
     if (percentage >= 100) return AppColors.danger;
     if (percentage >= 80) return AppColors.warning;
     return AppColors.success;
+  }
+
+  Future<void> _showDeleteConfirmation() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Budget?'),
+        content: const Text(
+          'Are you sure you want to delete this budget? '
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && _currentBudget != null && _currentBudget!.budgetId != null) {
+      try {
+        final result = await ApiService.deleteBudget(_currentBudget!.budgetId!);
+
+        if (!mounted) return;
+
+        if (result['success']) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Budget deleted successfully'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          _loadCurrentBudget();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['error'] ?? 'Failed to delete budget'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -67,6 +142,88 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
         title: const Text('Budget Overview'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          if (_hasBudget)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) async {
+                if (value == 'edit') {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CreateBudgetScreen(budget: _currentBudget),
+                    ),
+                  );
+                  _loadCurrentBudget();
+                } else if (value == 'delete') {
+                  _showDeleteConfirmation();
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, size: 20),
+                      SizedBox(width: 12),
+                      Text('Edit Budget'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, size: 20, color: Colors.red),
+                      SizedBox(width: 12),
+                      Text('Delete Budget', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          if (_hasBudget)
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'Create New Budget',
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Create New Budget?'),
+                    content: const Text(
+                      'Creating a new budget will replace your current budget. '
+                      'You can only have one active budget at a time. Continue?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Create New'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true && mounted) {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CreateBudgetScreen(),
+                    ),
+                  );
+                  _loadCurrentBudget();
+                }
+              },
+            ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

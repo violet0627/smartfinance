@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../utils/colors.dart';
-import '../dashboard/dashboard_screen.dart';
+import '../../utils/app_gradients.dart';
+import 'login_screen.dart';
+import 'verify_email_screen.dart';
+import '../../widgets/animated_button.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -22,14 +25,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
 
+  // Password strength indicators
+  bool _hasMinLength = false;
+  bool _hasUppercase = false;
+  bool _hasLowercase = false;
+  bool _hasSymbol = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_checkPasswordStrength);
+  }
+
   @override
   void dispose() {
+    _passwordController.removeListener(_checkPasswordStrength);
     _fullNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _checkPasswordStrength() {
+    final password = _passwordController.text;
+    setState(() {
+      _hasMinLength = password.length >= 8;
+      _hasUppercase = password.contains(RegExp(r'[A-Z]'));
+      _hasLowercase = password.contains(RegExp(r'[a-z]'));
+      _hasSymbol = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+    });
   }
 
   String? _validatePassword(String? value) {
@@ -80,8 +106,89 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!mounted) return;
 
     if (result['success']) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      // Show success dialog with verification instructions
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Registration Successful!'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.check_circle,
+                size: 64,
+                color: AppColors.success,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Your account has been created successfully!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Please verify your email address to access all features.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _emailController.text.trim(),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => VerifyEmailScreen(
+                      email: _emailController.text.trim(),
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Verify Email'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                // Navigate back to login screen
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+                // Show success message
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Registration successful! Please login to continue.'),
+                        backgroundColor: AppColors.success,
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Login Now'),
+            ),
+          ],
+        ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -101,7 +208,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -164,11 +271,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   validator: (value) {
+                    // Email is required - removed optional functionality
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
+                      return 'Email is required';
                     }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
+                    // Proper email validation
+                    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                    if (!emailRegex.hasMatch(value)) {
+                      return 'Please enter a valid email address';
                     }
                     return null;
                   },
@@ -178,7 +288,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
-                    labelText: 'PHONE NUMBER (OPTIONAL)',
+                    labelText: 'PHONE NUMBER',
                     hintText: '012-345-6789',
                     filled: true,
                     fillColor: Colors.white,
@@ -187,6 +297,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderSide: BorderSide.none,
                     ),
                   ),
+                  validator: (value) {
+                    // Phone is now required due to backend validation
+                    if (value == null || value.isEmpty) {
+                      return 'Phone number is required';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -212,30 +329,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   validator: _validatePassword,
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.1),
-                    border: Border.all(color: AppColors.success),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Password must contain:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.success.withOpacity(0.8),
+                if (_passwordController.text.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Password must contain:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      _buildPasswordRequirement('At least 8 characters'),
-                      _buildPasswordRequirement('One uppercase / lowercase letter'),
-                      _buildPasswordRequirement('One symbol'),
-                    ],
+                        const SizedBox(height: 4),
+                        _buildPasswordRequirement('At least 8 characters', _hasMinLength),
+                        _buildPasswordRequirement('One uppercase letter', _hasUppercase),
+                        _buildPasswordRequirement('One lowercase letter', _hasLowercase),
+                        _buildPasswordRequirement('One symbol', _hasSymbol),
+                      ],
+                    ),
                   ),
-                ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _confirmPasswordController,
@@ -280,7 +399,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           setState(() => _agreeToTerms = !_agreeToTerms);
                         },
                         child: RichText(
-                          text: const TextSpan(
+                          text: TextSpan(
                             text: 'I agree to the ',
                             style: TextStyle(color: AppColors.textSecondary),
                             children: [
@@ -299,27 +418,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleRegister,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            'Create Account',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
+                AnimatedButton(
+                  text: 'Create Account',
+                  onPressed: _handleRegister,
+                  gradient: AppGradients.successGradient,
+                  isLoading: _isLoading,
+                  icon: Icons.person_add,
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -343,21 +447,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildPasswordRequirement(String text) {
+  Widget _buildPasswordRequirement(String text, bool isMet) {
+    final color = isMet ? AppColors.success : AppColors.danger;
+    final icon = isMet ? Icons.check_circle : Icons.cancel;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
           Icon(
-            Icons.check_circle,
+            icon,
             size: 16,
-            color: AppColors.success.withOpacity(0.8),
+            color: color,
           ),
           const SizedBox(width: 8),
           Text(
             text,
             style: TextStyle(
-              color: AppColors.success.withOpacity(0.8),
+              color: color,
               fontSize: 13,
             ),
           ),
