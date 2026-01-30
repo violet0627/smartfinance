@@ -50,3 +50,27 @@ android/app/*.jks
 android/app/*.keystore
 *.jks
 *.keystore
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env.local
+
+# Temp files
+tmpclaude-*
+nul
+*.tmp
+*.temp
+
+# IDE
+.vscode/
+*.sublime-*
+
+# OS files
+Thumbs.db
+desktop.ini
