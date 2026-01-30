@@ -96,78 +96,105 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   Future<void> _showContributeDialog(Map<String, dynamic> goal) async {
     final amountController = TextEditingController();
+    final remainingAmount = (goal['remainingAmount'] ?? 0).toDouble();
+    bool isLoading = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Contribution'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              goal['goalName'],
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: amountController,
-              decoration: const InputDecoration(
-                labelText: 'Amount (RM)',
-                prefixIcon: Icon(Icons.attach_money),
-                border: OutlineInputBorder(),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Contribution'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                goal['goalName'],
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
-              keyboardType: TextInputType.number,
+              const SizedBox(height: 8),
+              Text(
+                'Remaining: RM ${remainingAmount.toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountController,
+                decoration: InputDecoration(
+                  labelText: 'Amount (RM)',
+                  prefixIcon: const Icon(Icons.attach_money),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+                keyboardType: TextInputType.number,
+                enabled: !isLoading,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading ? null : () async {
+                final amount = double.tryParse(amountController.text);
+                if (amount == null || amount <= 0) {
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a valid amount'),
+                      backgroundColor: AppColors.danger,
+                    ),
+                  );
+                  return;
+                }
+
+                setDialogState(() => isLoading = true);
+
+                final result = await ApiService.contributeToGoal(goal['goalId'], amount);
+
+                setDialogState(() => isLoading = false);
+
+                Navigator.pop(dialogContext);
+
+                if (!this.mounted) return;
+
+                if (result['success']) {
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Contribution added successfully'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                  _loadData();
+                } else {
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    SnackBar(
+                      content: Text(result['error'] ?? 'Failed to add contribution'),
+                      backgroundColor: AppColors.danger,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: isLoading
+                  ? const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text('Add'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final amount = double.tryParse(amountController.text);
-              if (amount == null || amount <= 0) {
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please enter a valid amount'),
-                    backgroundColor: AppColors.danger,
-                  ),
-                );
-                return;
-              }
-
-              Navigator.pop(context);
-
-              final result = await ApiService.contributeToGoal(goal['goalId'], amount);
-
-              if (!this.mounted) return;
-
-              if (result['success']) {
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Contribution added successfully'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-                _loadData();
-              } else {
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(
-                    content: Text(result['error'] ?? 'Failed to add contribution'),
-                    backgroundColor: AppColors.danger,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Add'),
-          ),
-        ],
       ),
     );
   }
@@ -221,18 +248,50 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         padding: const EdgeInsets.all(32),
                         child: Column(
                           children: [
-                            Icon(Icons.flag_outlined, size: 64, color: Colors.grey.shade400),
+                            Icon(
+                              _selectedFilter == 'completed' ? Icons.check_circle_outline : Icons.flag_outlined,
+                              size: 64,
+                              color: Colors.grey.shade400,
+                            ),
                             const SizedBox(height: 16),
                             Text(
-                              'No goals yet',
+                              _selectedFilter == 'all'
+                                  ? 'No goals yet'
+                                  : _selectedFilter == 'active'
+                                      ? 'No active goals'
+                                      : 'No completed goals',
                               style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Start by adding your first financial goal',
+                              _selectedFilter == 'all'
+                                  ? 'Start by adding your first financial goal'
+                                  : _selectedFilter == 'active'
+                                      ? 'All your goals are completed!'
+                                      : 'Complete some goals to see them here',
                               style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
                               textAlign: TextAlign.center,
                             ),
+                            if (_selectedFilter == 'all') ...[
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const AddGoalScreen()),
+                                  ).then((_) => _loadData());
+                                },
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add Goal'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

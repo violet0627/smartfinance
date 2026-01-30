@@ -284,9 +284,42 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
     );
   }
 
+  Widget _buildEmptyState(String title, String subtitle, IconData icon) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSpendingReportTab() {
     if (_spendingReport == null) {
-      return const Center(child: Text('No data available'));
+      return _buildEmptyState(
+        'No Spending Data',
+        'Add some transactions to see your spending report',
+        Icons.receipt_long_outlined,
+      );
     }
 
     final summary = _spendingReport!['summary'];
@@ -458,10 +491,21 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
         ),
         const SizedBox(height: 12),
         if (categoryBreakdown.isEmpty)
-          const Card(
+          Card(
             child: Padding(
-              padding: EdgeInsets.all(40),
-              child: Center(child: Text('No expense data for this period')),
+              padding: const EdgeInsets.all(40),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.category_outlined, size: 48, color: Colors.grey.shade400),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No expense data for this period',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
             ),
           )
         else
@@ -523,7 +567,11 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
 
   Widget _buildBudgetReportTab() {
     if (_budgetReport == null || (_budgetReport!['budgets'] as List).isEmpty) {
-      return const Center(child: Text('No budget data available for this period'));
+      return _buildEmptyState(
+        'No Budget Data',
+        'Create a budget to track your spending against your goals',
+        Icons.account_balance_wallet_outlined,
+      );
     }
 
     final summary = _budgetReport!['summary'];
@@ -749,12 +797,20 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
 
   Widget _buildCategoryAnalysisTab() {
     if (_categoryAnalysis == null) {
-      return const Center(child: Text('No category analysis available'));
+      return _buildEmptyState(
+        'No Category Data',
+        'Add expense transactions to see category analysis',
+        Icons.pie_chart_outline,
+      );
     }
 
     final categories = _categoryAnalysis!['categories'] as List;
     if (categories.isEmpty) {
-      return const Center(child: Text('No expense data for this period'));
+      return _buildEmptyState(
+        'No Expenses This Period',
+        'No expense transactions found for the selected time period',
+        Icons.category_outlined,
+      );
     }
 
     return ListView(

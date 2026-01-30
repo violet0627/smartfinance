@@ -370,6 +370,34 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Edit Mode Indicator
+                if (widget.transaction != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, color: AppColors.primary, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Editing transaction from ${DateFormat('MMM dd, yyyy').format(widget.transaction!.transactionDate)}',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 // Transaction Type Toggle
                 Container(
                   decoration: BoxDecoration(
@@ -485,9 +513,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 4,
-                    childAspectRatio: 1,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.85,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
                   ),
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
@@ -527,15 +555,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              category.split(' ')[0],
+                              category,
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 9,
                                 color: isSelected
                                     ? Colors.white
                                     : AppColors.textPrimary,
                                 fontWeight: FontWeight.w500,
                               ),
                               textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),

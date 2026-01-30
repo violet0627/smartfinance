@@ -302,6 +302,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Phone number is required';
                     }
+                    // Malaysian phone format: 01X-XXXXXXX or 01XXXXXXXX
+                    final phoneRegex = RegExp(r'^01[0-9]-?[0-9]{7,8}$');
+                    if (!phoneRegex.hasMatch(value.replaceAll(' ', ''))) {
+                      return 'Please enter a valid Malaysian phone number (e.g., 012-3456789)';
+                    }
                     return null;
                   },
                 ),

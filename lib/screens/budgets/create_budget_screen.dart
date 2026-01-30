@@ -80,7 +80,8 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
   }
 
   bool get _isValid {
-    return _totalBudget > 0 && (_remaining >= 0 && _remaining < 0.01);
+    // Allow small remainders up to RM 1 for flexibility
+    return _totalBudget > 0 && _remaining >= 0 && _remaining <= 1.0;
   }
 
   Future<void> _selectMonth() async {
@@ -427,7 +428,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
             child: ElevatedButton(
               onPressed: _isLoading ? null : _handleSubmit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

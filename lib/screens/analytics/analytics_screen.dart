@@ -201,24 +201,50 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final netSavings = totalIncome - totalExpense;
     final savingsRate = AnalyticsService.getSavingsRate(totalIncome, totalExpense);
 
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _buildSummaryCard(
-            'Total Spent',
-            'RM ${totalExpense.toStringAsFixed(2)}',
-            Icons.arrow_upward,
-            AppColors.expense,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _buildSummaryCard(
+                'Total Income',
+                'RM ${totalIncome.toStringAsFixed(2)}',
+                Icons.arrow_downward,
+                AppColors.income,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildSummaryCard(
+                'Total Spent',
+                'RM ${totalExpense.toStringAsFixed(2)}',
+                Icons.arrow_upward,
+                AppColors.expense,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildSummaryCard(
-            'Net Savings',
-            'RM ${netSavings.toStringAsFixed(2)}',
-            Icons.savings,
-            netSavings >= 0 ? AppColors.success : AppColors.danger,
-          ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildSummaryCard(
+                'Net Savings',
+                'RM ${netSavings.toStringAsFixed(2)}',
+                Icons.savings,
+                netSavings >= 0 ? AppColors.success : AppColors.danger,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildSummaryCard(
+                'Savings Rate',
+                '${savingsRate.toStringAsFixed(1)}%',
+                Icons.percent,
+                savingsRate >= 20 ? AppColors.success : (savingsRate >= 10 ? AppColors.warning : AppColors.danger),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -318,7 +344,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
 
     if (trendData.isEmpty) {
-      return const Center(child: Text('No spending data available'));
+      return _buildEmptyChartState('No spending data', 'Add transactions to see your spending trends');
     }
 
     final maxY = trendData.values.reduce((a, b) => a > b ? a : b) * 1.2;
@@ -337,7 +363,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
 
     if (data.isEmpty) {
-      return const Center(child: Text('No data available'));
+      return _buildEmptyChartState('No data available', 'Add income and expense transactions to see comparison');
     }
 
     double maxY = 0;
@@ -362,7 +388,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
 
     if (categoryData.isEmpty) {
-      return const Center(child: Text('No expense data available'));
+      return _buildEmptyChartState('No expense data', 'Add expense transactions to see category breakdown');
     }
 
     return CategoryPieChart(
@@ -375,7 +401,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final data = AnalyticsService.getBudgetVsActual(_currentBudget);
 
     if (data.isEmpty) {
-      return const Center(child: Text('No budget data available'));
+      return _buildEmptyChartState('No budget data', 'Create a budget to compare with actual spending');
     }
 
     double maxY = 0;
@@ -481,6 +507,42 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             );
           }).toList(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyChartState(String title, String subtitle) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.bar_chart_outlined,
+              size: 48,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

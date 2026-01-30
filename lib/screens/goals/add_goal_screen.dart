@@ -121,11 +121,40 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
       return;
     }
 
+    // Safe parsing with error handling
+    final targetAmount = double.tryParse(_targetAmountController.text);
+    final currentAmount = widget.existingGoal != null
+        ? double.tryParse(_currentAmountController.text) ?? 0.0
+        : 0.0;
+
+    if (targetAmount == null || targetAmount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid target amount'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      setState(() => _isSaving = false);
+      return;
+    }
+
+    // Validate current amount doesn't exceed target
+    if (currentAmount > targetAmount) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Current amount cannot exceed target amount'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      setState(() => _isSaving = false);
+      return;
+    }
+
     final goalData = {
       'goalName': _nameController.text,
       'description': _descriptionController.text,
-      'targetAmount': double.parse(_targetAmountController.text),
-      'currentAmount': widget.existingGoal != null ? double.parse(_currentAmountController.text) : 0,
+      'targetAmount': targetAmount,
+      'currentAmount': currentAmount,
       'deadline': DateFormat('yyyy-MM-dd').format(_selectedDeadline!),
       'category': _selectedCategory,
       'priority': _selectedPriority,

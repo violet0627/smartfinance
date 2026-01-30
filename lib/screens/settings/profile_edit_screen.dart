@@ -211,8 +211,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
                         }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
+                        final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                        if (!emailRegex.hasMatch(value)) {
+                          return 'Please enter a valid email address';
                         }
                         return null;
                       },
@@ -224,12 +225,23 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                       controller: _phoneController,
                       decoration: InputDecoration(
                         labelText: 'Phone Number',
+                        hintText: '01X-XXXXXXX',
                         prefixIcon: const Icon(Icons.phone),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       keyboardType: TextInputType.phone,
+                      validator: (value) {
+                        if (value != null && value.isNotEmpty) {
+                          // Malaysian phone format: 01X-XXXXXXX or 01XXXXXXXX
+                          final phoneRegex = RegExp(r'^01[0-9]-?[0-9]{7,8}$');
+                          if (!phoneRegex.hasMatch(value.replaceAll(' ', ''))) {
+                            return 'Please enter a valid Malaysian phone number';
+                          }
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 32),
 

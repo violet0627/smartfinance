@@ -624,76 +624,132 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showChangePasswordDialog() async {
+    final formKey = GlobalKey<FormState>();
     final currentPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
+    bool isLoading = false;
+
+    String? validatePassword(String? value) {
+      if (value == null || value.isEmpty) {
+        return 'Password is required';
+      }
+      if (value.length < 8) {
+        return 'Password must be at least 8 characters';
+      }
+      if (!value.contains(RegExp(r'[A-Z]'))) {
+        return 'Must contain at least one uppercase letter';
+      }
+      if (!value.contains(RegExp(r'[a-z]'))) {
+        return 'Must contain at least one lowercase letter';
+      }
+      if (!value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+        return 'Must contain at least one symbol';
+      }
+      return null;
+    }
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Change Password'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: currentPasswordController,
-              decoration: const InputDecoration(labelText: 'Current Password'),
-              obscureText: true,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Change Password'),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: currentPasswordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Current Password',
+                      prefixIcon: Icon(Icons.lock_outline),
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your current password';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: newPasswordController,
+                    decoration: const InputDecoration(
+                      labelText: 'New Password',
+                      prefixIcon: Icon(Icons.lock),
+                      helperText: 'Min 8 chars, uppercase, lowercase, symbol',
+                      helperMaxLines: 2,
+                    ),
+                    obscureText: true,
+                    validator: validatePassword,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: confirmPasswordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm New Password',
+                      prefixIcon: Icon(Icons.lock),
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value != newPasswordController.text) {
+                        return 'Passwords do not match';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: newPasswordController,
-              decoration: const InputDecoration(labelText: 'New Password'),
-              obscureText: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: confirmPasswordController,
-              decoration: const InputDecoration(labelText: 'Confirm New Password'),
-              obscureText: true,
+            ElevatedButton(
+              onPressed: isLoading ? null : () async {
+                if (!formKey.currentState!.validate()) return;
+
+                setDialogState(() => isLoading = true);
+
+                final userId = await ApiService.getCurrentUserId();
+                if (userId == null) {
+                  setDialogState(() => isLoading = false);
+                  return;
+                }
+
+                final result = await ApiService.changePassword(
+                  userId,
+                  currentPasswordController.text,
+                  newPasswordController.text,
+                );
+
+                setDialogState(() => isLoading = false);
+
+                Navigator.pop(dialogContext);
+
+                if (!this.mounted) return;
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(
+                    content: Text(result['success'] ? 'Password changed successfully' : (result['error'] ?? 'Failed to change password')),
+                    backgroundColor: result['success'] ? AppColors.success : AppColors.danger,
+                  ),
+                );
+              },
+              child: isLoading
+                ? const SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Change'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (newPasswordController.text != confirmPasswordController.text) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Passwords do not match'),
-                    backgroundColor: AppColors.danger,
-                  ),
-                );
-                return;
-              }
-
-              final userId = await ApiService.getCurrentUserId();
-              if (userId == null) return;
-
-              final result = await ApiService.changePassword(
-                userId,
-                currentPasswordController.text,
-                newPasswordController.text,
-              );
-
-              Navigator.pop(context);
-
-              if (!this.mounted) return;
-              ScaffoldMessenger.of(this.context).showSnackBar(
-                SnackBar(
-                  content: Text(result['success'] ? 'Password changed successfully' : result['error']),
-                  backgroundColor: result['success'] ? AppColors.success : AppColors.danger,
-                ),
-              );
-            },
-            child: const Text('Change'),
-          ),
-        ],
       ),
     );
   }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
 import '../../utils/colors.dart';
 import '../dashboard/dashboard_screen.dart';
@@ -190,8 +189,11 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                   labelText: 'Verification Token',
                   hintText: 'Paste token from email',
                   prefixIcon: const Icon(Icons.vpn_key),
+                  filled: true,
+                  fillColor: Colors.white,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
                   ),
                 ),
                 maxLines: 3,
