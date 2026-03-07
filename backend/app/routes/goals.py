@@ -1,61 +1,98 @@
-from flask import Blueprint, request, jsonify
-from app import db
-from app.models.goal import Goal
-from datetime import datetime
+# ==============================================================================
+# goals.py - Financial Goals Routes (API Endpoints for Savings Goals)
+# ==============================================================================
+# This file defines ALL the goal-related API endpoints.
+# Goals let users set financial targets and track their progress.
+#
+# Examples:
+# - "Emergency Fund" - Save RM10,000 by December 2025
+# - "Vacation to Japan" - Save RM5,000 by June 2025
+# - "New Laptop" - Save RM3,000 by March 2025
+#
+# Users can contribute money toward their goals and the app shows progress.
+#
+# URL prefix: /api/goals (set in app/__init__.py)
+# ==============================================================================
 
+from flask import Blueprint, request, jsonify      # Blueprint for grouping, request for input, jsonify for output
+from app import db                                  # Database instance
+from app.models.goal import Goal                    # Goal model (database table)
+from datetime import datetime                       # For date operations
+
+# --- Create the Blueprint ---
 goals_bp = Blueprint('goals', __name__)
 
+
+# ==============================================================================
+# ROUTE: GET /api/goals/user/<user_id>
+# ==============================================================================
+# Called to fetch all goals for a user.
+# Supports optional filtering by status (active, completed, paused).
+# Results are sorted by priority (highest first), then by deadline (soonest first).
+# ==============================================================================
 @goals_bp.route('/user/<int:user_id>', methods=['GET'])
 def get_user_goals(user_id):
     """Get all goals for a user"""
     try:
-        status_filter = request.args.get('status', None)  # Filter by status if provided
+        # Optional status filter from query parameter
+        # Example: GET /api/goals/user/1?status=active
+        status_filter = request.args.get('status', None)
 
+        # Build query starting with all goals for this user
         query = Goal.query.filter_by(UserId=user_id)
 
+        # Add status filter if provided
         if status_filter:
             query = query.filter_by(Status=status_filter)
 
+        # Sort: highest priority first, then earliest deadline first
+        # .desc() = descending (high to low), .asc() = ascending (low to high)
         goals = query.order_by(Goal.Priority.desc(), Goal.Deadline.asc()).all()
 
         return jsonify({
-            'goals': [goal.to_dict() for goal in goals],
+            'goals': [goal.to_dict() for goal in goals],   # Convert each goal to dict
             'count': len(goals)
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
+# ==============================================================================
+# ROUTE: POST /api/goals/user/<user_id>
+# ==============================================================================
+# Called when the user creates a new savings goal.
+# ==============================================================================
 @goals_bp.route('/user/<int:user_id>', methods=['POST'])
 def create_goal(user_id):
     """Create a new goal"""
     try:
         data = request.get_json()
 
-        # Validate required fields
+        # --- Step 1: Validate required fields ---
         if not data.get('goalName') or not data.get('targetAmount') or not data.get('deadline'):
             return jsonify({'error': 'Missing required fields'}), 400
 
-        # Parse deadline
+        # --- Step 2: Parse the deadline date ---
         try:
             deadline = datetime.strptime(data['deadline'], '%Y-%m-%d').date()
         except ValueError:
             return jsonify({'error': 'Invalid deadline format. Use YYYY-MM-DD'}), 400
 
-        # Create new goal
+        # --- Step 3: Create the Goal record ---
         new_goal = Goal(
-            UserId=user_id,
-            GoalName=data['goalName'],
-            Description=data.get('description', ''),
-            TargetAmount=data['targetAmount'],
-            CurrentAmount=data.get('currentAmount', 0),
-            StartDate=datetime.now().date(),
-            Deadline=deadline,
-            Category=data.get('category', 'Other'),
-            Priority=data.get('priority', 'medium'),
-            Status='active'
+            UserId=user_id,                                      # Which user owns this goal
+            GoalName=data['goalName'],                           # e.g., "Emergency Fund"
+            Description=data.get('description', ''),             # Optional description
+            TargetAmount=data['targetAmount'],                   # How much to save (e.g., 10000)
+            CurrentAmount=data.get('currentAmount', 0),          # How much saved so far (default: 0)
+            StartDate=datetime.now().date(),                     # Today's date
+            Deadline=deadline,                                   # When the goal should be achieved
+            Category=data.get('category', 'Other'),              # e.g., "Emergency Fund", "Vacation"
+            Priority=data.get('priority', 'medium'),             # "low", "medium", or "high"
+            Status='active'                                      # New goals start as active
         )
 
+        # --- Step 4: Save to database ---
         db.session.add(new_goal)
         db.session.commit()
 
@@ -68,6 +105,11 @@ def create_goal(user_id):
         return jsonify({'error': str(e)}), 500
 
 
+# ==============================================================================
+# ROUTE: GET /api/goals/<goal_id>
+# ==============================================================================
+# Called to fetch a single goal by its ID.
+# ==============================================================================
 @goals_bp.route('/<int:goal_id>', methods=['GET'])
 def get_goal(goal_id):
     """Get a specific goal by ID"""
@@ -82,6 +124,13 @@ def get_goal(goal_id):
         return jsonify({'error': str(e)}), 500
 
 
+# ==============================================================================
+# ROUTE: PUT /api/goals/<goal_id>
+# ==============================================================================
+# Called when the user edits an existing goal.
+# Special feature: If currentAmount reaches targetAmount, the goal is
+# automatically marked as "completed".
+# ==============================================================================
 @goals_bp.route('/<int:goal_id>', methods=['PUT'])
 def update_goal(goal_id):
     """Update an existing goal"""
@@ -93,7 +142,7 @@ def update_goal(goal_id):
 
         data = request.get_json()
 
-        # Update fields if provided
+        # --- Update each field if provided ---
         if 'goalName' in data:
             goal.GoalName = data['goalName']
         if 'description' in data:
@@ -102,7 +151,7 @@ def update_goal(goal_id):
             goal.TargetAmount = data['targetAmount']
         if 'currentAmount' in data:
             goal.CurrentAmount = data['currentAmount']
-            # Auto-complete if target reached
+            # AUTO-COMPLETE: If the user has saved enough, mark the goal as completed
             if float(goal.CurrentAmount) >= float(goal.TargetAmount) and goal.Status == 'active':
                 goal.Status = 'completed'
         if 'deadline' in data:
@@ -114,7 +163,7 @@ def update_goal(goal_id):
         if 'status' in data:
             goal.Status = data['status']
 
-        goal.UpdatedAt = datetime.utcnow()
+        goal.UpdatedAt = datetime.utcnow()   # Record when the update happened
         db.session.commit()
 
         return jsonify({
@@ -126,6 +175,11 @@ def update_goal(goal_id):
         return jsonify({'error': str(e)}), 500
 
 
+# ==============================================================================
+# ROUTE: DELETE /api/goals/<goal_id>
+# ==============================================================================
+# Called when the user deletes a goal.
+# ==============================================================================
 @goals_bp.route('/<int:goal_id>', methods=['DELETE'])
 def delete_goal(goal_id):
     """Delete a goal"""
@@ -144,6 +198,15 @@ def delete_goal(goal_id):
         return jsonify({'error': str(e)}), 500
 
 
+# ==============================================================================
+# ROUTE: POST /api/goals/<goal_id>/contribute
+# ==============================================================================
+# Called when the user adds money toward a goal.
+# This is a convenience endpoint that adds to CurrentAmount.
+#
+# Example: User contributes RM500 to their "Emergency Fund" goal.
+# If this brings them to the target, the goal auto-completes.
+# ==============================================================================
 @goals_bp.route('/<int:goal_id>/contribute', methods=['POST'])
 def contribute_to_goal(goal_id):
     """Add contribution to a goal"""
@@ -156,12 +219,14 @@ def contribute_to_goal(goal_id):
         data = request.get_json()
         amount = data.get('amount', 0)
 
+        # Validate contribution amount
         if amount <= 0:
             return jsonify({'error': 'Contribution amount must be positive'}), 400
 
+        # Add the contribution to the current amount
         goal.CurrentAmount = float(goal.CurrentAmount) + float(amount)
 
-        # Check if goal is completed
+        # AUTO-COMPLETE: Check if the goal has been reached
         if float(goal.CurrentAmount) >= float(goal.TargetAmount) and goal.Status == 'active':
             goal.Status = 'completed'
 
@@ -177,53 +242,73 @@ def contribute_to_goal(goal_id):
         return jsonify({'error': str(e)}), 500
 
 
+# ==============================================================================
+# ROUTE: GET /api/goals/user/<user_id>/summary
+# ==============================================================================
+# Called to get an overview of all the user's goals.
+# Returns counts, total target/saved amounts, overall progress percentage,
+# and the goal with the closest deadline.
+# Used by the dashboard screen.
+# ==============================================================================
 @goals_bp.route('/user/<int:user_id>/summary', methods=['GET'])
 def get_goals_summary(user_id):
     """Get summary of user's goals"""
     try:
+        # Get all goals for this user
         goals = Goal.query.filter_by(UserId=user_id).all()
 
+        # Separate active and completed goals using list comprehension
         active_goals = [g for g in goals if g.Status == 'active']
         completed_goals = [g for g in goals if g.Status == 'completed']
 
-        total_target = sum(float(g.TargetAmount) for g in active_goals)
-        total_saved = sum(float(g.CurrentAmount) for g in active_goals)
-        total_remaining = total_target - total_saved
+        # Calculate totals for active goals only
+        total_target = sum(float(g.TargetAmount) for g in active_goals)     # Total target amount
+        total_saved = sum(float(g.CurrentAmount) for g in active_goals)     # Total saved so far
+        total_remaining = total_target - total_saved                         # How much more to save
 
+        # Overall progress as a percentage
         overall_progress = (total_saved / total_target * 100) if total_target > 0 else 0
 
-        # Find closest deadline
+        # Find the goal with the closest (nearest) deadline
         closest_goal = None
         if active_goals:
+            # min() with key=lambda finds the goal with the smallest (earliest) deadline
             closest_goal = min(active_goals, key=lambda g: g.Deadline)
 
         return jsonify({
-            'totalGoals': len(goals),
-            'activeGoals': len(active_goals),
-            'completedGoals': len(completed_goals),
-            'totalTargetAmount': round(total_target, 2),
-            'totalSavedAmount': round(total_saved, 2),
-            'totalRemainingAmount': round(total_remaining, 2),
-            'overallProgress': round(overall_progress, 2),
-            'closestDeadline': closest_goal.to_dict() if closest_goal else None
+            'totalGoals': len(goals),                                           # Total number of goals
+            'activeGoals': len(active_goals),                                   # Number of active goals
+            'completedGoals': len(completed_goals),                             # Number completed
+            'totalTargetAmount': round(total_target, 2),                        # Total target
+            'totalSavedAmount': round(total_saved, 2),                          # Total saved
+            'totalRemainingAmount': round(total_remaining, 2),                  # Total remaining
+            'overallProgress': round(overall_progress, 2),                      # Overall % progress
+            'closestDeadline': closest_goal.to_dict() if closest_goal else None # Nearest deadline goal
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
+# ==============================================================================
+# ROUTE: GET /api/goals/categories
+# ==============================================================================
+# Returns a list of predefined goal categories with their icons.
+# The Flutter app uses this to display category options when creating a goal.
+# The 'icon' values correspond to Flutter Material Icons.
+# ==============================================================================
 @goals_bp.route('/categories', methods=['GET'])
 def get_goal_categories():
     """Get available goal categories"""
     categories = [
-        {'name': 'Emergency Fund', 'icon': 'emergency'},
-        {'name': 'Vacation', 'icon': 'flight'},
-        {'name': 'Home', 'icon': 'home'},
-        {'name': 'Education', 'icon': 'school'},
-        {'name': 'Car', 'icon': 'directions_car'},
-        {'name': 'Wedding', 'icon': 'favorite'},
-        {'name': 'Retirement', 'icon': 'elderly'},
-        {'name': 'Business', 'icon': 'business'},
-        {'name': 'Investment', 'icon': 'trending_up'},
-        {'name': 'Other', 'icon': 'savings'}
+        {'name': 'Emergency Fund', 'icon': 'emergency'},     # For rainy days
+        {'name': 'Vacation', 'icon': 'flight'},               # Travel goals
+        {'name': 'Home', 'icon': 'home'},                     # House purchase/renovation
+        {'name': 'Education', 'icon': 'school'},              # Tuition, courses
+        {'name': 'Car', 'icon': 'directions_car'},            # Vehicle purchase
+        {'name': 'Wedding', 'icon': 'favorite'},              # Wedding expenses
+        {'name': 'Retirement', 'icon': 'elderly'},            # Retirement savings
+        {'name': 'Business', 'icon': 'business'},             # Business investment
+        {'name': 'Investment', 'icon': 'trending_up'},        # Investment capital
+        {'name': 'Other', 'icon': 'savings'}                  # Anything else
     ]
     return jsonify({'categories': categories}), 200

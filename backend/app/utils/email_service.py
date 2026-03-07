@@ -1,19 +1,59 @@
-from flask_mail import Message
-from app import mail
-from flask import render_template_string
-import os
+# ==============================================================================
+# email_service.py - Email Sending Service
+# ==============================================================================
+# This file handles sending emails from the SmartFinance backend.
+# It uses Flask-Mail to send HTML emails for:
+#
+# 1. EMAIL VERIFICATION: Sent after registration to verify the user's email
+# 2. PASSWORD RESET: Sent when the user clicks "Forgot Password"
+#
+# Each email includes:
+# - An HTML version (styled, with buttons and formatting)
+# - A plain text version (fallback for email clients that don't support HTML)
+#
+# Configuration (set in config.py):
+# - MAIL_SERVER: SMTP server address (e.g., smtp.gmail.com)
+# - MAIL_PORT: SMTP port (usually 587 for TLS)
+# - MAIL_USERNAME: Email account to send from
+# - MAIL_PASSWORD: Email account password or app password
+# ==============================================================================
 
+from flask_mail import Message       # Message class for creating emails
+from app import mail                  # Flask-Mail instance (initialized in app/__init__.py)
+from flask import render_template_string  # For rendering HTML templates (not used here but imported)
+import os                             # For reading environment variables
+
+
+# ==============================================================================
+# FUNCTION: send_verification_email
+# ==============================================================================
+# Sends a verification email to a newly registered user.
+# The email contains a link that the user clicks to verify their email address.
+#
+# Args:
+#     user_email (str): The user's email address (recipient)
+#     user_name (str): The user's full name (for personalization)
+#     verification_token (str): The JWT token for verification
+#
+# Returns:
+#     bool: True if email was sent successfully, False if an error occurred
+# ==============================================================================
 def send_verification_email(user_email, user_name, verification_token):
     """Send email verification email"""
     try:
-        # Frontend URL (should be in environment variable in production)
+        # --- Step 1: Build the verification link ---
+        # FRONTEND_URL is where the Flutter web app or verification page is hosted.
+        # The token is passed as a query parameter in the URL.
         frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
         verification_link = f"{frontend_url}/verify-email?token={verification_token}"
 
-        # Email subject
+        # --- Step 2: Email subject line ---
         subject = "Verify Your SmartFinance Account"
 
-        # HTML email body
+        # --- Step 3: HTML email body ---
+        # This is a full HTML page with CSS styling that will display in the user's email.
+        # Note: {{ and }} are escaped as {{ }} in f-strings (double braces = literal brace)
+        # The f-string variables ({user_name}, {verification_link}) are inserted into the HTML.
         html_body = f"""
         <!DOCTYPE html>
         <html>
@@ -96,7 +136,8 @@ def send_verification_email(user_email, user_name, verification_token):
         </html>
         """
 
-        # Plain text fallback
+        # --- Step 4: Plain text fallback ---
+        # For email clients that can't display HTML (rare but important for accessibility)
         text_body = f"""
         Hi {user_name},
 
@@ -112,34 +153,56 @@ def send_verification_email(user_email, user_name, verification_token):
         The SmartFinance Team
         """
 
-        # Create message
+        # --- Step 5: Create the email message ---
+        # Message() creates an email with:
+        # - subject: Email subject line
+        # - recipients: List of email addresses to send to
+        # - body: Plain text version
+        # - html: HTML version (email client picks the best one to display)
         msg = Message(
             subject=subject,
-            recipients=[user_email],
-            body=text_body,
-            html=html_body
+            recipients=[user_email],       # List of recipients (just one user)
+            body=text_body,                 # Plain text fallback
+            html=html_body                  # HTML version (preferred)
         )
 
-        # Send email
+        # --- Step 6: Send the email ---
+        # mail.send() uses Flask-Mail to connect to the SMTP server and send
         mail.send(msg)
-        return True
+        return True       # Email sent successfully
 
     except Exception as e:
+        # If sending fails (e.g., SMTP server down, wrong credentials), log the error
         print(f"Error sending verification email: {str(e)}")
-        return False
+        return False       # Email failed to send
 
 
+# ==============================================================================
+# FUNCTION: send_password_reset_email
+# ==============================================================================
+# Sends a password reset email when the user requests to reset their password.
+# The email contains a link with a reset token that expires in 1 hour.
+#
+# Args:
+#     user_email (str): The user's email address (recipient)
+#     user_name (str): The user's full name (for personalization)
+#     reset_token (str): The JWT token for password reset
+#
+# Returns:
+#     bool: True if email was sent successfully, False if an error occurred
+# ==============================================================================
 def send_password_reset_email(user_email, user_name, reset_token):
     """Send password reset email"""
     try:
-        # Frontend URL
+        # --- Build the reset link ---
         frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
         reset_link = f"{frontend_url}/reset-password?token={reset_token}"
 
-        # Email subject
         subject = "Reset Your SmartFinance Password"
 
-        # HTML email body
+        # --- HTML email body ---
+        # Similar structure to the verification email but with different colors (orange)
+        # and different messaging (password reset instead of welcome)
         html_body = f"""
         <!DOCTYPE html>
         <html>
@@ -230,7 +293,7 @@ def send_password_reset_email(user_email, user_name, reset_token):
         </html>
         """
 
-        # Plain text fallback
+        # --- Plain text fallback ---
         text_body = f"""
         Hi {user_name},
 
@@ -246,7 +309,7 @@ def send_password_reset_email(user_email, user_name, reset_token):
         The SmartFinance Team
         """
 
-        # Create message
+        # --- Create and send the email ---
         msg = Message(
             subject=subject,
             recipients=[user_email],
@@ -254,7 +317,6 @@ def send_password_reset_email(user_email, user_name, reset_token):
             html=html_body
         )
 
-        # Send email
         mail.send(msg)
         return True
 

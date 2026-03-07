@@ -1,11 +1,18 @@
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../models/investment_model.dart';
-import '../../services/api_service.dart';
-import '../../utils/colors.dart';
-import '../../utils/investment_types.dart';
-import 'add_investment_screen.dart';
+// portfolio_overview_screen.dart
+// This screen shows the user's investment portfolio: total value, profit/loss,
+// asset type breakdown, top performers, and a list of all individual investments.
+// Users can filter by asset type, add new investments, update prices, and delete investments.
+// Swiping left on an investment card deletes it (with confirmation dialog).
 
+import 'package:flutter/material.dart'; // Flutter UI toolkit
+import 'package:intl/intl.dart'; // DateFormat for date formatting
+import '../../models/investment_model.dart'; // InvestmentModel, PortfolioSummary, InvestmentPerformance
+import '../../services/api_service.dart'; // Backend API calls
+import '../../utils/colors.dart'; // AppColors constants
+import '../../utils/investment_types.dart'; // InvestmentTypes utility (icons, colors, performance icons)
+import 'add_investment_screen.dart'; // Screen for adding new investments
+
+// PortfolioOverviewScreen shows all investment data for the current user
 class PortfolioOverviewScreen extends StatefulWidget {
   const PortfolioOverviewScreen({super.key});
 
@@ -14,17 +21,19 @@ class PortfolioOverviewScreen extends StatefulWidget {
 }
 
 class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
-  List<InvestmentModel> _investments = [];
-  PortfolioSummary? _portfolio;
-  bool _isLoading = true;
-  String? _filterType;
+  List<InvestmentModel> _investments = []; // All individual investments
+  PortfolioSummary? _portfolio;            // Aggregated portfolio statistics
+  bool _isLoading = true;                  // True while fetching data
+  String? _filterType;                     // null = all types; otherwise e.g. "Stocks"
 
   @override
   void initState() {
     super.initState();
-    _loadPortfolio();
+    _loadPortfolio(); // Load data when screen opens
   }
 
+  // _loadPortfolio fetches portfolio summary and individual investments
+  // Both calls are made sequentially with separate try/catch so one failure doesn't stop the other
   Future<void> _loadPortfolio() async {
     setState(() => _isLoading = true);
 
@@ -35,24 +44,26 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
         return;
       }
 
-      // Load portfolio summary
+      // Load portfolio summary (total value, profit/loss, asset breakdown)
       try {
         final portfolioResult = await ApiService.getPortfolioSummary(userId);
         if (portfolioResult['success'] && portfolioResult['portfolio'] != null) {
           setState(() {
+            // PortfolioSummary.fromJson converts JSON to a typed model object
             _portfolio = PortfolioSummary.fromJson(portfolioResult['portfolio']);
           });
         }
       } catch (e) {
-        print('Error loading portfolio summary: $e');
+        print('Error loading portfolio summary: $e'); // Debug log; not shown to user
       }
 
-      // Load investments
+      // Load individual investments, optionally filtered by asset type
       try {
         final investmentsResult = await ApiService.getUserInvestments(userId, type: _filterType);
         if (investmentsResult['success']) {
           final investmentsList = investmentsResult['investments'] as List;
           setState(() {
+            // Convert each JSON map to an InvestmentModel object
             _investments = investmentsList
                 .map((json) => InvestmentModel.fromJson(json))
                 .toList();
@@ -64,11 +75,12 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
     } catch (e) {
       print('Error in _loadPortfolio: $e');
     } finally {
-      // Always stop loading, even if there's an error
+      // 'finally' always runs - ensures loading stops even on error
       setState(() => _isLoading = false);
     }
   }
 
+  // _deleteInvestment removes an investment from the portfolio
   Future<void> _deleteInvestment(int investmentId) async {
     final result = await ApiService.deleteInvestment(investmentId);
 
@@ -81,7 +93,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
           backgroundColor: AppColors.success,
         ),
       );
-      _loadPortfolio();
+      _loadPortfolio(); // Refresh to update totals
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -92,7 +104,10 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
     }
   }
 
+  // _showUpdatePriceDialog shows a dialog to update the current market price of an investment
+  // This recalculates the profit/loss based on the new price
   void _showUpdatePriceDialog(InvestmentModel investment) {
+    // Pre-fill with current price (or purchase price if no current price is set)
     final priceController = TextEditingController(
       text: investment.currentPrice?.toString() ?? investment.purchasePrice.toString(),
     );
@@ -119,7 +134,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
             onPressed: () async {
               final price = double.tryParse(priceController.text);
               if (price != null && investment.investmentId != null) {
-                Navigator.pop(context);
+                Navigator.pop(context); // Close dialog first
                 final result = await ApiService.updateInvestmentPrice(
                   investment.investmentId!,
                   price,
@@ -132,7 +147,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                       backgroundColor: AppColors.success,
                     ),
                   );
-                  _loadPortfolio();
+                  _loadPortfolio(); // Refresh to show new profit/loss
                 }
               }
             },
@@ -152,16 +167,19 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
+          // Filter button - shows a dropdown with asset type options
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list),
             onSelected: (value) {
               setState(() {
+                // 'All' means no filter; otherwise store the type name
                 _filterType = value == 'All' ? null : value;
               });
-              _loadPortfolio();
+              _loadPortfolio(); // Reload with new filter
             },
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'All', child: Text('All Types')),
+              // Dynamically generate menu items from InvestmentTypes.allTypes list
               ...InvestmentTypes.allTypes.map((type) =>
                   PopupMenuItem(value: type, child: Text(type))),
             ],
@@ -170,6 +188,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
+          // Show empty state if no portfolio data or portfolio is empty
           : _portfolio == null || _portfolio!.isEmpty
               ? _buildEmptyState()
               : RefreshIndicator(
@@ -180,10 +199,11 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildPortfolioSummaryCard(),
+                        _buildPortfolioSummaryCard(), // Gradient card with total value
                         const SizedBox(height: 24),
-                        _buildAssetBreakdown(),
+                        _buildAssetBreakdown(),       // Per-type breakdown section
                         const SizedBox(height: 24),
+                        // Top performers section (only shown when there are performers)
                         if (_portfolio!.topPerformers.isNotEmpty) ...[
                           _buildPerformersSection(
                             'Top Performers',
@@ -199,6 +219,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                               ),
                         ),
                         const SizedBox(height: 16),
+                        // Build one card per investment
                         ..._investments.map((investment) {
                           return _buildInvestmentCard(investment);
                         }).toList(),
@@ -206,6 +227,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                     ),
                   ),
                 ),
+      // FAB to add a new investment
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.push(
@@ -215,7 +237,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
             ),
           );
           if (result == true) {
-            _loadPortfolio();
+            _loadPortfolio(); // Refresh after adding
           }
         },
         backgroundColor: AppColors.primary,
@@ -224,6 +246,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
     );
   }
 
+  // _buildEmptyState shows the "no investments" prompt
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -289,6 +312,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
     );
   }
 
+  // _buildPortfolioSummaryCard creates the large gradient header card
   Widget _buildPortfolioSummaryCard() {
     final portfolio = _portfolio!;
     final profitColor = portfolio.isProfit ? AppColors.success : AppColors.danger;
@@ -315,12 +339,10 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
         children: [
           const Text(
             'Portfolio Value',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
           const SizedBox(height: 8),
+          // Current total value in large bold text
           Text(
             'RM ${portfolio.currentValue.toStringAsFixed(2)}',
             style: const TextStyle(
@@ -339,11 +361,13 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
               ),
               _buildSummaryItem(
                 portfolio.isProfit ? 'Profit' : 'Loss',
+                // .abs() makes negative loss values positive for display
                 'RM ${portfolio.totalProfitLoss.abs().toStringAsFixed(2)}',
               ),
             ],
           ),
           const SizedBox(height: 16),
+          // Overall percentage return/loss badge
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -354,12 +378,14 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
+                  // getIconForPerformance returns up/down arrow based on + or - change
                   InvestmentTypes.getIconForPerformance(portfolio.percentageChange),
                   color: Colors.white,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
                 Text(
+                  // Add "+" prefix for positive values; negative values already have "-"
                   '${portfolio.percentageChange > 0 ? "+" : ""}${portfolio.percentageChange.toStringAsFixed(2)}%',
                   style: const TextStyle(
                     color: Colors.white,
@@ -370,10 +396,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                 const SizedBox(width: 4),
                 Text(
                   portfolio.isProfit ? 'Return' : 'Loss',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
             ),
@@ -383,17 +406,12 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
     );
   }
 
+  // _buildSummaryItem creates a label+value pair widget for the summary card
   Widget _buildSummaryItem(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
-        ),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
         const SizedBox(height: 4),
         Text(
           value,
@@ -407,10 +425,11 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
     );
   }
 
+  // _buildAssetBreakdown shows how the portfolio is distributed across asset types
   Widget _buildAssetBreakdown() {
     final portfolio = _portfolio!;
 
-    if (portfolio.assetBreakdown.isEmpty) return const SizedBox.shrink();
+    if (portfolio.assetBreakdown.isEmpty) return const SizedBox.shrink(); // Nothing to show
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,8 +441,9 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
               ),
         ),
         const SizedBox(height: 16),
+        // Build one row per asset type (e.g., Stocks, Crypto, Real Estate)
         ...portfolio.assetBreakdown.map((asset) {
-          final typeInfo = InvestmentTypes.getAssetTypeInfo(asset.type);
+          final typeInfo = InvestmentTypes.getAssetTypeInfo(asset.type); // Icon and color
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(16),
@@ -433,6 +453,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
             ),
             child: Row(
               children: [
+                // Asset type icon
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -442,27 +463,27 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                   child: Icon(typeInfo.icon, color: typeInfo.color, size: 24),
                 ),
                 const SizedBox(width: 12),
+                // Asset type name and count/value
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        asset.type,
+                        asset.type, // e.g., "Stocks"
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
+                        // Ternary for "1 asset" vs "N assets" (proper singular/plural)
                         '${asset.count} ${asset.count > 1 ? "assets" : "asset"} • RM ${asset.currentValue.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       ),
                     ],
                   ),
                 ),
+                // Percentage change on the right
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -476,10 +497,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                     ),
                     Text(
                       asset.isProfit ? 'Profit' : 'Loss',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: AppColors.textSecondary,
-                      ),
+                      style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -491,10 +509,11 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
     );
   }
 
+  // _buildPerformersSection shows the top-performing individual investments
   Widget _buildPerformersSection(
     String title,
     List<InvestmentPerformance> performers,
-    bool isTop,
+    bool isTop, // True for top performers (could be used for bottom performers too)
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -531,7 +550,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        performer.assetName,
+                        performer.assetName, // e.g., "Apple Inc."
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -539,10 +558,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                       ),
                       Text(
                         performer.assetsType,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       ),
                     ],
                   ),
@@ -559,11 +575,9 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                       ),
                     ),
                     Text(
+                      // .abs() shows profit/loss as positive for display purposes
                       'RM ${performer.profitLoss.abs().toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -575,13 +589,16 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
     );
   }
 
+  // _buildInvestmentCard creates a swipeable card for one investment
   Widget _buildInvestmentCard(InvestmentModel investment) {
     final typeInfo = InvestmentTypes.getAssetTypeInfo(investment.assetsType);
 
     return Dismissible(
+      // Dismissible enables swipe-to-delete
       key: Key(investment.investmentId.toString()),
-      direction: DismissDirection.endToStart,
+      direction: DismissDirection.endToStart, // Swipe left to delete
       background: Container(
+        // Red delete background revealed while swiping
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
@@ -591,6 +608,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
         alignment: Alignment.centerRight,
         child: const Icon(Icons.delete, color: Colors.white),
       ),
+      // confirmDismiss shows a dialog before completing the swipe
       confirmDismiss: (direction) async {
         return await showDialog(
           context: context,
@@ -617,7 +635,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
         }
       },
       child: GestureDetector(
-        onTap: () => _showUpdatePriceDialog(investment),
+        onTap: () => _showUpdatePriceDialog(investment), // Tap to update price
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
@@ -629,6 +647,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
             children: [
               Row(
                 children: [
+                  // Asset type icon
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -638,12 +657,13 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                     child: Icon(typeInfo.icon, color: typeInfo.color, size: 28),
                   ),
                   const SizedBox(width: 12),
+                  // Asset name, type, and quantity
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          investment.assetName,
+                          investment.assetName, // e.g., "Bitcoin"
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -651,14 +671,12 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                         ),
                         Text(
                           '${investment.assetsType} • ${investment.quantity} units',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
+                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                         ),
                       ],
                     ),
                   ),
+                  // Current value and percentage change
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
@@ -692,22 +710,18 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                 ],
               ),
               const SizedBox(height: 12),
+              // Bottom row: purchase date and days held
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
+                    // DateFormat('dd MMM yyyy') formats as "15 Mar 2024"
                     'Purchased: ${DateFormat('dd MMM yyyy').format(investment.purchaseDate)}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                   ),
                   Text(
                     '${investment.daysHeld} days held',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                   ),
                 ],
               ),

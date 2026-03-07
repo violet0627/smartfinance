@@ -1,10 +1,17 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'dart:convert';
-import '../../services/api_service.dart';
-import '../../utils/colors.dart';
-import 'backup_codes_screen.dart';
+// two_factor_setup_screen.dart
+// This screen guides users through a 2-step process to enable Two-Factor Authentication (2FA).
+// Step 1: Display a QR code (and secret key) for the user to scan with an authenticator app.
+// Step 2: Ask the user to enter the 6-digit code from the app to verify it works.
+// On success, navigates to BackupCodesScreen to display the one-time backup codes.
 
+import 'package:flutter/material.dart'; // Flutter UI toolkit
+import 'package:flutter/services.dart'; // Clipboard for copying the secret key
+import 'dart:convert'; // Provides base64Decode for converting QR code data to image bytes
+import '../../services/api_service.dart'; // Backend API calls for 2FA setup
+import '../../utils/colors.dart'; // AppColors constants
+import 'backup_codes_screen.dart'; // Next screen after successful 2FA verification
+
+// TwoFactorSetupScreen is a StatefulWidget because it manages a 2-step process with loading states
 class TwoFactorSetupScreen extends StatefulWidget {
   const TwoFactorSetupScreen({super.key});
 
@@ -13,33 +20,34 @@ class TwoFactorSetupScreen extends StatefulWidget {
 }
 
 class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
-  final _codeController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
+  final _codeController = TextEditingController(); // Manages the 6-digit verification code input
+  final _formKey = GlobalKey<FormState>(); // Enables validation of the verification code form
 
-  bool _isLoading = true;
-  bool _isVerifying = false;
-  String _qrCode = '';
-  String _secret = '';
-  List<dynamic> _backupCodes = [];
-  String _error = '';
-  int _currentStep = 0;
+  bool _isLoading = true;    // True while loading the QR code from the server
+  bool _isVerifying = false; // True while verifying the entered code with the server
+  String _qrCode = '';       // Base64-encoded QR code image data from the API
+  String _secret = '';       // The raw 2FA secret key (for manual entry in authenticator apps)
+  List<dynamic> _backupCodes = []; // Backup codes returned after successful verification
+  String _error = '';        // Error message if setup initialization fails; empty = no error
+  int _currentStep = 0;      // 0 = Step 1 (QR scan), 1 = Step 2 (verify code)
 
   @override
   void initState() {
     super.initState();
-    _initializeSetup();
+    _initializeSetup(); // Fetch QR code and secret from the backend when screen opens
   }
 
   @override
   void dispose() {
-    _codeController.dispose();
+    _codeController.dispose(); // Free memory when screen is removed
     super.dispose();
   }
 
+  // _initializeSetup calls the backend to generate a new 2FA secret and QR code
   Future<void> _initializeSetup() async {
     setState(() {
       _isLoading = true;
-      _error = '';
+      _error = ''; // Clear any previous error
     });
 
     try {
@@ -52,13 +60,17 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
         return;
       }
 
+      // setup2FA generates a new TOTP secret and returns:
+      // - qrCode: base64-encoded PNG image of the QR code
+      // - secret: the raw secret key text
+      // - backupCodes: pre-generated backup codes
       final result = await ApiService.setup2FA(userId);
 
       if (result['success']) {
         setState(() {
-          _qrCode = result['qrCode'];
-          _secret = result['secret'];
-          _backupCodes = result['backupCodes'];
+          _qrCode = result['qrCode'];           // Store QR code image data
+          _secret = result['secret'];           // Store the secret key
+          _backupCodes = result['backupCodes']; // Store backup codes for later
           _isLoading = false;
         });
       } else {
@@ -75,8 +87,10 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
     }
   }
 
+  // _verifyAndEnable sends the user's entered 6-digit code to the backend for verification
+  // If correct, 2FA is enabled and we navigate to the backup codes screen
   Future<void> _verifyAndEnable() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) return; // Check the code field is valid
 
     setState(() => _isVerifying = true);
 
@@ -87,14 +101,16 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
         return;
       }
 
+      // .trim() removes any leading/trailing whitespace the user might have accidentally entered
       final result = await ApiService.verify2FASetup(userId, _codeController.text.trim());
 
       setState(() => _isVerifying = false);
 
-      if (!mounted) return;
+      if (!mounted) return; // Widget might be gone after async gap
 
       if (result['success']) {
-        // Navigate to backup codes screen
+        // 2FA is now enabled - navigate to backup codes screen
+        // pushReplacement replaces the current screen (can't go back to setup after success)
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -121,6 +137,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
     }
   }
 
+  // _copySecret copies the raw secret key to the clipboard for manual entry in authenticator apps
   void _copySecret() {
     Clipboard.setData(ClipboardData(text: _secret));
     ScaffoldMessenger.of(context).showSnackBar(
@@ -141,25 +158,26 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
+      // Show loading spinner, error view, or the step-by-step setup flow
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error.isNotEmpty
-              ? _buildErrorView()
+              ? _buildErrorView() // Shows error with a retry button
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    crossAxisAlignment: CrossAxisAlignment.stretch, // Full-width children
                     children: [
-                      // Progress Indicator
+                      // Visual progress indicator showing Step 1 and Step 2
                       _buildProgressIndicator(),
                       const SizedBox(height: 32),
 
-                      // Step 1: Scan QR Code
+                      // Show Step 1 (scan QR) when _currentStep is 0
                       if (_currentStep == 0) ...[
                         _buildStep1(),
                       ],
 
-                      // Step 2: Verify Code
+                      // Show Step 2 (verify code) when _currentStep is 1
                       if (_currentStep == 1) ...[
                         _buildStep2(),
                       ],
@@ -169,6 +187,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
     );
   }
 
+  // _buildErrorView shows an error message and a retry button
   Widget _buildErrorView() {
     return Center(
       child: Padding(
@@ -185,7 +204,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _initializeSetup,
+              onPressed: _initializeSetup, // Retry the setup initialization
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -198,21 +217,29 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
     );
   }
 
+  // _buildProgressIndicator shows the "1 Scan QR - 2 Verify" step indicator at the top
   Widget _buildProgressIndicator() {
     return Row(
       children: [
-        _buildProgressStep(1, 'Scan QR', _currentStep >= 0),
+        // Step 1 circle
+        _buildProgressStep(1, 'Scan QR', _currentStep >= 0), // Step 1 is always active
+        // Connecting line between steps - colored when Step 2 is active
         Expanded(
           child: Container(
             height: 2,
             color: _currentStep >= 1 ? AppColors.primary : Colors.grey.shade300,
           ),
         ),
+        // Step 2 circle - active (colored) only when _currentStep >= 1
         _buildProgressStep(2, 'Verify', _currentStep >= 1),
       ],
     );
   }
 
+  // _buildProgressStep creates one step circle with a number and label
+  // step: the number to display (1 or 2)
+  // label: text below the circle ("Scan QR" or "Verify")
+  // isActive: whether this step is currently active/completed
   Widget _buildProgressStep(int step, String label, bool isActive) {
     return Column(
       children: [
@@ -221,6 +248,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
           height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
+            // Active step uses primary color; inactive uses grey
             color: isActive ? AppColors.primary : Colors.grey.shade300,
           ),
           child: Center(
@@ -247,6 +275,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
     );
   }
 
+  // _buildStep1 builds the QR code scanning UI (Step 1)
   Widget _buildStep1() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -270,8 +299,8 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
         ),
         const SizedBox(height: 32),
 
-        // QR Code Display
-        if (_qrCode.isNotEmpty)
+        // QR code image and manual secret key entry
+        if (_qrCode.isNotEmpty) // Only show if QR code data was loaded
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -287,7 +316,11 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
             ),
             child: Column(
               children: [
-                // QR Code Image
+                // QR Code image - decoded from base64 string
+                // The QR code is sent as a "data URL": "data:image/png;base64,iVBOR..."
+                // .split(',')[1] extracts just the base64 data after the comma
+                // base64Decode converts the base64 string to bytes (Uint8List)
+                // Image.memory displays an image from raw bytes
                 Image.memory(
                   base64Decode(_qrCode.split(',')[1]),
                   width: 250,
@@ -295,7 +328,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 16),
-                const Divider(),
+                const Divider(), // Horizontal line separator
                 const SizedBox(height: 16),
                 const Text(
                   'Or enter this key manually:',
@@ -305,6 +338,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
+                // Secret key display with copy button
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -315,10 +349,10 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          _secret,
+                          _secret, // Display the raw secret key
                           style: const TextStyle(
                             fontSize: 14,
-                            fontFamily: 'monospace',
+                            fontFamily: 'monospace', // Monospace for code-like appearance
                             fontWeight: FontWeight.w500,
                           ),
                           textAlign: TextAlign.center,
@@ -337,7 +371,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
           ),
         const SizedBox(height: 32),
 
-        // Recommended Apps
+        // Blue info box listing recommended authenticator apps
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -362,6 +396,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
                 ],
               ),
               const SizedBox(height: 12),
+              // Each app listed as a bullet point
               _buildAppRecommendation('Google Authenticator'),
               _buildAppRecommendation('Microsoft Authenticator'),
               _buildAppRecommendation('Authy'),
@@ -371,12 +406,12 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
         ),
         const SizedBox(height: 32),
 
-        // Next Button
+        // "Next" button to advance to Step 2
         SizedBox(
           height: 50,
           child: ElevatedButton(
             onPressed: () {
-              setState(() => _currentStep = 1);
+              setState(() => _currentStep = 1); // Advance to step 2
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -395,9 +430,10 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
     );
   }
 
+  // _buildAppRecommendation creates a single bullet point for an authenticator app name
   Widget _buildAppRecommendation(String appName) {
     return Padding(
-      padding: const EdgeInsets.only(left: 28, top: 4),
+      padding: const EdgeInsets.only(left: 28, top: 4), // Indent to align with header
       child: Row(
         children: [
           Icon(Icons.check_circle, size: 16, color: Colors.blue.shade700),
@@ -411,9 +447,10 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
     );
   }
 
+  // _buildStep2 builds the code verification UI (Step 2)
   Widget _buildStep2() {
     return Form(
-      key: _formKey,
+      key: _formKey, // Attach form key for validation
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -436,7 +473,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
           ),
           const SizedBox(height: 32),
 
-          // Code Input
+          // Code entry card
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -464,14 +501,14 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.number, // Numeric keyboard
+                  textAlign: TextAlign.center,        // Center the digits
                   style: const TextStyle(
                     fontSize: 24,
-                    letterSpacing: 8,
+                    letterSpacing: 8,           // Wide spacing between digits for readability
                     fontWeight: FontWeight.bold,
                   ),
-                  maxLength: 6,
+                  maxLength: 6, // TOTP codes are exactly 6 digits
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter the code';
@@ -479,10 +516,11 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
                     if (value.length != 6) {
                       return 'Code must be 6 digits';
                     }
+                    // RegExp(r'^\d+$') matches strings containing only digits (0-9)
                     if (!RegExp(r'^\d+$').hasMatch(value)) {
                       return 'Code must contain only numbers';
                     }
-                    return null;
+                    return null; // Valid
                   },
                 ),
               ],
@@ -490,7 +528,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Info Box
+          // Orange info box warning about the 30-second code expiry
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -516,13 +554,13 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
           ),
           const SizedBox(height: 32),
 
-          // Verify Button
+          // "Verify & Enable 2FA" button
           SizedBox(
             height: 50,
             child: ElevatedButton(
-              onPressed: _isVerifying ? null : _verifyAndEnable,
+              onPressed: _isVerifying ? null : _verifyAndEnable, // Disable while verifying
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
+                backgroundColor: AppColors.success, // Green for the final action
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -545,10 +583,10 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Back Button
+          // "Back to QR Code" button to return to Step 1
           TextButton(
             onPressed: () {
-              setState(() => _currentStep = 0);
+              setState(() => _currentStep = 0); // Go back to step 1
             },
             child: const Text('Back to QR Code'),
           ),

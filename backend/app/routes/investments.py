@@ -1,42 +1,67 @@
-from flask import Blueprint, request, jsonify
-from app import db
-from app.models.investment import Investment
-from datetime import datetime
-from sqlalchemy import func
+# ==============================================================================
+# investments.py - Investment Routes (API Endpoints for Portfolio Management)
+# ==============================================================================
+# This file defines ALL the investment-related API endpoints.
+# Users can track their investment portfolio including stocks, crypto,
+# mutual funds, bonds, and other asset types.
+#
+# Features:
+# - Add/edit/delete investments
+# - Track current prices and profit/loss
+# - View portfolio summary with asset breakdown
+# - Identify top and bottom performing investments
+#
+# URL prefix: /api/investments (set in app/__init__.py)
+# ==============================================================================
 
+from flask import Blueprint, request, jsonify      # Blueprint for grouping, request for input, jsonify for output
+from app import db                                  # Database instance
+from app.models.investment import Investment        # Investment model (database table)
+from datetime import datetime                       # For timestamps
+from sqlalchemy import func                         # SQL aggregate functions
+
+# --- Create the Blueprint ---
 investments_bp = Blueprint('investments', __name__)
 
+
+# ==============================================================================
+# ROUTE: POST /api/investments/
+# ==============================================================================
+# Called when the user adds a new investment to their portfolio.
+# Example: User buys 100 shares of Maybank at RM9.50 each.
+# ==============================================================================
 @investments_bp.route('/', methods=['POST'])
 def create_investment():
     """Create a new investment entry"""
     try:
         data = request.get_json()
 
-        # Validate required fields
+        # --- Step 1: Validate required fields ---
         required_fields = ['assetName', 'assetsType', 'quantity', 'purchasePrice', 'purchaseDate', 'userId']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'{field} is required'}), 400
 
-        # Parse purchase date
+        # --- Step 2: Parse the purchase date ---
         try:
             purchase_date = datetime.strptime(data['purchaseDate'], '%Y-%m-%d').date()
         except ValueError:
             return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
 
-        # Create new investment
+        # --- Step 3: Create the Investment record ---
         new_investment = Investment(
-            AssetName=data['assetName'],
-            AssetsType=data['assetsType'],
-            StockSymbol=data.get('stockSymbol'),
-            Quantity=data['quantity'],
-            PurchasePrice=data['purchasePrice'],
-            PurchaseDate=purchase_date,
-            CurrentPrice=data.get('currentPrice', data['purchasePrice']),  # Default to purchase price
-            Notes=data.get('notes'),
-            UserId=data['userId']
+            AssetName=data['assetName'],                     # e.g., "Maybank", "Bitcoin"
+            AssetsType=data['assetsType'],                   # e.g., "stocks", "crypto", "mutual_funds"
+            StockSymbol=data.get('stockSymbol'),             # Optional stock ticker (e.g., "MAYBANK")
+            Quantity=data['quantity'],                        # How many units (e.g., 100 shares)
+            PurchasePrice=data['purchasePrice'],             # Price per unit when bought
+            PurchaseDate=purchase_date,                      # When the purchase was made
+            CurrentPrice=data.get('currentPrice', data['purchasePrice']),  # Default to purchase price if not provided
+            Notes=data.get('notes'),                         # Optional notes
+            UserId=data['userId']                            # Which user owns this investment
         )
 
+        # --- Step 4: Save to database ---
         db.session.add(new_investment)
         db.session.commit()
 
@@ -49,14 +74,22 @@ def create_investment():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+# ==============================================================================
+# ROUTE: GET /api/investments/user/<user_id>
+# ==============================================================================
+# Called to fetch all investments for a user.
+# Supports optional filtering by asset type.
+# Example: GET /api/investments/user/1?type=stocks
+# ==============================================================================
 @investments_bp.route('/user/<int:user_id>', methods=['GET'])
 def get_user_investments(user_id):
     """Get all investments for a user with optional filtering"""
     try:
         query = Investment.query.filter_by(UserId=user_id)
 
-        # Filter by asset type if provided
-        asset_type = request.args.get('type')
+        # --- Optional filter by asset type ---
+        asset_type = request.args.get('type')    # e.g., "stocks", "crypto"
         if asset_type:
             query = query.filter_by(AssetsType=asset_type)
 
@@ -71,6 +104,12 @@ def get_user_investments(user_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+# ==============================================================================
+# ROUTE: GET /api/investments/<investment_id>
+# ==============================================================================
+# Called to fetch a single investment by its ID.
+# ==============================================================================
 @investments_bp.route('/<int:investment_id>', methods=['GET'])
 def get_investment(investment_id):
     """Get a specific investment by ID"""
@@ -85,6 +124,13 @@ def get_investment(investment_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+# ==============================================================================
+# ROUTE: PUT /api/investments/<investment_id>
+# ==============================================================================
+# Called when the user edits an investment (e.g., updating the current price).
+# Only the provided fields will be updated.
+# ==============================================================================
 @investments_bp.route('/<int:investment_id>', methods=['PUT'])
 def update_investment(investment_id):
     """Update an investment (mainly for updating current price)"""
@@ -96,17 +142,17 @@ def update_investment(investment_id):
 
         data = request.get_json()
 
-        # Update allowed fields
+        # --- Update only the fields that were provided ---
         if 'currentPrice' in data:
-            investment.CurrentPrice = data['currentPrice']
+            investment.CurrentPrice = data['currentPrice']      # Update current market price
         if 'quantity' in data:
-            investment.Quantity = data['quantity']
+            investment.Quantity = data['quantity']               # Update quantity held
         if 'notes' in data:
-            investment.Notes = data['notes']
+            investment.Notes = data['notes']                    # Update notes
         if 'assetName' in data:
-            investment.AssetName = data['assetName']
+            investment.AssetName = data['assetName']            # Update asset name
 
-        investment.LastUpdated = datetime.utcnow()
+        investment.LastUpdated = datetime.utcnow()   # Record when this update happened
         db.session.commit()
 
         return jsonify({
@@ -118,6 +164,12 @@ def update_investment(investment_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+# ==============================================================================
+# ROUTE: DELETE /api/investments/<investment_id>
+# ==============================================================================
+# Called when the user deletes an investment from their portfolio.
+# ==============================================================================
 @investments_bp.route('/<int:investment_id>', methods=['DELETE'])
 def delete_investment(investment_id):
     """Delete an investment"""
@@ -136,12 +188,25 @@ def delete_investment(investment_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+# ==============================================================================
+# ROUTE: GET /api/investments/user/<user_id>/portfolio
+# ==============================================================================
+# Called to get a comprehensive portfolio summary.
+# This calculates total invested, current value, profit/loss for each investment,
+# groups them by asset type, and identifies top/bottom performers.
+#
+# This is the most complex endpoint in investments - it performs multiple
+# calculations to give the user a complete overview of their portfolio.
+# ==============================================================================
 @investments_bp.route('/user/<int:user_id>/portfolio', methods=['GET'])
 def get_portfolio_summary(user_id):
     """Get portfolio summary with profit/loss calculations"""
     try:
+        # --- Step 1: Get all investments for this user ---
         investments = Investment.query.filter_by(UserId=user_id).all()
 
+        # If user has no investments, return empty portfolio
         if not investments:
             return jsonify({
                 'totalInvested': 0.0,
@@ -153,22 +218,27 @@ def get_portfolio_summary(user_id):
                 'bottomPerformers': []
             }), 200
 
-        total_invested = 0.0
-        current_value = 0.0
-        asset_breakdown = {}
-        all_investments_data = []
+        # --- Step 2: Calculate totals for each investment ---
+        total_invested = 0.0           # Total money put in (purchase price * quantity)
+        current_value = 0.0            # Total current value (current price * quantity)
+        asset_breakdown = {}           # Group by asset type (stocks, crypto, etc.)
+        all_investments_data = []      # Store calculated data for ranking later
 
         for inv in investments:
-            purchase_value = float(inv.Quantity) * float(inv.PurchasePrice)
+            # Calculate values for this investment
+            purchase_value = float(inv.Quantity) * float(inv.PurchasePrice)   # What you paid
             current_price = float(inv.CurrentPrice) if inv.CurrentPrice else float(inv.PurchasePrice)
-            current_val = float(inv.Quantity) * current_price
-            profit_loss = current_val - purchase_value
+            current_val = float(inv.Quantity) * current_price                 # What it's worth now
+            profit_loss = current_val - purchase_value                         # Gain or loss
+            # Percentage change: how much the value has changed as a percentage
             percentage_change = ((current_val - purchase_value) / purchase_value * 100) if purchase_value > 0 else 0.0
 
+            # Add to running totals
             total_invested += purchase_value
             current_value += current_val
 
-            # Asset type breakdown
+            # --- Step 3: Group by asset type ---
+            # Creates/updates a summary for each asset type (stocks, crypto, etc.)
             if inv.AssetsType not in asset_breakdown:
                 asset_breakdown[inv.AssetsType] = {
                     'type': inv.AssetsType,
@@ -183,7 +253,7 @@ def get_portfolio_summary(user_id):
             asset_breakdown[inv.AssetsType]['profitLoss'] += profit_loss
             asset_breakdown[inv.AssetsType]['count'] += 1
 
-            # Store for ranking
+            # Store data for ranking top/bottom performers
             all_investments_data.append({
                 'investmentId': inv.InvestmentId,
                 'assetName': inv.AssetName,
@@ -193,36 +263,45 @@ def get_portfolio_summary(user_id):
                 'currentValue': current_val
             })
 
-        # Calculate overall metrics
+        # --- Step 4: Calculate overall metrics ---
         total_profit_loss = current_value - total_invested
         overall_percentage_change = ((current_value - total_invested) / total_invested * 100) if total_invested > 0 else 0.0
 
-        # Add percentage to asset breakdown
+        # --- Step 5: Add percentage change to each asset type ---
         for asset_type in asset_breakdown:
             asset_breakdown[asset_type]['percentageChange'] = (
                 (asset_breakdown[asset_type]['profitLoss'] / asset_breakdown[asset_type]['invested'] * 100)
                 if asset_breakdown[asset_type]['invested'] > 0 else 0.0
             )
 
-        # Sort investments by performance
+        # --- Step 6: Identify top and bottom performers ---
+        # Sort by percentage change (highest first)
         sorted_by_performance = sorted(all_investments_data, key=lambda x: x['percentageChange'], reverse=True)
-        top_performers = sorted_by_performance[:3]
-        bottom_performers = sorted_by_performance[-3:] if len(sorted_by_performance) > 3 else []
+        top_performers = sorted_by_performance[:3]        # Best 3 investments
+        bottom_performers = sorted_by_performance[-3:] if len(sorted_by_performance) > 3 else []  # Worst 3
 
+        # --- Step 7: Return the portfolio summary ---
         return jsonify({
-            'totalInvested': round(total_invested, 2),
-            'currentValue': round(current_value, 2),
-            'totalProfitLoss': round(total_profit_loss, 2),
-            'percentageChange': round(overall_percentage_change, 2),
-            'assetBreakdown': list(asset_breakdown.values()),
-            'topPerformers': top_performers,
-            'bottomPerformers': bottom_performers,
-            'totalAssets': len(investments)
+            'totalInvested': round(total_invested, 2),                # Total money put in
+            'currentValue': round(current_value, 2),                  # Total current worth
+            'totalProfitLoss': round(total_profit_loss, 2),           # Total gain/loss
+            'percentageChange': round(overall_percentage_change, 2),  # Overall % change
+            'assetBreakdown': list(asset_breakdown.values()),         # Breakdown by type
+            'topPerformers': top_performers,                          # Best performing investments
+            'bottomPerformers': bottom_performers,                    # Worst performing investments
+            'totalAssets': len(investments)                            # Total number of investments
         }), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+# ==============================================================================
+# ROUTE: POST /api/investments/<investment_id>/update-price
+# ==============================================================================
+# Called for a quick price update on a single investment.
+# Returns the updated investment along with profit/loss calculations.
+# ==============================================================================
 @investments_bp.route('/<int:investment_id>/update-price', methods=['POST'])
 def update_investment_price(investment_id):
     """Quick update for just the current price"""
@@ -237,11 +316,12 @@ def update_investment_price(investment_id):
         if 'currentPrice' not in data:
             return jsonify({'error': 'currentPrice is required'}), 400
 
+        # --- Update the price ---
         investment.CurrentPrice = data['currentPrice']
         investment.LastUpdated = datetime.utcnow()
         db.session.commit()
 
-        # Calculate profit/loss for response
+        # --- Calculate profit/loss for the response ---
         purchase_value = float(investment.Quantity) * float(investment.PurchasePrice)
         current_value = float(investment.Quantity) * float(investment.CurrentPrice)
         profit_loss = current_value - purchase_value

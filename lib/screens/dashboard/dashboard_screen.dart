@@ -1,33 +1,69 @@
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../models/transaction_model.dart';
-import '../../models/budget_model.dart';
-import '../../models/investment_model.dart';
-import '../../models/gamification_model.dart';
-import '../../services/api_service.dart';
-import '../../services/notification_service.dart';
-import '../../utils/categories.dart';
-import '../../utils/colors.dart';
-import '../../utils/investment_types.dart';
-import '../../widgets/level_progress_widget.dart';
-import '../../widgets/goal_progress_card.dart';
-import '../../widgets/email_verification_banner.dart';
-import '../../widgets/shimmer_loading.dart';
-import '../../widgets/dashboard_summary_card.dart';
-import '../../utils/app_gradients.dart';
-import '../auth/login_screen.dart';
-import '../transactions/add_transaction_screen.dart';
-import '../transactions/transaction_history_screen.dart';
-import '../budgets/budget_overview_screen.dart';
-import '../budgets/create_budget_screen.dart';
-import '../investments/portfolio_overview_screen.dart';
-import '../analytics/analytics_screen.dart';
-import '../gamification/achievements_screen.dart';
-import '../reports/reports_screen.dart';
-import '../settings/settings_screen.dart';
-import '../goals/goals_screen.dart';
+// ==============================================================================
+// dashboard_screen.dart - Main Dashboard / Home Screen
+// ==============================================================================
+// This is the primary screen users see after logging in. It displays:
+//
+// - Personalized greeting (Good morning/afternoon/evening)
+// - Email verification banner (if email not verified)
+// - Financial summary cards (balance, income, expenses) with gradient styling
+// - Budget progress card with progress bar and over-budget warning
+// - Investment portfolio card with profit/loss display
+// - Gamification card (level progress from LevelProgressWidget)
+// - Goals progress card
+// - Upcoming bills card (from recurring transactions)
+// - Quick action grid (6 shortcuts to main features)
+// - Recent transactions list (last 5 transactions)
+// - Logout button
+// - Bottom navigation bar (Home, Analytics, Budget, Portfolio)
+//
+// Data Loading:
+// All data is loaded in _loadData() which fetches from multiple API endpoints.
+// Each section has its own try-catch so a failure in one doesn't break others.
+// Pull-to-refresh (RefreshIndicator) reloads all data.
+// Shimmer skeletons are shown during loading.
+//
+// Usage: DashboardScreen() — navigated to after successful login
+// ==============================================================================
 
+import 'package:flutter/material.dart';                    // For StatefulWidget, Scaffold, etc.
+import 'package:intl/intl.dart';                            // For DateFormat (date formatting)
+import 'package:shared_preferences/shared_preferences.dart'; // For reading stored user data
+import '../../models/transaction_model.dart';                // For TransactionModel
+import '../../models/budget_model.dart';                     // For BudgetModel
+import '../../models/investment_model.dart';                 // For PortfolioSummary
+import '../../models/gamification_model.dart';               // For UserStats
+import '../../services/api_service.dart';                    // For all API calls
+import '../../services/notification_service.dart';           // For budget alerts and bill reminders
+import '../../utils/categories.dart';                        // For TransactionCategories (icons/colors)
+import '../../utils/colors.dart';                            // For AppColors
+import '../../utils/investment_types.dart';                   // For InvestmentTypes icon helper
+import '../../widgets/level_progress_widget.dart';           // For LevelProgressWidget (gamification)
+import '../../widgets/goal_progress_card.dart';              // For GoalProgressCard
+import '../../widgets/email_verification_banner.dart';       // For EmailVerificationBanner
+import '../../widgets/shimmer_loading.dart';                  // For skeleton loading placeholders
+import '../../widgets/dashboard_summary_card.dart';          // For AnimatedDashboardCard, QuickActionCard
+import '../../utils/app_gradients.dart';                     // For gradient definitions
+import '../auth/login_screen.dart';                          // For LoginScreen (logout destination)
+import '../transactions/add_transaction_screen.dart';        // For AddTransactionScreen
+import '../transactions/transaction_history_screen.dart';    // For TransactionHistoryScreen
+import '../budgets/budget_overview_screen.dart';             // For BudgetOverviewScreen
+import '../budgets/create_budget_screen.dart';               // For CreateBudgetScreen
+import '../investments/portfolio_overview_screen.dart';      // For PortfolioOverviewScreen
+import '../analytics/analytics_screen.dart';                 // For AnalyticsScreen
+import '../gamification/achievements_screen.dart';           // For AchievementsScreen
+import '../reports/reports_screen.dart';                     // For ReportsScreen
+import '../settings/settings_screen.dart';                   // For SettingsScreen
+import '../goals/goals_screen.dart';                         // For GoalsScreen
+
+// ==============================================================================
+// DashboardScreen - StatefulWidget for Main Dashboard
+// ==============================================================================
+// StatefulWidget because it manages:
+// - Multiple data objects fetched from APIs (transactions, budget, portfolio, etc.)
+// - Loading state for shimmer skeletons
+// - Bottom navigation bar selected index
+// - User info (name, email, verification status)
+// ==============================================================================
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -36,82 +72,109 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _selectedIndex = 0;
-  List<TransactionModel> _recentTransactions = [];
-  Map<String, dynamic>? _summary;
-  BudgetModel? _currentBudget;
-  PortfolioSummary? _portfolio;
-  UserStats? _userStats;
-  Map<String, dynamic>? _goalsSummary;
-  List<Map<String, dynamic>> _upcomingBills = [];
-  bool _isLoading = true;
-  String _userName = '';
-  String _userEmail = '';
-  bool _emailVerified = true; // Default to true to avoid showing banner unnecessarily
+  int _selectedIndex = 0;                          // Bottom nav bar selected tab index
+  List<TransactionModel> _recentTransactions = []; // Last 5 transactions for display
+  Map<String, dynamic>? _summary;                  // Financial summary (balance, income, expense)
+  BudgetModel? _currentBudget;                     // Current month's budget (null if none)
+  PortfolioSummary? _portfolio;                    // Investment portfolio summary
+  UserStats? _userStats;                           // Gamification stats (level, XP, achievements)
+  Map<String, dynamic>? _goalsSummary;             // Goals overview data
+  List<Map<String, dynamic>> _upcomingBills = [];  // Upcoming recurring transactions
+  bool _isLoading = true;                          // Whether data is being loaded
+  String _userName = '';                           // User's full name from SharedPreferences
+  String _userEmail = '';                          // User's email for verification banner
+  bool _emailVerified = true;                      // Default true to avoid flash of banner
 
-  // Helper function to safely convert dynamic values to double
+  // ==============================================================================
+  // _toDouble - Safely Convert Dynamic Values to Double
+  // ==============================================================================
+  // API responses may return numbers as int, double, String, or null.
+  // This helper handles all cases to prevent type errors.
+  // ==============================================================================
   double _toDouble(dynamic value) {
-    if (value == null) return 0.0;
-    if (value is num) return value.toDouble();
-    if (value is String) return double.tryParse(value) ?? 0.0;
-    return 0.0;
+    if (value == null) return 0.0;                 // null → 0.0
+    if (value is num) return value.toDouble();     // int or double → double
+    if (value is String) return double.tryParse(value) ?? 0.0;  // String → parse or 0.0
+    return 0.0;                                    // Anything else → 0.0
   }
 
-  // Get time-appropriate greeting
+  // ==============================================================================
+  // _getGreeting - Return Time-Appropriate Greeting
+  // ==============================================================================
+  // Returns "Good morning", "Good afternoon", or "Good evening" based on
+  // the current hour of the day.
+  // ==============================================================================
   String _getGreeting() {
-    final hour = DateTime.now().hour;
+    final hour = DateTime.now().hour;              // 0-23
     if (hour < 12) {
-      return 'Good morning';
+      return 'Good morning';                       // Before noon
     } else if (hour < 17) {
-      return 'Good afternoon';
+      return 'Good afternoon';                     // Noon to 5 PM
     } else {
-      return 'Good evening';
+      return 'Good evening';                       // After 5 PM
     }
   }
 
+  // ==============================================================================
+  // initState - Initialize Dashboard
+  // ==============================================================================
   @override
   void initState() {
     super.initState();
-    NotificationService.initialize();
-    _loadData();
+    NotificationService.initialize();              // Set up local notifications
+    _loadData();                                   // Fetch all dashboard data
   }
 
+  // ==============================================================================
+  // _loadData - Fetch All Dashboard Data from APIs
+  // ==============================================================================
+  // Loads data from multiple API endpoints. Each section is wrapped in its own
+  // try-catch so that a failure in one (e.g., portfolio) doesn't prevent others
+  // (e.g., transactions) from loading.
+  //
+  // Called on:
+  // - Initial load (initState)
+  // - Pull-to-refresh (RefreshIndicator)
+  // - Returning from other screens (.then((_) => _loadData()))
+  // ==============================================================================
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    setState(() => _isLoading = true);             // Show shimmer skeletons
 
     try {
+      // Get the current user's ID from stored JWT token
       final userId = await ApiService.getCurrentUserId();
       if (userId == null) {
         setState(() => _isLoading = false);
-        return;
+        return;                                    // No user logged in
       }
 
-      // Get user name from shared preferences
+      // Get user name from SharedPreferences (saved during login)
       final prefs = await SharedPreferences.getInstance();
       setState(() {
         _userName = prefs.getString('userFullName') ?? 'User';
       });
 
-      // Load recent transactions
+      // --- Load Recent Transactions ---
       try {
         final transactionsResult = await ApiService.getUserTransactions(
           userId,
-          limit: 5,
+          limit: 5,                                // Only get the 5 most recent
         );
 
         if (transactionsResult['success']) {
           final transactionsList = transactionsResult['transactions'] as List;
           setState(() {
+            // Convert each JSON map to a TransactionModel object
             _recentTransactions = transactionsList
                 .map((json) => TransactionModel.fromJson(json))
                 .toList();
           });
         }
       } catch (e) {
-        print('Error loading transactions: $e');
+        print('Error loading transactions: $e');   // Log but don't crash
       }
 
-      // Load summary
+      // --- Load Financial Summary (balance, total income, total expense) ---
       try {
         final summaryResult = await ApiService.getTransactionSummary(userId);
         if (summaryResult['success']) {
@@ -123,7 +186,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         print('Error loading summary: $e');
       }
 
-      // Load current budget
+      // --- Load Current Month's Budget ---
       try {
         final budgetResult = await ApiService.getCurrentBudget(userId);
         if (budgetResult['success'] && budgetResult['budget'] != null) {
@@ -132,7 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _currentBudget = budget;
           });
 
-          // Check budget and send alerts if needed (only for critical alerts on dashboard)
+          // Send budget alerts for critical situations (over budget or 90%+ used)
           if (budget.isOverBudget || budget.percentageUsed >= 90) {
             await NotificationService.checkBudgetAndAlert(budget);
           }
@@ -141,7 +204,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         print('Error loading budget: $e');
       }
 
-      // Load portfolio summary
+      // --- Load Investment Portfolio Summary ---
       try {
         final portfolioResult = await ApiService.getPortfolioSummary(userId);
         if (portfolioResult['success'] && portfolioResult['portfolio'] != null) {
@@ -153,7 +216,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         print('Error loading portfolio: $e');
       }
 
-      // Load user stats (gamification)
+      // --- Load Gamification Stats (level, XP, achievements) ---
       try {
         final statsResult = await ApiService.getUserStats(userId);
         if (statsResult['success'] && statsResult['stats'] != null) {
@@ -165,7 +228,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         print('Error loading stats: $e');
       }
 
-      // Load goals summary
+      // --- Load Goals Summary ---
       try {
         final goalsResult = await ApiService.getGoalsSummary(userId);
         if (goalsResult['success']) {
@@ -177,11 +240,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         print('Error loading goals: $e');
       }
 
-      // Load recurring transactions for upcoming bills
+      // --- Load Upcoming Bills (from recurring transactions) ---
       try {
         final recurringResult = await ApiService.getRecurringTransactions(userId);
         if (recurringResult['success']) {
+          // Convert to List<Map<String, dynamic>> for the notification service
           final recurringList = List<Map<String, dynamic>>.from(recurringResult['recurring'] ?? []);
+          // Filter to only upcoming (due within 7 days)
           final upcomingReminders = await NotificationService.getUpcomingReminders(recurringList);
           setState(() {
             _upcomingBills = upcomingReminders;
@@ -191,7 +256,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         print('Error loading recurring transactions: $e');
       }
 
-      // Check email verification status
+      // --- Check Email Verification Status ---
       try {
         final userEmail = prefs.getString('userEmail') ?? '';
         final verificationResult = await ApiService.checkVerificationStatus(userId);
@@ -206,14 +271,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         print('Error checking email verification: $e');
       }
     } catch (e) {
-      print('Error in _loadData: $e');
+      print('Error in _loadData: $e');             // Catch-all for unexpected errors
     } finally {
-      // Always stop loading, even if there's an error
+      // Always stop loading, even if there was an error
+      // "finally" runs whether try succeeded or catch was triggered
       setState(() => _isLoading = false);
     }
   }
 
+  // ==============================================================================
+  // _handleLogout - Show Confirmation Dialog and Log Out
+  // ==============================================================================
+  // Shows an AlertDialog asking the user to confirm logout.
+  // If confirmed, calls ApiService.logout() to clear the JWT token,
+  // then navigates to LoginScreen (replacing the current route).
+  // ==============================================================================
   Future<void> _handleLogout() async {
+    // showDialog<bool> returns the value passed to Navigator.pop()
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -221,13 +295,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(context, false),   // Cancel → return false
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(context, true),    // Confirm → return true
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
+              backgroundColor: AppColors.danger,              // Red button for destructive action
               foregroundColor: Colors.white,
             ),
             child: const Text('Logout'),
@@ -237,29 +311,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
 
     if (confirmed == true) {
-      await ApiService.logout();
+      await ApiService.logout();                   // Clear stored token and user data
       if (!mounted) return;
+      // Navigate to login, replacing the dashboard (can't go back)
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     }
   }
 
+  // ==============================================================================
+  // build - Render the Dashboard Screen UI
+  // ==============================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.background,       // Light grey background
+
+      // --- App Bar ---
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        elevation: 0,
+        elevation: 0,                              // No shadow under the app bar
         title: const Text(
           'Dashboard',
           style: TextStyle(color: Colors.white),
         ),
         actions: [
+          // Settings gear icon in the top-right
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.white),
             onPressed: () {
+              // Navigate to settings, reload data when returning
+              // .then() is called when the user comes back from SettingsScreen
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const SettingsScreen()),
@@ -268,19 +351,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
+
+      // --- Body: Loading Skeletons or Dashboard Content ---
       body: _isLoading
+          // Show shimmer skeleton placeholders while loading
           ? SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Skeleton for the greeting text
                   SkeletonBox(
                     width: 200,
                     height: 24,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   const SizedBox(height: 24),
-                  const DashboardCardSkeleton(),
+                  const DashboardCardSkeleton(),    // Skeleton for a card
                   const SizedBox(height: 24),
                   const DashboardCardSkeleton(),
                   const SizedBox(height: 24),
@@ -288,14 +375,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
             )
+          // RefreshIndicator wraps the content for pull-to-refresh
           : RefreshIndicator(
-              onRefresh: _loadData,
+              onRefresh: _loadData,                // Pull down to reload all data
               child: SingleChildScrollView(
+                // AlwaysScrollableScrollPhysics ensures pull-to-refresh works
+                // even when content fits on screen
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // --- Personalized Greeting ---
+                    // Shows "Good morning, John!" using the first name only
                     Text(
                       '${_getGreeting()}, ${_userName.split(' ')[0]}!',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -303,8 +395,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                     ),
                     const SizedBox(height: 24),
-                    // Email Verification Banner
+
+                    // --- Email Verification Banner ---
+                    // Only shown if email is not verified
                     if (!_emailVerified && _userEmail.isNotEmpty) ...[
+                      // FutureBuilder to get the userId asynchronously
                       FutureBuilder<int?>(
                         future: ApiService.getCurrentUserId(),
                         builder: (context, snapshot) {
@@ -312,15 +407,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             return EmailVerificationBanner(
                               userId: snapshot.data!,
                               email: _userEmail,
-                              onVerified: _loadData,
+                              onVerified: _loadData,   // Reload after verification
                             );
                           }
-                          return const SizedBox.shrink();
+                          return const SizedBox.shrink();  // Empty widget if no userId
                         },
                       ),
                       const SizedBox(height: 16),
                     ],
-                    // Financial Summary with Beautiful Gradient Cards
+
+                    // --- Financial Summary Section ---
                     Text(
                       'Financial Summary',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -328,7 +424,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                     ),
                     const SizedBox(height: 16),
-                    // Balance Card (Primary)
+
+                    // Balance Card (full width, primary gradient)
                     AnimatedDashboardCard(
                       title: 'Current Balance',
                       amount: 'RM ${_toDouble(_summary?['balance'] ?? 0).toStringAsFixed(2)}',
@@ -337,10 +434,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       gradient: AppGradients.balanceCardGradient,
                     ),
                     const SizedBox(height: 16),
-                    // Income and Expense Row
+
+                    // Income and Expense Cards (side by side)
                     Row(
                       children: [
-                        // Income Card
+                        // Income Card (left half)
                         Expanded(
                           child: AnimatedDashboardCard(
                             title: 'Income',
@@ -350,7 +448,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        // Expense Card
+                        // Expense Card (right half)
                         Expanded(
                           child: AnimatedDashboardCard(
                             title: 'Expenses',
@@ -362,22 +460,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    // Budget Progress Card
+
+                    // --- Budget Progress Card (conditional) ---
+                    // Only shown if the user has a budget set up
                     if (_currentBudget != null) ...[
                       _buildBudgetCard(),
                       const SizedBox(height: 24),
                     ],
-                    // Investment Portfolio Card
+
+                    // --- Investment Portfolio Card (conditional) ---
+                    // Only shown if the user has investments and the portfolio isn't empty
                     if (_portfolio != null && !_portfolio!.isEmpty) ...[
                       _buildPortfolioCard(),
                       const SizedBox(height: 24),
                     ],
-                    // Gamification Card
+
+                    // --- Gamification Progress Card (conditional) ---
+                    // Only shown if user stats are loaded
                     if (_userStats != null) ...[
                       _buildGamificationCard(),
                       const SizedBox(height: 24),
                     ],
-                    // Goals Card
+
+                    // --- Goals Progress Card (conditional) ---
+                    // Only shown if the user has at least one goal
                     if (_goalsSummary != null && _goalsSummary!['totalGoals'] > 0) ...[
                       GoalProgressCard(
                         summary: _goalsSummary!,
@@ -390,11 +496,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(height: 24),
                     ],
-                    // Upcoming Bills Card
+
+                    // --- Upcoming Bills Card (conditional) ---
+                    // Only shown if there are upcoming recurring transactions
                     if (_upcomingBills.isNotEmpty) ...[
                       _buildUpcomingBillsCard(),
                       const SizedBox(height: 24),
                     ],
+
+                    // --- Quick Actions Grid ---
                     Text(
                       'Quick Actions',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -402,6 +512,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Row 1: Add Transaction + History
                     Row(
                       children: [
                         Expanded(
@@ -410,6 +522,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             icon: Icons.add_circle,
                             color: AppColors.primary,
                             onTap: () async {
+                              // Navigate to add transaction, reload if added successfully
                               final result = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -417,7 +530,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               );
                               if (result == true) {
-                                _loadData();
+                                _loadData();       // Refresh dashboard data
                               }
                             },
                           ),
@@ -441,13 +554,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
+
+                    // Row 2: Analytics + Budget
                     Row(
                       children: [
                         Expanded(
                           child: QuickActionCard(
                             title: 'Analytics',
                             icon: Icons.bar_chart,
-                            color: const Color(0xFF9C27B0),
+                            color: const Color(0xFF9C27B0),    // Purple
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -463,8 +578,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: QuickActionCard(
                             title: 'Budget',
                             icon: Icons.account_balance_wallet,
-                            color: const Color(0xFFFF9800),
+                            color: const Color(0xFFFF9800),    // Orange
                             onTap: () {
+                              // Navigate to overview if budget exists, create screen if not
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -479,13 +595,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
+
+                    // Row 3: Reports + Portfolio
                     Row(
                       children: [
                         Expanded(
                           child: QuickActionCard(
                             title: 'Reports',
                             icon: Icons.description,
-                            color: const Color(0xFF00BCD4),
+                            color: const Color(0xFF00BCD4),    // Cyan
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -501,7 +619,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: QuickActionCard(
                             title: 'Portfolio',
                             icon: Icons.trending_up,
-                            color: const Color(0xFF4CAF50),
+                            color: const Color(0xFF4CAF50),    // Green
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -515,13 +633,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
+
+                    // Row 4: Goals + Achievements
                     Row(
                       children: [
                         Expanded(
                           child: QuickActionCard(
                             title: 'Goals',
                             icon: Icons.flag,
-                            color: const Color(0xFF9C27B0),
+                            color: const Color(0xFF9C27B0),    // Purple
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -537,7 +657,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: QuickActionCard(
                             title: 'Achievements',
                             icon: Icons.emoji_events,
-                            color: const Color(0xFFFF9800),
+                            color: const Color(0xFFFF9800),    // Orange
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -551,6 +671,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 24),
+
+                    // --- Recent Transactions Section ---
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -560,6 +682,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                         ),
+                        // "View All" link (only if there are transactions)
                         if (_recentTransactions.isNotEmpty)
                           TextButton(
                             onPressed: () {
@@ -575,7 +698,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
+
+                    // Transaction list or empty state
                     _recentTransactions.isEmpty
+                        // Empty state: icon + message
                         ? Container(
                             padding: const EdgeInsets.all(40),
                             decoration: BoxDecoration(
@@ -599,8 +725,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                           )
+                        // Transaction cards list
                         : Column(
+                            // .map() transforms each TransactionModel into a card widget
                             children: _recentTransactions.map((transaction) {
+                              // Get icon and color for the transaction's category
                               final categoryInfo = TransactionCategories.getCategoryInfo(
                                 transaction.category,
                                 transaction.transactionType,
@@ -614,6 +743,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 child: Row(
                                   children: [
+                                    // Category icon with colored background
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
@@ -627,6 +757,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       ),
                                     ),
                                     const SizedBox(width: 12),
+                                    // Category name and date
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -649,6 +780,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         ],
                                       ),
                                     ),
+                                    // Amount (red for expense, green for income)
                                     Text(
                                       '${transaction.isExpense ? "-" : "+"}RM ${transaction.amount.toStringAsFixed(2)}',
                                       style: TextStyle(
@@ -664,47 +796,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               );
                             }).toList(),
                           ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _handleLogout,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.danger,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+
+                    const SizedBox(height: 24),
+
+                    // --- Logout Button ---
+                    SizedBox(
+                      width: double.infinity,          // Full width button
+                      child: ElevatedButton(
+                        onPressed: _handleLogout,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.danger,   // Red for destructive action
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Logout'),
+                      ),
                     ),
-                  ),
-                  child: const Text('Logout'),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
+
+      // --- Bottom Navigation Bar ---
+      // Provides tab navigation between Home, Analytics, Budget, and Portfolio
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
+        currentIndex: _selectedIndex,              // Highlighted tab
         onTap: (index) async {
           setState(() => _selectedIndex = index);
+          // Navigate to the appropriate screen based on the tapped tab
           switch (index) {
             case 0:
-              // Already on home
+              // Home tab — already on dashboard, do nothing
               break;
             case 1:
-              // Navigate to Analytics
+              // Analytics tab
               await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => const AnalyticsScreen(),
                 ),
               );
-              // Reset to home when returning
+              // Reset to home tab when returning from analytics
               setState(() => _selectedIndex = 0);
               break;
             case 2:
-              // Navigate to Budget
+              // Budget tab — shows overview or create screen
               await Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -713,12 +852,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       : const CreateBudgetScreen(),
                 ),
               );
-              _loadData();
-              // Reset to home when returning
-              setState(() => _selectedIndex = 0);
+              _loadData();                         // Refresh data after budget changes
+              setState(() => _selectedIndex = 0);  // Reset to home tab
               break;
             case 3:
-              // Navigate to Portfolio/Investments
+              // Portfolio tab
               await Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -726,14 +864,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               );
               _loadData();
-              // Reset to home when returning
               setState(() => _selectedIndex = 0);
               break;
           }
         },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,       // Fixed tabs (no shifting animation)
+        selectedItemColor: AppColors.primary,      // Purple for selected tab
+        unselectedItemColor: Colors.grey,          // Grey for unselected tabs
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
@@ -756,6 +893,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ==============================================================================
+  // _buildSummaryItem - Reusable Summary Stat Display
+  // ==============================================================================
+  // Creates a single summary statistic (label + amount) used in the financial
+  // summary section. Each item shows an icon, label text, and formatted amount.
+  // Note: This method is defined but currently not used in the build method
+  // (replaced by AnimatedDashboardCard), kept for potential future use.
+  // ==============================================================================
   Widget _buildSummaryItem(String label, double amount, Color color, IconData icon) {
     return Expanded(
       child: Column(
@@ -788,21 +933,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ==============================================================================
+  // _buildBudgetCard - Monthly Budget Progress Card
+  // ==============================================================================
+  // Displays the current month's budget with:
+  // - Month name and percentage badge
+  // - Spent vs remaining amounts
+  // - Linear progress bar (green < 80%, orange < 100%, red >= 100%)
+  // - Total budget and days remaining
+  // - Over-budget warning banner (if applicable)
+  // Tapping navigates to BudgetOverviewScreen.
+  // ==============================================================================
   Widget _buildBudgetCard() {
-    final budget = _currentBudget!;
-    final percentage = budget.percentageUsed;
+    final budget = _currentBudget!;                // ! asserts budget is not null
+    final percentage = budget.percentageUsed;       // How much of the budget is used
 
+    // Choose progress bar color based on usage percentage
     Color progressColor;
     if (percentage >= 100) {
-      progressColor = AppColors.danger;
+      progressColor = AppColors.danger;            // Red: over budget
     } else if (percentage >= 80) {
-      progressColor = AppColors.warning;
+      progressColor = AppColors.warning;           // Orange: approaching limit
     } else {
-      progressColor = AppColors.success;
+      progressColor = AppColors.success;           // Green: healthy spending
     }
 
     return GestureDetector(
       onTap: () {
+        // Navigate to budget overview when tapped
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -817,24 +975,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withOpacity(0.05),   // Subtle shadow
               blurRadius: 10,
-              offset: const Offset(0, 4),
+              offset: const Offset(0, 4),              // Shadow below the card
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header row: month name + percentage badge
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
+                  // Parse the monthYear string ("2025-01") to get the month name
                   '${DateFormat('MMMM').format(DateTime.parse('${budget.monthYear}-01'))} Budget',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                 ),
+                // Percentage badge (pill-shaped)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
@@ -853,6 +1014,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
             const SizedBox(height: 16),
+
+            // Spent vs Remaining amounts
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -885,6 +1048,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
+                        // Red if over budget, green if under
                         color: budget.isOverBudget ? AppColors.danger : AppColors.income,
                       ),
                     ),
@@ -893,7 +1057,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
             const SizedBox(height: 16),
+
+            // Progress bar showing budget usage
             LinearProgressIndicator(
+              // .clamp(0.0, 1.0) ensures value stays between 0% and 100%
               value: (percentage / 100).clamp(0.0, 1.0),
               backgroundColor: Colors.grey[200],
               valueColor: AlwaysStoppedAnimation<Color>(progressColor),
@@ -901,6 +1068,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               borderRadius: BorderRadius.circular(4),
             ),
             const SizedBox(height: 8),
+
+            // Footer: total budget and days remaining
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -914,6 +1083,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ],
             ),
+
+            // Over-budget warning (only shown when budget is exceeded)
             if (budget.isOverBudget) ...[
               const SizedBox(height: 12),
               Container(
@@ -928,6 +1099,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
+                        // Negate totalRemaining to show positive overspend amount
                         'Over budget by RM ${(-budget.totalRemaining).toStringAsFixed(2)}',
                         style: TextStyle(
                           color: AppColors.danger,
@@ -946,8 +1118,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ==============================================================================
+  // _buildPortfolioCard - Investment Portfolio Summary Card
+  // ==============================================================================
+  // Displays the investment portfolio with:
+  // - Title and percentage change badge (+/- with color)
+  // - Current portfolio value
+  // - Total profit or loss amount
+  // - Total invested and asset count
+  // Tapping navigates to PortfolioOverviewScreen.
+  // ==============================================================================
   Widget _buildPortfolioCard() {
     final portfolio = _portfolio!;
+    // Green for profit, red for loss
     final profitColor = portfolio.isProfit ? AppColors.success : AppColors.danger;
 
     return GestureDetector(
@@ -975,6 +1158,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header: title + percentage change badge
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -984,6 +1168,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                 ),
+                // Percentage change badge with up/down arrow icon
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
@@ -993,12 +1178,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Row(
                     children: [
                       Icon(
+                        // Get appropriate icon (up/down/neutral arrow) based on change
                         InvestmentTypes.getIconForPerformance(portfolio.percentageChange),
                         size: 14,
                         color: profitColor,
                       ),
                       const SizedBox(width: 4),
                       Text(
+                        // Show "+" prefix for positive changes
                         '${portfolio.percentageChange > 0 ? "+" : ""}${portfolio.percentageChange.toStringAsFixed(1)}%',
                         style: TextStyle(
                           color: profitColor,
@@ -1012,6 +1199,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
             const SizedBox(height: 16),
+
+            // Current value and profit/loss
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1040,6 +1229,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                     ),
                     Text(
+                      // .abs() shows absolute value (remove negative sign for losses)
                       'RM ${portfolio.totalProfitLoss.abs().toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 20,
@@ -1052,6 +1242,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
             const SizedBox(height: 16),
+
+            // Footer: total invested and asset count
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1060,6 +1252,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                 ),
                 Text(
+                  // Pluralize "asset" → "assets" if more than 1
                   '${portfolio.totalAssets} ${portfolio.totalAssets > 1 ? "assets" : "asset"}',
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                 ),
@@ -1071,6 +1264,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ==============================================================================
+  // _buildGamificationCard - User Progress / Gamification Card
+  // ==============================================================================
+  // Displays the user's gamification progress (level, XP) using the
+  // LevelProgressWidget in compact mode. Tapping navigates to AchievementsScreen.
+  // ==============================================================================
   Widget _buildGamificationCard() {
     return GestureDetector(
       onTap: () {
@@ -1106,13 +1305,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                 ),
+                // Forward arrow indicating tappable card
                 Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.primary),
               ],
             ),
             const SizedBox(height: 16),
+            // Compact level progress widget showing level badge and XP bar
             LevelProgressWidget(
               stats: _userStats!,
-              compact: true,
+              compact: true,                       // Compact mode for dashboard
             ),
           ],
         ),
@@ -1120,6 +1321,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ==============================================================================
+  // _buildUpcomingBillsCard - Upcoming Bills / Recurring Transactions Card
+  // ==============================================================================
+  // Displays up to 3 upcoming recurring transactions (bills) with:
+  // - Bill name and icon (income/expense arrow)
+  // - Due date countdown (highlighted red if due within 3 days)
+  // - Amount and exact due date
+  // - "View all" link if more than 3 bills
+  // ==============================================================================
   Widget _buildUpcomingBillsCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1137,6 +1347,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header: bell icon + title + count badge
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1152,6 +1363,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ],
               ),
+              // Badge showing number of upcoming bills
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -1170,14 +1382,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const SizedBox(height: 16),
+
+          // Bill list (max 3 items)
           ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,                      // Don't take infinite height
+            physics: const NeverScrollableScrollPhysics(),  // Disable scrolling (parent scrolls)
             itemCount: _upcomingBills.length > 3 ? 3 : _upcomingBills.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final bill = _upcomingBills[index];
-              final daysUntil = bill['daysUntil'] as int;
+              final daysUntil = bill['daysUntil'] as int;          // Days until due
               final nextExecution = bill['nextExecution'] as DateTime;
               final amount = (bill['amount'] ?? 0.0).toDouble();
               final type = bill['type']?.toString() ?? 'expense';
@@ -1188,6 +1402,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.background,
                   borderRadius: BorderRadius.circular(12),
+                  // Red border if due within 3 days (urgent)
                   border: Border.all(
                     color: daysUntil <= 3 ? AppColors.danger.withOpacity(0.3) : Colors.grey.shade200,
                     width: 1,
@@ -1195,6 +1410,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: Row(
                   children: [
+                    // Income/expense direction icon
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -1208,6 +1424,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     const SizedBox(width: 12),
+
+                    // Bill name and due date countdown
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1219,7 +1437,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               fontSize: 14,
                             ),
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            overflow: TextOverflow.ellipsis,   // Truncate long names
                           ),
                           const SizedBox(height: 4),
                           Row(
@@ -1227,10 +1445,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Icon(
                                 Icons.schedule,
                                 size: 12,
+                                // Red clock icon if due within 3 days
                                 color: daysUntil <= 3 ? AppColors.danger : Colors.grey.shade600,
                               ),
                               const SizedBox(width: 4),
                               Text(
+                                // Human-readable due date text
                                 daysUntil == 0
                                     ? 'Due today'
                                     : daysUntil == 1
@@ -1247,6 +1467,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ],
                       ),
                     ),
+
+                    // Amount and date
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -1273,6 +1495,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               );
             },
           ),
+
+          // "View all" link (only shown if more than 3 upcoming bills)
           if (_upcomingBills.length > 3) ...[
             const SizedBox(height: 12),
             Center(

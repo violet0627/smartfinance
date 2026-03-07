@@ -1,18 +1,51 @@
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../models/budget_model.dart';
-import '../../models/transaction_model.dart';
-import '../../models/gamification_model.dart';
-import '../../services/api_service.dart';
-import '../../services/notification_service.dart';
-import '../../services/receipt_scanner_service.dart';
-import '../../utils/categories.dart';
-import '../../utils/colors.dart';
-import '../../utils/app_gradients.dart';
-import '../../widgets/animated_button.dart';
+// ==============================================================================
+// add_transaction_screen.dart - Add or Edit a Transaction
+// ==============================================================================
+// This screen provides a form for creating new transactions or editing existing
+// ones. It supports both income and expense transactions.
+//
+// Features:
+// - Expense/Income toggle switch
+// - Amount input field with RM prefix
+// - Category selection grid (changes based on transaction type)
+// - Date picker
+// - Description (optional) text area
+// - Receipt scanning via camera/gallery (OCR)
+// - Budget alert checking after adding an expense
+// - Gamification: updates streak and checks for new achievements
+//
+// The screen works in two modes:
+// 1. Add Mode: No transaction passed → creates a new transaction
+// 2. Edit Mode: Transaction passed via constructor → updates existing transaction
+//
+// Usage:
+//   AddTransactionScreen()                              — add new transaction
+//   AddTransactionScreen(transaction: existingTxn)     — edit existing transaction
+// ==============================================================================
 
+import 'package:flutter/material.dart';                    // For StatefulWidget, Form, etc.
+import 'package:intl/intl.dart';                            // For DateFormat (date formatting)
+import '../../models/budget_model.dart';                    // For BudgetModel (budget checking)
+import '../../models/transaction_model.dart';               // For TransactionModel
+import '../../models/gamification_model.dart';               // For NewAchievement
+import '../../services/api_service.dart';                    // For API calls (create, update, budget)
+import '../../services/notification_service.dart';           // For budget alerts and achievement notifications
+import '../../services/receipt_scanner_service.dart';        // For OCR receipt scanning
+import '../../utils/categories.dart';                        // For TransactionCategories
+import '../../utils/colors.dart';                            // For AppColors
+import '../../utils/app_gradients.dart';                     // For gradient button styles
+import '../../widgets/animated_button.dart';                 // For AnimatedButton
+
+// ==============================================================================
+// AddTransactionScreen - StatefulWidget for Transaction Form
+// ==============================================================================
+// StatefulWidget because it manages:
+// - Form fields (amount, description, category, date, type)
+// - Loading state during API calls
+// - Receipt scanning results
+// ==============================================================================
 class AddTransactionScreen extends StatefulWidget {
-  final TransactionModel? transaction;
+  final TransactionModel? transaction;   // Null for add mode, non-null for edit mode
 
   const AddTransactionScreen({super.key, this.transaction});
 
@@ -21,19 +54,22 @@ class AddTransactionScreen extends StatefulWidget {
 }
 
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _amountController = TextEditingController();
-  final _descriptionController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();              // For form validation
+  final _amountController = TextEditingController();    // Controls the amount input field
+  final _descriptionController = TextEditingController(); // Controls the description input
 
-  String _transactionType = 'expense';
-  String? _selectedCategory;
-  DateTime _selectedDate = DateTime.now();
-  bool _isLoading = false;
+  String _transactionType = 'expense';    // 'expense' or 'income' — which tab is selected
+  String? _selectedCategory;              // Currently selected category (null = none)
+  DateTime _selectedDate = DateTime.now(); // Date for the transaction (default: today)
+  bool _isLoading = false;                // Whether the API call is in progress
 
+  // ==============================================================================
+  // initState - Pre-fill Form Fields When Editing
+  // ==============================================================================
   @override
   void initState() {
     super.initState();
-    // If editing, populate fields with transaction data
+    // If editing an existing transaction, populate all fields with its data
     if (widget.transaction != null) {
       _amountController.text = widget.transaction!.amount.toString();
       _descriptionController.text = widget.transaction!.description ?? '';
@@ -45,48 +81,63 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   @override
   void dispose() {
-    _amountController.dispose();
+    _amountController.dispose();           // Clean up controllers to prevent memory leaks
     _descriptionController.dispose();
     super.dispose();
   }
 
+  // ==============================================================================
+  // _selectDate - Show Date Picker Dialog
+  // ==============================================================================
+  // Opens the Material date picker and updates _selectedDate if the user
+  // picks a new date.
+  // ==============================================================================
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      initialDate: _selectedDate,          // Start at current selection
+      firstDate: DateTime(2020),           // Earliest selectable date
+      lastDate: DateTime(2100),            // Latest selectable date
     );
+    // Only update if the user actually picked a date (didn't cancel)
     if (picked != null && picked != _selectedDate) {
       setState(() => _selectedDate = picked);
     }
   }
 
+  // ==============================================================================
+  // _scanReceipt - Scan a Receipt Using Camera or Gallery
+  // ==============================================================================
+  // Opens a dialog for the user to choose camera or gallery, captures/selects
+  // an image, runs OCR (Optical Character Recognition) on it, and shows the
+  // scanned results for the user to review and apply to the form.
+  // ==============================================================================
   Future<void> _scanReceipt() async {
-    // Show loading
+    // Show a loading spinner while processing
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: false,           // Can't dismiss by tapping outside
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
-      // Get image from camera or gallery
+      // Step 1: Let user choose camera or gallery, get the image file
       final imageFile = await ReceiptScannerService.showSourceSelectionDialog(context);
 
       if (imageFile == null) {
         if (!mounted) return;
-        Navigator.pop(context); // Close loading dialog
-        return;
+        Navigator.pop(context);            // Close loading dialog
+        return;                            // User cancelled
       }
 
-      // Scan the receipt
+      // Step 2: Run OCR on the image to extract receipt data
       final receiptData = await ReceiptScannerService.scanReceipt(imageFile);
 
       if (!mounted) return;
-      Navigator.pop(context); // Close loading dialog
+      Navigator.pop(context);              // Close loading dialog
 
       if (receiptData == null) {
+        // OCR failed to extract any data
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Failed to scan receipt. Please try again or enter manually.'),
@@ -96,11 +147,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         return;
       }
 
-      // Show results and prefill form
+      // Step 3: Show the extracted data and let user confirm
       _showScanResults(receiptData);
     } catch (e) {
       if (!mounted) return;
-      Navigator.pop(context); // Close loading dialog
+      Navigator.pop(context);              // Close loading dialog on error
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -111,6 +162,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
+  // ==============================================================================
+  // _showScanResults - Display OCR Results Dialog
+  // ==============================================================================
+  // Shows an AlertDialog with the data extracted from the scanned receipt.
+  // User can either "Use Data" (auto-fill the form) or "Cancel" (enter manually).
+  // ==============================================================================
   void _showScanResults(ReceiptData data) {
     showDialog(
       context: context,
@@ -126,6 +183,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
+              // Display each piece of extracted data (if available)
               if (data.merchantName != null) ...[
                 _resultRow('Merchant', data.merchantName!),
                 const Divider(),
@@ -152,13 +210,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context),   // Cancel: close dialog
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
-              _prefillForm(data);
-              Navigator.pop(context);
+              _prefillForm(data);                      // Auto-fill form with scanned data
+              Navigator.pop(context);                  // Close dialog
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -171,12 +229,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
+  // ==============================================================================
+  // _resultRow - Reusable Label-Value Row for Scan Results
+  // ==============================================================================
+  // Creates a two-column row showing a label (left) and value (right).
+  // Used inside the scan results dialog.
+  // ==============================================================================
   Widget _resultRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Label column (fixed width)
           SizedBox(
             width: 100,
             child: Text(
@@ -188,6 +253,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
             ),
           ),
+          // Value column (takes remaining space)
           Expanded(
             child: Text(
               value,
@@ -202,32 +268,39 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
+  // ==============================================================================
+  // _prefillForm - Auto-Fill Form with Scanned Receipt Data
+  // ==============================================================================
+  // Takes the ReceiptData from OCR and populates the form fields.
+  // Each field is only set if the OCR successfully extracted that piece of data.
+  // ==============================================================================
   void _prefillForm(ReceiptData data) {
     setState(() {
-      // Prefill amount
+      // Prefill amount if extracted
       if (data.amount != null) {
         _amountController.text = data.amount!.toStringAsFixed(2);
       }
 
-      // Prefill description (merchant name)
+      // Prefill description with the merchant name if extracted
       if (data.merchantName != null) {
         _descriptionController.text = data.merchantName!;
       }
 
-      // Set date
+      // Set date if extracted from receipt
       if (data.date != null) {
         _selectedDate = data.date!;
       }
 
-      // Set category
+      // Set category if the OCR suggested one
       if (data.category != null) {
         _selectedCategory = data.category;
       }
 
-      // Usually receipts are expenses
+      // Receipts are typically expenses
       _transactionType = 'expense';
     });
 
+    // Show confirmation message
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Form filled with scanned data. Please review and submit.'),
@@ -237,9 +310,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
+  // ==============================================================================
+  // _handleSubmit - Validate and Submit the Transaction
+  // ==============================================================================
+  // Validates all form fields, creates a TransactionModel, and either creates
+  // or updates the transaction via the API. After a successful expense:
+  // - Checks if the budget threshold was exceeded
+  // - Updates the daily tracking streak (gamification)
+  // - Checks for newly unlocked achievements
+  // ==============================================================================
   Future<void> _handleSubmit() async {
+    // Validate all form fields (amount, etc.)
     if (!_formKey.currentState!.validate()) return;
 
+    // Check that a category was selected (not part of form validation)
     if (_selectedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -250,8 +334,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() => _isLoading = true);     // Show loading state on button
 
+    // Get the current user's ID
     final userId = await ApiService.getCurrentUserId();
     if (userId == null) {
       setState(() => _isLoading = false);
@@ -262,8 +347,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       return;
     }
 
+    // Create a TransactionModel from the form data
     final transaction = TransactionModel(
-      transactionId: widget.transaction?.transactionId,
+      transactionId: widget.transaction?.transactionId,  // Keep ID when editing
       amount: double.parse(_amountController.text),
       category: _selectedCategory!,
       description: _descriptionController.text,
@@ -272,7 +358,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       userId: userId,
     );
 
-    // Call update or create based on whether we're editing
+    // Call the appropriate API method: update (editing) or create (adding)
     final result = widget.transaction != null
         ? await ApiService.updateTransaction(widget.transaction!.transactionId!, transaction.toJson())
         : await ApiService.createTransaction(transaction.toJson());
@@ -282,48 +368,53 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     if (!mounted) return;
 
     if (result['success']) {
-      // Check budget after adding expense
+      // --- Transaction saved successfully ---
+
+      // Check budget after adding an expense
       if (_transactionType == 'expense') {
         final budgetResult = await ApiService.getCurrentBudget(userId);
         if (budgetResult['success'] && budgetResult['budget'] != null) {
           final budget = BudgetModel.fromJson(budgetResult['budget']);
 
-          // Check if category is over budget or approaching limit
+          // Find the budget for the selected category
           final categoryBudget = budget.categories.firstWhere(
             (cat) => cat.categoryName == _selectedCategory,
-            orElse: () => budget.categories.first,
+            orElse: () => budget.categories.first,   // Fallback to first category
           );
 
+          // Send budget alert if category is 90%+ used or overall is 80%+ used
           if (categoryBudget.percentageUsed >= 90 || budget.percentageUsed >= 80) {
             await NotificationService.checkBudgetAndAlert(budget);
           }
         }
       }
 
-      // Update streak and check achievements (gamification)
+      // Update gamification: streak + achievements
       try {
-        // Update daily tracking streak
+        // Update the daily tracking streak
         await ApiService.updateStreak(userId);
 
         // Check for newly unlocked achievements
         final achievementResult = await ApiService.checkAchievements(userId);
         if (achievementResult['success']) {
+          // Parse the list of newly unlocked achievements
           final newlyUnlocked = (achievementResult['newlyUnlocked'] as List)
               .map((json) => NewAchievement.fromJson(json))
               .toList();
 
-          // Show notifications for newly unlocked achievements
+          // Show notification for each new achievement
           if (newlyUnlocked.isNotEmpty) {
             await NotificationService.checkAndNotifyAchievements(newlyUnlocked);
           }
         }
       } catch (e) {
-        // Silently fail gamification updates - don't block user flow
+        // Silently fail gamification updates — don't block the user flow
         debugPrint('Gamification update error: $e');
       }
 
       if (!mounted) return;
-      Navigator.pop(context, true); // Return true to indicate success
+      // Return true to tell the previous screen (dashboard) to reload
+      Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(widget.transaction != null
@@ -333,6 +424,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         ),
       );
     } else {
+      // --- Transaction save failed ---
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['error'] ?? (widget.transaction != null
@@ -344,16 +436,23 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
+  // ==============================================================================
+  // build - Render the Add/Edit Transaction Form UI
+  // ==============================================================================
   @override
   Widget build(BuildContext context) {
+    // Get the list of categories for the current transaction type
+    // (expense categories differ from income categories)
     final categories = TransactionCategories.getCategories(_transactionType);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        // Show "Edit Transaction" or "Add Transaction" based on mode
         title: Text(widget.transaction != null ? 'Edit Transaction' : 'Add Transaction'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        // Camera icon for receipt scanning (only in add mode)
         actions: widget.transaction == null ? [
           IconButton(
             icon: const Icon(Icons.camera_alt),
@@ -370,7 +469,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Edit Mode Indicator
+                // --- Edit Mode Indicator ---
+                // Shows a banner with the original transaction date when editing
                 if (widget.transaction != null) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -398,7 +498,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                   const SizedBox(height: 16),
                 ],
-                // Transaction Type Toggle
+
+                // --- Transaction Type Toggle (Expense / Income) ---
+                // A custom segmented control with two GestureDetector-wrapped buttons
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -406,17 +508,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                   child: Row(
                     children: [
+                      // Expense tab
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
                             setState(() {
                               _transactionType = 'expense';
-                              _selectedCategory = null;
+                              _selectedCategory = null;    // Reset category on type switch
                             });
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             decoration: BoxDecoration(
+                              // Filled red when selected, transparent when not
                               color: _transactionType == 'expense'
                                   ? AppColors.expense
                                   : Colors.transparent,
@@ -435,17 +539,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           ),
                         ),
                       ),
+                      // Income tab
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
                             setState(() {
                               _transactionType = 'income';
-                              _selectedCategory = null;
+                              _selectedCategory = null;    // Reset category on type switch
                             });
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             decoration: BoxDecoration(
+                              // Filled green when selected, transparent when not
                               color: _transactionType == 'income'
                                   ? AppColors.income
                                   : Colors.transparent,
@@ -468,14 +574,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // Amount Field
+
+                // --- Amount Input Field ---
                 TextFormField(
                   controller: _amountController,
+                  // Shows numeric keyboard with decimal point
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
                   style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                   decoration: InputDecoration(
                     labelText: 'AMOUNT (RM)',
-                    prefixText: 'RM ',
+                    prefixText: 'RM ',                 // Currency prefix
                     prefixStyle: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                     filled: true,
                     fillColor: Colors.white,
@@ -488,17 +596,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter amount';
                     }
+                    // Check if the value is a valid number
                     if (double.tryParse(value) == null) {
                       return 'Please enter a valid number';
                     }
+                    // Amount must be positive
                     if (double.parse(value) <= 0) {
                       return 'Amount must be greater than 0';
                     }
-                    return null;
+                    return null;                       // Validation passed
                   },
                 ),
                 const SizedBox(height: 16),
-                // Category Selection
+
+                // --- Category Selection Grid ---
                 Text(
                   'CATEGORY',
                   style: TextStyle(
@@ -508,18 +619,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
+                // GridView.builder creates a grid of category buttons
                 GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,                    // Don't take infinite height
+                  physics: const NeverScrollableScrollPhysics(),  // Parent scrolls
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    childAspectRatio: 0.85,
+                    crossAxisCount: 4,                 // 4 columns
+                    childAspectRatio: 0.85,            // Slightly tall cells
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
                   ),
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
                     final category = categories[index];
+                    // Get icon and color for this category
                     final categoryInfo = TransactionCategories.getCategoryInfo(
                       category,
                       _transactionType,
@@ -532,6 +645,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       },
                       child: Container(
                         decoration: BoxDecoration(
+                          // Selected: filled with category color; unselected: white
                           color: isSelected
                               ? categoryInfo.color
                               : Colors.white,
@@ -548,6 +662,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           children: [
                             Icon(
                               categoryInfo.icon,
+                              // Icon color inverts when selected (white on colored bg)
                               color: isSelected
                                   ? Colors.white
                                   : categoryInfo.color,
@@ -574,7 +689,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                // Date Picker
+
+                // --- Date Picker ---
+                // Tapping this container opens the date picker dialog
                 GestureDetector(
                   onTap: _selectDate,
                   child: Container(
@@ -596,6 +713,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         ),
                         Row(
                           children: [
+                            // Display the selected date
                             Text(
                               DateFormat('dd MMM yyyy').format(_selectedDate),
                               style: const TextStyle(
@@ -612,10 +730,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Description Field
+
+                // --- Description Input (Optional) ---
                 TextFormField(
                   controller: _descriptionController,
-                  maxLines: 3,
+                  maxLines: 3,                         // Multi-line input
                   decoration: InputDecoration(
                     labelText: 'DESCRIPTION (OPTIONAL)',
                     hintText: 'Add notes about this transaction...',
@@ -628,14 +747,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // Submit Button
+
+                // --- Submit Button ---
+                // AnimatedButton with gradient that changes based on expense/income type
                 AnimatedButton(
+                  // Dynamic button text: "Add Expense", "Update Income", etc.
                   text: '${widget.transaction != null ? "Update" : "Add"} ${_transactionType == "expense" ? "Expense" : "Income"}',
                   onPressed: _handleSubmit,
+                  // Red gradient for expense, green gradient for income
                   gradient: _transactionType == 'expense'
                       ? AppGradients.expenseGradient
                       : AppGradients.incomeGradient,
                   isLoading: _isLoading,
+                  // Different icon for expense vs income
                   icon: _transactionType == 'expense' ? Icons.remove_circle : Icons.add_circle,
                 ),
               ],

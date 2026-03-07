@@ -2,18 +2,101 @@
 
 ## Part 1: Pre-Testing Setup
 
-### Step 1: Start the Backend Server
-```bash
-cd backend
-python run.py
-```
-Keep this terminal open.
+You need **3 components running** in this order:
 
-### Step 2: Launch the App
-```bash
-flutter run
 ```
-Or double-click `START_FOR_DEMO.bat`
+┌─────────────────────────────────────────────────────┐
+│  1. MySQL Database (must start FIRST)               │
+│     └── Running on: localhost:3306                  │
+└─────────────────────────────────────────────────────┘
+                      ▼
+┌─────────────────────────────────────────────────────┐
+│  2. Python Backend Server                           │
+│     └── Running on: http://localhost:5000           │
+└─────────────────────────────────────────────────────┘
+                      ▼
+┌─────────────────────────────────────────────────────┐
+│  3. Flutter App (on Emulator or Phone)              │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+### OPTION A: Easy Way (Use BAT File)
+
+**Step 1: Start MySQL Database FIRST**
+1. Press `Windows + R`
+2. Type `services.msc` and press Enter
+3. Find **MySQL80** in the list
+4. Right-click → **Start** (if not already running)
+5. Status should show **Running**
+
+**Step 2: Double-click `START_APP.bat`**
+- Location: `C:\Users\Elaina\Desktop\smartfinance2\START_APP.bat`
+- This will automatically:
+  - Open Terminal 1: Backend server
+  - Open Terminal 2: Flutter app
+- Wait for everything to load (2-3 minutes first time)
+
+---
+
+### OPTION B: Manual Way (Step by Step)
+
+**Step 1: Start MySQL Database**
+1. Press `Windows + R`
+2. Type `services.msc` and press Enter
+3. Find **MySQL80** → Right-click → **Start**
+4. OR: Open **MySQL Workbench** and connect to localhost
+
+**Step 2: Start Backend Server**
+1. Open **Windows Terminal** (or Command Prompt)
+   - Press `Windows + R`, type `cmd`, press Enter
+2. Run these commands:
+   ```bash
+   cd C:\Users\Elaina\Desktop\smartfinance2\backend
+   python run.py
+   ```
+3. You should see:
+   ```
+   * Running on http://127.0.0.1:5000
+   ```
+4. **Keep this terminal open!** (Don't close it)
+
+**Step 3: Start Android Emulator**
+1. Open **Android Studio**
+2. Click **Device Manager** (phone icon on right)
+3. Click **Play ▶** on your emulator
+4. Wait for emulator to fully boot (shows home screen)
+
+**Step 4: Run Flutter App**
+1. Open a **NEW** Windows Terminal (don't close the backend one!)
+2. Run these commands:
+   ```bash
+   cd C:\Users\Elaina\Desktop\smartfinance2
+   flutter run
+   ```
+3. Wait 2-3 minutes for first build
+4. App will automatically open on emulator
+
+---
+
+### Which BAT File to Use?
+
+| File | What it does | When to use |
+|------|--------------|-------------|
+| `START_APP.bat` | Starts backend + Flutter app | Normal testing/development |
+| `START_FOR_DEMO.bat` | Starts backend only (for physical phone) | Demo on real phone |
+
+---
+
+### Verify Everything is Running
+
+| Component | How to Check |
+|-----------|--------------|
+| MySQL | Services shows "MySQL80 - Running" |
+| Backend | Terminal shows "Running on http://127.0.0.1:5000" |
+| Emulator | Android home screen is visible |
+| App | SmartFinance app opens on emulator |
 
 ---
 
@@ -243,11 +326,18 @@ Use this checklist for rapid testing:
 ## Part 4: Supervisor Presentation Guide
 
 ### Before Presentation Checklist
-- [ ] Backend server running (`cd backend && python run.py`)
+- [ ] MySQL database running (services.msc → MySQL80 → Running)
+- [ ] Backend server running (terminal shows "Running on http://127.0.0.1:5000")
+- [ ] Emulator running OR phone connected
 - [ ] App launched and working
 - [ ] Either fresh install OR pre-populated with demo data
-- [ ] Phone/emulator charged and ready
 - [ ] Done one test run to ensure everything works
+
+### Quick Start for Presentation
+1. Start MySQL: `services.msc` → MySQL80 → Start
+2. Double-click `START_APP.bat`
+3. Wait 2-3 minutes
+4. Ready to present!
 
 ---
 

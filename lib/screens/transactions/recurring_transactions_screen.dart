@@ -1,10 +1,16 @@
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../services/api_service.dart';
-import '../../services/notification_service.dart';
-import '../../utils/colors.dart';
-import 'add_recurring_transaction_screen.dart';
+// recurring_transactions_screen.dart
+// This screen shows all recurring transactions (like monthly rent, weekly salary, etc.).
+// Each recurring item shows name, category, frequency, amount, next execution date, and status.
+// Users can: execute a transaction now, pause/resume it, delete it, and view full details.
 
+import 'package:flutter/material.dart'; // Flutter UI toolkit
+import 'package:intl/intl.dart'; // Date formatting
+import '../../services/api_service.dart'; // Backend API calls
+import '../../services/notification_service.dart'; // Scheduling reminders for upcoming transactions
+import '../../utils/colors.dart'; // AppColors constants
+import 'add_recurring_transaction_screen.dart'; // Screen for adding new recurring transactions
+
+// RecurringTransactionsScreen is a StatefulWidget because data loads and updates dynamically
 class RecurringTransactionsScreen extends StatefulWidget {
   const RecurringTransactionsScreen({super.key});
 
@@ -13,16 +19,19 @@ class RecurringTransactionsScreen extends StatefulWidget {
 }
 
 class _RecurringTransactionsScreenState extends State<RecurringTransactionsScreen> {
+  // List of recurring transaction maps from the API
+  // Each map contains keys like 'name', 'amount', 'frequency', 'isActive', etc.
   List<Map<String, dynamic>> _recurringList = [];
-  bool _isLoading = true;
-  String _error = '';
+  bool _isLoading = true; // True while fetching data
+  String _error = '';     // Error message; empty = no error
 
   @override
   void initState() {
     super.initState();
-    _loadRecurringTransactions();
+    _loadRecurringTransactions(); // Load data when screen opens
   }
 
+  // _loadRecurringTransactions fetches all recurring transactions for the current user
   Future<void> _loadRecurringTransactions() async {
     setState(() {
       _isLoading = true;
@@ -42,13 +51,16 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
       final result = await ApiService.getRecurringTransactions(userId);
 
       if (result['success']) {
+        // List.from() converts the raw API list to a typed List<Map<String, dynamic>>
+        // The '?? []' means "use empty list if result['recurring'] is null"
         final recurringList = List<Map<String, dynamic>>.from(result['recurring'] ?? []);
         setState(() {
           _recurringList = recurringList;
           _isLoading = false;
         });
 
-        // Schedule notifications for all active recurring transactions
+        // Schedule local device notifications for all active recurring transactions
+        // so users get reminders when transactions are about to be executed
         NotificationService.scheduleAllRecurringReminders(recurringList);
       } else {
         setState(() {
@@ -64,14 +76,18 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
     }
   }
 
+  // _toggleTransaction activates or pauses a recurring transaction
+  // recurringId: the database ID of the transaction to toggle
+  // currentStatus: current active state (true = active, false = paused)
   Future<void> _toggleTransaction(int recurringId, bool currentStatus) async {
     final result = await ApiService.toggleRecurringTransaction(recurringId);
 
     if (result['success']) {
-      _loadRecurringTransactions();
+      _loadRecurringTransactions(); // Refresh list to show updated status
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          // result['isActive'] is the new state after toggling
           content: Text(result['isActive'] ? 'Activated' : 'Paused'),
           backgroundColor: AppColors.success,
         ),
@@ -87,7 +103,10 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
     }
   }
 
+  // _executeNow manually triggers a recurring transaction immediately
+  // (Creates one transaction instance now instead of waiting for the scheduled time)
   Future<void> _executeNow(int recurringId, String name) async {
+    // Ask the user to confirm before executing
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -95,11 +114,11 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
         content: Text('Create transaction for "$name" now?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(context, false), // Cancel
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(context, true), // Confirm
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
@@ -110,6 +129,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
       ),
     );
 
+    // Only proceed if the user pressed 'Execute' (confirmed == true)
     if (confirmed == true) {
       final result = await ApiService.executeRecurringTransaction(recurringId);
 
@@ -121,7 +141,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
             backgroundColor: AppColors.success,
           ),
         );
-        _loadRecurringTransactions();
+        _loadRecurringTransactions(); // Refresh to show updated nextExecution date
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -133,7 +153,9 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
     }
   }
 
+  // _deleteTransaction permanently removes a recurring transaction after confirmation
   Future<void> _deleteTransaction(int recurringId, String name) async {
+    // Confirm deletion - this action cannot be undone
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -147,7 +169,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
+              backgroundColor: AppColors.danger, // Red button for destructive action
               foregroundColor: Colors.white,
             ),
             child: const Text('Delete'),
@@ -167,7 +189,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
             backgroundColor: AppColors.success,
           ),
         );
-        _loadRecurringTransactions();
+        _loadRecurringTransactions(); // Refresh the list after deletion
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -179,16 +201,19 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
     }
   }
 
+  // _formatDate converts an ISO date string to a human-readable format
+  // Returns 'N/A' if the date is null; returns the original string if parsing fails
   String _formatDate(String? dateStr) {
     if (dateStr == null) return 'N/A';
     try {
-      final date = DateTime.parse(dateStr);
-      return DateFormat('MMM dd, yyyy').format(date);
+      final date = DateTime.parse(dateStr); // Parse "2024-03-15" into DateTime
+      return DateFormat('MMM dd, yyyy').format(date); // Format as "Mar 15, 2024"
     } catch (e) {
-      return dateStr;
+      return dateStr; // Return original string if parsing fails
     }
   }
 
+  // _getFrequencyLabel converts API frequency values to display-friendly labels
   String _getFrequencyLabel(String frequency) {
     switch (frequency.toLowerCase()) {
       case 'daily':
@@ -200,15 +225,18 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
       case 'yearly':
         return 'Yearly';
       default:
-        return frequency;
+        return frequency; // Return original if unknown
     }
   }
 
+  // _getTypeColor returns green for income transactions, red for expenses
   Color _getTypeColor(String type) {
     return type.toLowerCase() == 'income' ? AppColors.income : AppColors.expense;
   }
 
+  // _getCategoryIcon returns an appropriate icon for a given category name
   Icon _getCategoryIcon(String category) {
+    // Map of category keywords to Material icons
     final iconMap = {
       'salary': Icons.work,
       'freelance': Icons.computer,
@@ -224,6 +252,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
       'education': Icons.school,
     };
 
+    // .toLowerCase() for case-insensitive matching; ?? provides fallback icon
     final icon = iconMap[category.toLowerCase()] ?? Icons.attach_money;
     return Icon(icon, size: 24);
   }
@@ -236,6 +265,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
+          // Test notification button - sends a test push notification
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () async {
@@ -251,6 +281,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
             },
             tooltip: 'Test Notifications',
           ),
+          // Refresh button to manually reload the list
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadRecurringTransactions,
@@ -261,6 +292,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error.isNotEmpty
+              // Error state with retry button
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -277,6 +309,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                   ),
                 )
               : _recurringList.isEmpty
+                  // Empty state with call-to-action button
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -299,6 +332,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                           const SizedBox(height: 24),
                           ElevatedButton.icon(
                             onPressed: () async {
+                              // Navigate to add screen; refresh if new item was added
                               final result = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -320,13 +354,16 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                         ],
                       ),
                     )
+                  // List state - show all recurring transactions
                   : RefreshIndicator(
+                      // Pull-to-refresh reloads the list
                       onRefresh: _loadRecurringTransactions,
                       child: ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: _recurringList.length,
                         itemBuilder: (context, index) {
-                          final recurring = _recurringList[index];
+                          final recurring = _recurringList[index]; // Current item's data
+                          // Check isActive - API returns bool or 1/0 integer
                           final isActive = recurring['isActive'] == true || recurring['isActive'] == 1;
 
                           return Card(
@@ -336,8 +373,10 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Opacity(
+                              // Paused transactions are shown at 60% opacity to indicate inactive state
                               opacity: isActive ? 1.0 : 0.6,
                               child: InkWell(
+                                // Tapping the card opens the detail bottom sheet
                                 onTap: () {
                                   _showRecurringDetails(recurring);
                                 },
@@ -347,8 +386,10 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
+                                      // Top row: icon, name/category/frequency, amount
                                       Row(
                                         children: [
+                                          // Category icon in colored circle
                                           Container(
                                             padding: const EdgeInsets.all(10),
                                             decoration: BoxDecoration(
@@ -359,6 +400,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                                             child: _getCategoryIcon(recurring['category'] ?? ''),
                                           ),
                                           const SizedBox(width: 12),
+                                          // Name, category badge, and frequency badge
                                           Expanded(
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,6 +415,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                                                 const SizedBox(height: 4),
                                                 Row(
                                                   children: [
+                                                    // Category badge pill
                                                     Container(
                                                       padding: const EdgeInsets.symmetric(
                                                         horizontal: 8,
@@ -393,6 +436,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                                                       ),
                                                     ),
                                                     const SizedBox(width: 8),
+                                                    // Frequency badge pill
                                                     Container(
                                                       padding: const EdgeInsets.symmetric(
                                                         horizontal: 8,
@@ -416,6 +460,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                                               ],
                                             ),
                                           ),
+                                          // Amount on the right - colored by type (green/red)
                                           Text(
                                             'RM ${(recurring['amount'] ?? 0.0).toStringAsFixed(2)}',
                                             style: TextStyle(
@@ -426,6 +471,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                                           ),
                                         ],
                                       ),
+                                      // Optional description text
                                       if (recurring['description'] != null && recurring['description'].toString().isNotEmpty) ...[
                                         const SizedBox(height: 12),
                                         Text(
@@ -437,6 +483,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                                         ),
                                       ],
                                       const SizedBox(height: 12),
+                                      // Next execution date and Active/Paused status badge
                                       Row(
                                         children: [
                                           Icon(Icons.schedule, size: 14, color: Colors.grey.shade600),
@@ -448,7 +495,8 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                                               color: Colors.grey.shade600,
                                             ),
                                           ),
-                                          const Spacer(),
+                                          const Spacer(), // Push status badge to the right
+                                          // Active/Paused status indicator
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                             decoration: BoxDecoration(
@@ -480,10 +528,13 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                                         ],
                                       ),
                                       const SizedBox(height: 12),
+                                      // Action buttons row: Execute Now, Pause/Resume, Delete
                                       Row(
                                         children: [
+                                          // Execute Now button
                                           Expanded(
                                             child: OutlinedButton.icon(
+                                              // Disable button if recurringId is null (shouldn't happen)
                                               onPressed: recurring['recurringId'] != null
                                                   ? () => _executeNow(
                                                         recurring['recurringId'] as int,
@@ -500,6 +551,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                                             ),
                                           ),
                                           const SizedBox(width: 8),
+                                          // Pause/Resume button - label and color change based on state
                                           Expanded(
                                             child: OutlinedButton.icon(
                                               onPressed: recurring['recurringId'] != null
@@ -511,6 +563,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                                               icon: Icon(isActive ? Icons.pause : Icons.play_circle, size: 16),
                                               label: Text(isActive ? 'Pause' : 'Resume'),
                                               style: OutlinedButton.styleFrom(
+                                                // Orange for pause (caution), green for resume
                                                 foregroundColor: isActive ? Colors.orange : AppColors.success,
                                                 side: BorderSide(
                                                   color: isActive ? Colors.orange : AppColors.success,
@@ -520,6 +573,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                                             ),
                                           ),
                                           const SizedBox(width: 8),
+                                          // Delete button (icon only)
                                           IconButton(
                                             onPressed: recurring['recurringId'] != null
                                                 ? () => _deleteTransaction(
@@ -528,7 +582,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                                                     )
                                                 : null,
                                             icon: const Icon(Icons.delete_outline, size: 20),
-                                            color: AppColors.danger,
+                                            color: AppColors.danger, // Red delete icon
                                             tooltip: 'Delete',
                                           ),
                                         ],
@@ -542,8 +596,11 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                         },
                       ),
                     ),
+      // FAB only shows when there are existing recurring transactions
+      // (empty state has its own button; FAB would be redundant there)
       floatingActionButton: _recurringList.isNotEmpty
           ? FloatingActionButton.extended(
+              // FloatingActionButton.extended has both an icon and a text label
               onPressed: () async {
                 final result = await Navigator.push(
                   context,
@@ -560,29 +617,33 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
             )
-          : null,
+          : null, // null = no FAB shown when the list is empty
     );
   }
 
+  // _showRecurringDetails displays a bottom sheet with full details of a recurring transaction
   void _showRecurringDetails(Map<String, dynamic> recurring) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
+      isScrollControlled: true, // Allow the sheet to take more than half the screen
       shape: const RoundedRectangleBorder(
+        // Rounded top corners for the bottom sheet
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
-        expand: false,
+        // DraggableScrollableSheet allows the bottom sheet to be resized by dragging
+        initialChildSize: 0.6, // Opens at 60% of screen height
+        minChildSize: 0.4,     // Minimum height: 40%
+        maxChildSize: 0.9,     // Maximum height: 90%
+        expand: false, // Don't expand to fill parent by default
         builder: (context, scrollController) => SingleChildScrollView(
-          controller: scrollController,
+          controller: scrollController, // Connect scrolling to the DraggableScrollableSheet
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Drag handle - small grey pill at the top of the bottom sheet
                 Center(
                   child: Container(
                     width: 40,
@@ -599,6 +660,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
+                // Detail rows showing all properties
                 _detailRow('Type', recurring['transactionType'] ?? 'N/A'),
                 _detailRow('Category', recurring['category'] ?? 'N/A'),
                 _detailRow('Amount', 'RM ${(recurring['amount'] ?? 0.0).toStringAsFixed(2)}'),
@@ -607,6 +669,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                 _detailRow('End Date', recurring['endDate'] != null ? _formatDate(recurring['endDate']) : 'No end date'),
                 _detailRow('Next Execution', _formatDate(recurring['nextExecution'])),
                 _detailRow('Last Executed', recurring['lastExecuted'] != null ? _formatDate(recurring['lastExecuted']) : 'Never'),
+                // Optional description section
                 if (recurring['description'] != null && recurring['description'].toString().isNotEmpty) ...[
                   const SizedBox(height: 12),
                   const Text(
@@ -627,14 +690,15 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
     );
   }
 
+  // _detailRow creates a label-value pair row for the details bottom sheet
   Widget _detailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start, // Align to top for multi-line values
         children: [
           SizedBox(
-            width: 120,
+            width: 120, // Fixed width for labels to keep values aligned
             child: Text(
               label,
               style: TextStyle(
@@ -644,7 +708,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
               ),
             ),
           ),
-          Expanded(
+          Expanded( // Expanded lets the value text use remaining width
             child: Text(
               value,
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),

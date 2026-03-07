@@ -1,9 +1,16 @@
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../services/api_service.dart';
-import '../../utils/colors.dart';
-import 'add_goal_screen.dart';
+// goals_screen.dart
+// This screen shows all financial goals (e.g., save for a house, build emergency fund).
+// It shows a summary card at the top, filter chips (All/Active/Completed), and goal cards.
+// Each goal card has a progress bar, amounts, deadline, priority badge, and contribute button.
+// Swiping left on a goal card deletes it.
 
+import 'package:flutter/material.dart'; // Flutter UI toolkit
+import 'package:intl/intl.dart'; // NumberFormat for comma-separated currency, DateFormat for dates
+import '../../services/api_service.dart'; // Backend API calls
+import '../../utils/colors.dart'; // AppColors constants
+import 'add_goal_screen.dart'; // Screen for adding/editing goals
+
+// GoalsScreen is a StatefulWidget because filter selection, data, and loading state change
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
 
@@ -12,17 +19,18 @@ class GoalsScreen extends StatefulWidget {
 }
 
 class _GoalsScreenState extends State<GoalsScreen> {
-  List<Map<String, dynamic>> _goals = [];
-  Map<String, dynamic>? _summary;
-  bool _isLoading = true;
-  String _selectedFilter = 'all'; // all, active, completed
+  List<Map<String, dynamic>> _goals = []; // Goals list loaded from API
+  Map<String, dynamic>? _summary;         // Summary stats (total goals, progress, amounts)
+  bool _isLoading = true;                 // True while loading data
+  String _selectedFilter = 'all';         // 'all', 'active', or 'completed'
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadData(); // Load goals and summary when screen opens
   }
 
+  // _loadData fetches goals and the summary in parallel using Future.wait
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
@@ -32,12 +40,16 @@ class _GoalsScreenState extends State<GoalsScreen> {
       return;
     }
 
+    // Future.wait runs multiple async operations at the same time and waits for ALL to complete
+    // This is faster than running them sequentially (one after the other)
     final results = await Future.wait([
+      // Pass null for status when filter is 'all' (returns all goals regardless of status)
       ApiService.getUserGoals(userId, status: _selectedFilter == 'all' ? null : _selectedFilter),
       ApiService.getGoalsSummary(userId),
     ]);
 
     setState(() {
+      // results[0] is from getUserGoals, results[1] is from getGoalsSummary
       if (results[0]['success']) {
         _goals = List<Map<String, dynamic>>.from(results[0]['goals']);
       }
@@ -48,6 +60,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     });
   }
 
+  // _deleteGoal asks for confirmation then permanently removes a goal
   Future<void> _deleteGoal(int goalId) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -82,7 +95,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
             backgroundColor: AppColors.success,
           ),
         );
-        _loadData();
+        _loadData(); // Refresh list after deletion
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -94,18 +107,22 @@ class _GoalsScreenState extends State<GoalsScreen> {
     }
   }
 
+  // _showContributeDialog shows an AlertDialog for adding money to a goal
+  // StatefulBuilder is used so the dialog can show its own loading state
   Future<void> _showContributeDialog(Map<String, dynamic> goal) async {
     final amountController = TextEditingController();
     final remainingAmount = (goal['remainingAmount'] ?? 0).toDouble();
-    bool isLoading = false;
+    bool isLoading = false; // Local state just for this dialog
 
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
+        // StatefulBuilder provides a local setState (setDialogState) inside the dialog
+        // This lets us update the dialog's UI (e.g., show a spinner) without rebuilding the whole screen
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Add Contribution'),
           content: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min, // Dialog only as tall as its content
             children: [
               Text(
                 goal['goalName'],
@@ -129,7 +146,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   fillColor: Colors.grey.shade50,
                 ),
                 keyboardType: TextInputType.number,
-                enabled: !isLoading,
+                enabled: !isLoading, // Disable input while API call is in progress
               ),
             ],
           ),
@@ -142,6 +159,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
               onPressed: isLoading ? null : () async {
                 final amount = double.tryParse(amountController.text);
                 if (amount == null || amount <= 0) {
+                  // 'this.context' refers to the GoalsScreen's context, not the dialog's context
                   ScaffoldMessenger.of(this.context).showSnackBar(
                     const SnackBar(
                       content: Text('Please enter a valid amount'),
@@ -151,15 +169,15 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   return;
                 }
 
-                setDialogState(() => isLoading = true);
+                setDialogState(() => isLoading = true); // Show spinner in dialog button
 
                 final result = await ApiService.contributeToGoal(goal['goalId'], amount);
 
                 setDialogState(() => isLoading = false);
 
-                Navigator.pop(dialogContext);
+                Navigator.pop(dialogContext); // Close the dialog
 
-                if (!this.mounted) return;
+                if (!this.mounted) return; // 'this.mounted' checks the GoalsScreen widget
 
                 if (result['success']) {
                   ScaffoldMessenger.of(this.context).showSnackBar(
@@ -168,7 +186,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       backgroundColor: AppColors.success,
                     ),
                   );
-                  _loadData();
+                  _loadData(); // Refresh goals to show updated amounts
                 } else {
                   ScaffoldMessenger.of(this.context).showSnackBar(
                     SnackBar(
@@ -182,6 +200,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
               ),
+              // Show a small spinner in the button while the API call is in progress
               child: isLoading
                   ? const SizedBox(
                       height: 16,
@@ -207,13 +226,14 @@ class _GoalsScreenState extends State<GoalsScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
+          // Add button in app bar
           IconButton(
             icon: const Icon(Icons.add, color: Colors.white),
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const AddGoalScreen()),
-              ).then((_) => _loadData());
+              ).then((_) => _loadData()); // .then() runs after the push resolves (user came back)
             },
           ),
         ],
@@ -221,15 +241,15 @@ class _GoalsScreenState extends State<GoalsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _loadData,
+              onRefresh: _loadData, // Pull-to-refresh
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // Summary Card
+                  // Summary card - only shown when summary data is available
                   if (_summary != null) _buildSummaryCard(),
                   const SizedBox(height: 16),
 
-                  // Filter Chips
+                  // Filter chips row: All / Active / Completed
                   Row(
                     children: [
                       _buildFilterChip('all', 'All', Icons.list),
@@ -241,7 +261,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Goals List
+                  // Goals list or empty state
                   if (_goals.isEmpty)
                     Center(
                       child: Padding(
@@ -249,12 +269,14 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         child: Column(
                           children: [
                             Icon(
+                              // Show different icon based on which filter is active
                               _selectedFilter == 'completed' ? Icons.check_circle_outline : Icons.flag_outlined,
                               size: 64,
                               color: Colors.grey.shade400,
                             ),
                             const SizedBox(height: 16),
                             Text(
+                              // Context-aware empty message
                               _selectedFilter == 'all'
                                   ? 'No goals yet'
                                   : _selectedFilter == 'active'
@@ -272,6 +294,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                               style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
                               textAlign: TextAlign.center,
                             ),
+                            // Only show add button in empty state when no filter is applied
                             if (_selectedFilter == 'all') ...[
                               const SizedBox(height: 16),
                               ElevatedButton.icon(
@@ -297,10 +320,12 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       ),
                     )
                   else
+                    // '...' spread operator expands the list of goal cards into the parent ListView
                     ..._goals.map((goal) => _buildGoalCard(goal)),
                 ],
               ),
             ),
+      // Floating action button for adding a new goal
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
@@ -314,6 +339,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
+  // _buildSummaryCard creates the gradient overview card at the top
   Widget _buildSummaryCard() {
     return Card(
       elevation: 4,
@@ -321,6 +347,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
+          // Gradient background: primary color fading slightly
           gradient: LinearGradient(
             colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
             begin: Alignment.topLeft,
@@ -339,6 +366,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            // Three stats: Active goals count, Completed count, Overall progress %
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -360,10 +388,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ],
             ),
             const SizedBox(height: 16),
+            // Total saved vs target row
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withOpacity(0.2), // Semi-transparent white box
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -377,6 +406,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         style: TextStyle(fontSize: 12, color: Colors.white70),
                       ),
                       Text(
+                        // NumberFormat('#,##0.00') formats as "1,234.56" (with comma separators)
                         'RM ${NumberFormat('#,##0.00').format(_summary!['totalSavedAmount'])}',
                         style: const TextStyle(
                           fontSize: 18,
@@ -412,6 +442,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
+  // _buildSummaryItem creates one stat item (icon + value + label) for the summary card
   Widget _buildSummaryItem(String label, String value, IconData icon) {
     return Column(
       children: [
@@ -433,6 +464,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
+  // _buildFilterChip creates one filter option (All/Active/Completed)
   Widget _buildFilterChip(String value, String label, IconData icon) {
     final isSelected = _selectedFilter == value;
     return FilterChip(
@@ -451,9 +483,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
       selected: isSelected,
       onSelected: (selected) {
         setState(() {
-          _selectedFilter = value;
+          _selectedFilter = value; // Update filter
         });
-        _loadData();
+        _loadData(); // Reload with new filter applied
       },
       selectedColor: AppColors.primary,
       backgroundColor: Colors.grey.shade200,
@@ -463,47 +495,53 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
+  // _buildGoalCard creates the card for a single goal
   Widget _buildGoalCard(Map<String, dynamic> goal) {
-    final progressPercentage = goal['progressPercentage'] ?? 0.0;
+    final progressPercentage = goal['progressPercentage'] ?? 0.0; // 0-100
     final daysRemaining = goal['daysRemaining'] ?? 0;
     final isOverdue = goal['isOverdue'] ?? false;
     final isCompleted = goal['status'] == 'completed';
 
+    // Priority color: red=high, orange=medium, green=low
     Color priorityColor = Colors.grey;
     if (goal['priority'] == 'high') priorityColor = Colors.red;
     if (goal['priority'] == 'medium') priorityColor = Colors.orange;
     if (goal['priority'] == 'low') priorityColor = Colors.green;
 
-    Color progressColor = AppColors.success;
-    if (progressPercentage < 50) progressColor = AppColors.danger;
-    else if (progressPercentage < 80) progressColor = AppColors.warning;
+    // Progress bar color changes based on how much progress has been made
+    Color progressColor = AppColors.success; // Green for 80%+
+    if (progressPercentage < 50) progressColor = AppColors.danger;      // Red for < 50%
+    else if (progressPercentage < 80) progressColor = AppColors.warning; // Orange for 50-79%
 
     return Dismissible(
-      key: Key(goal['goalId'].toString()),
+      // Dismissible enables swipe-to-delete on the card
+      key: Key(goal['goalId'].toString()), // Unique key required for Dismissible
       background: Container(
+        // Red delete background visible while swiping
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: AppColors.danger,
           borderRadius: BorderRadius.circular(12),
         ),
-        alignment: Alignment.centerRight,
+        alignment: Alignment.centerRight,  // Delete icon on the right
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(Icons.delete, color: Colors.white, size: 32),
       ),
-      direction: DismissDirection.endToStart,
-      onDismissed: (direction) => _deleteGoal(goal['goalId']),
+      direction: DismissDirection.endToStart, // Only allow swipe from right to left
+      onDismissed: (direction) => _deleteGoal(goal['goalId']), // Delete when dismissed
       child: Card(
         elevation: 2,
         margin: const EdgeInsets.only(bottom: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: InkWell(
+          // Tapping the card navigates to the edit screen
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => AddGoalScreen(existingGoal: goal),
+                builder: (_) => AddGoalScreen(existingGoal: goal), // Pass goal for pre-filling
               ),
-            ).then((_) => _loadData());
+            ).then((_) => _loadData()); // Refresh after editing
           },
           borderRadius: BorderRadius.circular(12),
           child: Padding(
@@ -511,6 +549,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Top row: Goal name + priority badge
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -523,6 +562,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         ),
                       ),
                     ),
+                    // Priority badge (LOW/MEDIUM/HIGH)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
@@ -530,7 +570,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        goal['priority'].toUpperCase(),
+                        goal['priority'].toUpperCase(), // Convert to uppercase
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -540,25 +580,26 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     ),
                   ],
                 ),
+                // Optional description (capped at 2 lines)
                 if (goal['description'] != null && goal['description'].isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
                     goal['description'],
                     style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    overflow: TextOverflow.ellipsis, // Show "..." if too long
                   ),
                 ],
                 const SizedBox(height: 12),
 
-                // Progress Bar
+                // Progress bar with percentage
                 Row(
                   children: [
                     Expanded(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: LinearProgressIndicator(
-                          value: progressPercentage / 100,
+                          value: progressPercentage / 100, // Convert % to 0.0-1.0
                           minHeight: 8,
                           backgroundColor: Colors.grey.shade200,
                           valueColor: AlwaysStoppedAnimation<Color>(
@@ -579,7 +620,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Amount and Deadline
+                // Bottom row: amounts (left) and deadline (right)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -587,6 +628,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
+                          // "RM 500.00 / RM 10,000.00" format
                           'RM ${NumberFormat('#,##0.00').format(goal['currentAmount'])} / RM ${NumberFormat('#,##0.00').format(goal['targetAmount'])}',
                           style: const TextStyle(
                             fontSize: 14,
@@ -611,6 +653,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             Icon(
                               Icons.calendar_today,
                               size: 14,
+                              // Red calendar icon if overdue
                               color: isOverdue ? AppColors.danger : Colors.grey.shade600,
                             ),
                             const SizedBox(width: 4),
@@ -624,9 +667,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: isCompleted
-                                    ? AppColors.success
+                                    ? AppColors.success  // Green for completed
                                     : isOverdue
-                                        ? AppColors.danger
+                                        ? AppColors.danger // Red for overdue
                                         : Colors.black87,
                               ),
                             ),
@@ -634,6 +677,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
+                          // Format deadline date from "2024-12-31" to "Dec 31, 2024"
                           DateFormat('MMM dd, yyyy').format(DateTime.parse(goal['deadline'])),
                           style: TextStyle(
                             fontSize: 12,
@@ -645,7 +689,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   ],
                 ),
 
-                // Contribute Button (only for active goals)
+                // "Add Contribution" button - only shown for active (not completed) goals
                 if (goal['status'] == 'active') ...[
                   const SizedBox(height: 12),
                   SizedBox(
