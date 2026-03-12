@@ -33,9 +33,17 @@ class ApiService {
   // Base URL Configuration
   // ==============================================================================
   // This is the root URL for ALL API calls. Every endpoint URL is built from this.
-  // - For Android emulator: use 10.0.2.2 (special alias for host machine's localhost)
-  // - For physical device: use your computer's IP address (e.g., 192.168.1.38)
-  // - For web/iOS simulator: use localhost or 127.0.0.1
+  //
+  // HOW TO FIND YOUR IP (Windows): Open Command Prompt → type "ipconfig"
+  //                                Look for "IPv4 Address" under your Wi-Fi adapter
+  // HOW TO FIND YOUR IP (Mac/Linux): Open Terminal → type "ifconfig" or "ip addr"
+  //
+  // - For Android emulator: use 10.0.2.2 (maps to host machine localhost)
+  // - For physical device:  use your computer's local IP (e.g., 192.168.x.x)
+  //                         *** Device and computer must be on the SAME Wi-Fi ***
+  // - For iOS simulator:    use localhost or 127.0.0.1
+  //
+  // ⚠️  UPDATE THIS IP before running on a new network or different device
   // ==============================================================================
   static const String baseUrl = 'http://192.168.1.38:5000/api';
 

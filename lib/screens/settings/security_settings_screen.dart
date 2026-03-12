@@ -16,8 +16,6 @@ import '../auth/verify_email_screen.dart';
 // Import the 2FA setup screen — navigates here when enabling Two-Factor Authentication
 import 'two_factor_setup_screen.dart';
 
-// Import the backup codes screen — shown after 2FA setup (not used in this file directly, but imported for reference)
-import 'backup_codes_screen.dart';
 
 // SecuritySettingsScreen — shows the full security dashboard for the user's account
 // Includes: security score, email verification, 2FA toggle, active sessions, security log, danger zone
@@ -577,88 +575,6 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       // !mounted check ensures we don't update state after widget was removed
       if (result == true || !mounted) {
         _loadSecurityData(); // Reload to reflect that 2FA is now enabled
-      }
-    }
-  }
-
-  // _handleDeleteAccount — a simpler 2-step confirmation for account deletion
-  // Note: the actual deletion is in _deleteAccount; this is a separate flow used elsewhere
-  Future<void> _handleDeleteAccount() async {
-    // Step 1: Initial warning dialog
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text(
-          'Are you sure you want to delete your account? '
-          'This action cannot be undone and all your data will be permanently deleted.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete Account'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      // Step 2: Password confirmation dialog
-      final passwordController = TextEditingController();
-      final passwordConfirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Confirm Password'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Please enter your password to confirm account deletion:'),
-              const SizedBox(height: 16),
-              TextField(
-                controller: passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: Icon(Icons.lock),
-                ),
-                obscureText: true,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.danger,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Confirm'),
-            ),
-          ],
-        ),
-      );
-
-      if (passwordConfirmed == true) {
-        // TODO: API call to delete account
-        // Currently shows a placeholder message — feature coming in next update
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account deletion will be available in next update'),
-            backgroundColor: AppColors.info, // Blue info color
-          ),
-        );
       }
     }
   }

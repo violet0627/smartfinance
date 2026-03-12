@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart'; // Flutter UI toolkit
 import 'package:flutter/services.dart'; // Provides Clipboard for copy-to-clipboard functionality
+import 'package:share_plus/share_plus.dart'; // Allows sharing text/files via system share sheet
 import '../../utils/colors.dart'; // AppColors constants
 
 // BackupCodesScreen receives the backup codes as a parameter from the 2FA setup flow
@@ -351,15 +352,20 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        // TODO: Implement print functionality
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Print feature coming soon'),
-                          ),
+                        // Share the backup codes as formatted text via the system share sheet
+                        // Users can save to Notes, email themselves, print from another app, etc.
+                        final codesText = widget.backupCodes
+                            .asMap()
+                            .entries
+                            .map((e) => '${e.key + 1}. ${e.value}')
+                            .join('\n');
+                        Share.share(
+                          'SmartFinance Backup Codes\n\nKeep these safe — each code can only be used once.\n\n$codesText',
+                          subject: 'SmartFinance 2FA Backup Codes',
                         );
                       },
-                      icon: const Icon(Icons.print, size: 18),
-                      label: const Text('Print'),
+                      icon: const Icon(Icons.share, size: 18),
+                      label: const Text('Share'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
                         side: const BorderSide(color: AppColors.primary),
