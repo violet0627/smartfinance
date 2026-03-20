@@ -200,7 +200,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
     if (!mounted) return; // Check widget is still in tree after async gap
 
     if (result['success']) {
-      Navigator.pop(context, true); // Go back and signal to refresh the goals list
+      // Show snackbar BEFORE popping — context becomes invalid after Navigator.pop
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           // Show different messages for create vs edit
@@ -208,6 +208,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
           backgroundColor: AppColors.success,
         ),
       );
+      Navigator.pop(context, true); // Go back and signal to refresh the goals list
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

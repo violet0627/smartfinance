@@ -433,8 +433,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
 
       if (!mounted) return;
-      // Return true to tell the previous screen (dashboard) to reload
-      Navigator.pop(context, true);
+      // Show snackbar BEFORE popping — context becomes invalid after Navigator.pop
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(widget.transaction != null
@@ -443,6 +442,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           backgroundColor: AppColors.success,
         ),
       );
+      // Return true to tell the previous screen (dashboard) to reload
+      Navigator.pop(context, true);
     } else {
       // --- Transaction save failed ---
       ScaffoldMessenger.of(context).showSnackBar(

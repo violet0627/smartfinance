@@ -572,8 +572,10 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       );
 
       // result == true means setup was completed successfully
-      // !mounted check ensures we don't update state after widget was removed
-      if (result == true || !mounted) {
+      // mounted check ensures we don't update state after widget was removed
+      // Must use && (AND): only reload when BOTH conditions are true
+      // Using || (OR) would call _loadSecurityData() even when widget is unmounted — crash
+      if (result == true && mounted) {
         _loadSecurityData(); // Reload to reflect that 2FA is now enabled
       }
     }

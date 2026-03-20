@@ -107,15 +107,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       await prefs.setString('userFullName', _fullNameController.text); // Cache the name locally
       await prefs.setString('userEmail', _emailController.text); // Cache the email locally
 
-      // Navigator.pop closes this screen and returns 'true' to the calling screen
-      // The 'true' value tells the settings screen to refresh the displayed name/email
-      Navigator.pop(context, true);
+      // Show snackbar BEFORE popping — context becomes invalid after Navigator.pop
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Profile updated successfully'),
           backgroundColor: AppColors.success, // Green background for success
         ),
       );
+      // Navigator.pop closes this screen and returns 'true' to the calling screen
+      // The 'true' value tells the settings screen to refresh the displayed name/email
+      Navigator.pop(context, true);
     } else {
       // Profile save failed - show an error snackbar
       ScaffoldMessenger.of(context).showSnackBar(

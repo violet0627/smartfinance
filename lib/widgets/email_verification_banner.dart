@@ -92,8 +92,12 @@ class EmailVerificationBanner extends StatelessWidget {
           ),
         ),
       // .then() runs AFTER the user comes back from VerifyEmailScreen
-      // It calls onVerified to refresh the parent widget
-      ).then((_) => onVerified());
+      // context.mounted check: if the parent widget was disposed while the user
+      // was on VerifyEmailScreen, calling onVerified() would crash (setState on dead widget)
+      ).then((_) {
+        if (!context.mounted) return;
+        onVerified(); // Refresh the parent widget to hide the banner
+      });
     } else {
       // API call failed - show error message
       ScaffoldMessenger.of(context).showSnackBar(

@@ -85,12 +85,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Future<void> _verifyToken() async {
     final result = await ApiService.verifyResetToken(_tokenController.text.trim());
 
+    // Check mounted before any setState or context usage after the await
+    if (!mounted) return;
+
     if (result['success']) {
       setState(() {
         _tokenEmail = result['email'];         // Store the email for display
       });
     } else {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['error'] ?? 'Invalid or expired token'),
