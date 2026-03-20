@@ -183,17 +183,18 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
       // The url_launcher package works with Uri objects, not plain strings
       final uri = Uri.parse(url);
 
-      // canLaunchUrl — checks if the device can handle opening this URL
-      // (e.g., is there a browser app installed?)
-      if (await canLaunchUrl(uri)) {
-        // launchUrl — actually opens the URL
-        // LaunchMode.externalApplication — opens in the default browser (not in-app)
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      // launchUrl — opens the URL in the default external browser/app
+      // LaunchMode.externalApplication — forces open in external browser, not in-app WebView
+      // We skip canLaunchUrl() because it is unreliable on Android 11+ (can return false
+      // even when the device has a browser). Instead we call launchUrl directly and
+      // catch PlatformException if it genuinely fails.
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
-        // !mounted check — by the time the await completes, the widget might have been removed
-        // If !mounted (widget destroyed), don't try to update the UI — it would crash
-        if (!mounted) return;
+      // !mounted check — by the time the await completes, the widget might have been removed
+      // If !mounted (widget destroyed), don't try to update the UI — it would crash
+      if (!mounted) return;
 
+      if (launched) {
         // Show a green success snackbar at the bottom of the screen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -203,10 +204,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
           ),
         );
       } else {
-        // canLaunchUrl returned false — device cannot open the URL
-        // This happens on Android 11+ when the <queries> block is missing in AndroidManifest.xml,
-        // or when no browser app is installed
-        if (!mounted) return;
+        // launchUrl returned false — device could not handle the URL
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Could not open download link. Please ensure a browser is installed.'),
