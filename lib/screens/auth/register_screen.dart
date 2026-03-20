@@ -403,11 +403,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Phone number is required';
-                    }
+                    // Phone is optional — only validate format if the user typed something
+                    if (value == null || value.isEmpty) return null;
                     // Malaysian phone format: 01X-XXXXXXX or 01XXXXXXXX
-                    // .replaceAll(' ', '') removes spaces before matching
                     final phoneRegex = RegExp(r'^01[0-9]-?[0-9]{7,8}$');
                     if (!phoneRegex.hasMatch(value.replaceAll(' ', ''))) {
                       return 'Please enter a valid Malaysian phone number (e.g., 012-3456789)';

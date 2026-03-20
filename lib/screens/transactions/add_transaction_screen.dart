@@ -390,14 +390,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         if (budgetResult['success'] && budgetResult['budget'] != null) {
           final budget = BudgetModel.fromJson(budgetResult['budget']);
 
-          // Find the budget for the selected category
-          final categoryBudget = budget.categories.firstWhere(
-            (cat) => cat.categoryName == _selectedCategory,
-            orElse: () => budget.categories.first,   // Fallback to first category
-          );
+          // Only check category budget if there are categories in the budget
+          // budget.categories.first crashes with RangeError if the list is empty
+          if (budget.categories.isNotEmpty) {
+            final categoryBudget = budget.categories.firstWhere(
+              (cat) => cat.categoryName == _selectedCategory,
+              orElse: () => budget.categories.first, // Safe — we checked isNotEmpty above
+            );
 
-          // Send budget alert if category is 90%+ used or overall is 80%+ used
-          if (categoryBudget.percentageUsed >= 90 || budget.percentageUsed >= 80) {
+            // Send budget alert if category is 90%+ used or overall is 80%+ used
+            if (categoryBudget.percentageUsed >= 90 || budget.percentageUsed >= 80) {
+              await NotificationService.checkBudgetAndAlert(budget);
+            }
+          } else if (budget.percentageUsed >= 80) {
+            // No categories defined, but overall budget is near limit — still alert
             await NotificationService.checkBudgetAndAlert(budget);
           }
         }

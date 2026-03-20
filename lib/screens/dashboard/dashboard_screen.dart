@@ -45,6 +45,7 @@ import '../../widgets/dashboard_summary_card.dart';          // For AnimatedDash
 import '../../utils/app_gradients.dart';                     // For gradient definitions
 import '../auth/login_screen.dart';                          // For LoginScreen (logout destination)
 import '../transactions/add_transaction_screen.dart';        // For AddTransactionScreen
+import '../transactions/recurring_transactions_screen.dart'; // For RecurringTransactionsScreen (upcoming bills)
 import '../transactions/transaction_history_screen.dart';    // For TransactionHistoryScreen
 import '../budgets/budget_overview_screen.dart';             // For BudgetOverviewScreen
 import '../budgets/create_budget_screen.dart';               // For CreateBudgetScreen
@@ -1498,7 +1499,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: TextButton(
                 onPressed: () {
                   // Navigate to recurring transactions screen
-                  Navigator.pushNamed(context, '/recurring-transactions').then((_) => _loadData());
+                  // Use direct push — named routes are not registered in main.dart
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const RecurringTransactionsScreen(),
+                    ),
+                  ).then((_) => _loadData());
                 },
                 child: Text(
                   'View all ${_upcomingBills.length} upcoming bills',
