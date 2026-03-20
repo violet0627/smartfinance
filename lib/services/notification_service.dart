@@ -153,8 +153,10 @@ class NotificationService {
     final percentage = budget.percentageUsed;     // Get the overall usage percentage
 
     // Alert for overall budget status
-    if (percentage >= 100 && !budget.isOverBudget) {
-      // First time exceeding budget (100%)
+    // isOverBudget is derived from percentageUsed >= 100, so we check it directly
+    // (the old condition `percentage >= 100 && !budget.isOverBudget` was always false)
+    if (budget.isOverBudget) {
+      // Budget has been exceeded
       await showBudgetAlert(
         title: '🚨 Budget Exceeded!',
         body: 'You\'ve spent RM ${budget.totalSpent.toStringAsFixed(2)} of your RM ${budget.totalBudget.toStringAsFixed(2)} budget.',
@@ -545,23 +547,23 @@ class NotificationService {
     final daysBeforeReminder = settings['daysBeforeReminder'] as int;
 
     for (var recurring in recurringList) {
-      // Check if this recurring transaction is active
+      // The API model's to_dict() returns camelCase keys (isActive, nextExecution, etc.)
       // Handle both boolean true and integer 1 (database might return either)
-      final isActive = recurring['IsActive'] == true || recurring['IsActive'] == 1;
+      final isActive = recurring['isActive'] == true || recurring['isActive'] == 1;
       if (!isActive) continue;                    // Skip inactive ones
 
       try {
-        final nextExecutionStr = recurring['NextExecution'];
+        final nextExecutionStr = recurring['nextExecution'];
         if (nextExecutionStr == null) continue;   // Skip if no next execution date
 
         final nextExecution = DateTime.parse(nextExecutionStr);
 
         // Schedule the reminder
         await scheduleRecurringReminder(
-          recurringId: recurring['RecurringId'],
-          name: recurring['Name'] ?? 'Unnamed',
-          amount: (recurring['Amount'] ?? 0.0).toDouble(),
-          type: recurring['TransactionType'] ?? 'expense',
+          recurringId: recurring['recurringId'],
+          name: recurring['name'] ?? 'Unnamed',
+          amount: (recurring['amount'] ?? 0.0).toDouble(),
+          type: recurring['transactionType'] ?? 'expense',
           nextExecution: nextExecution,
           daysBeforeReminder: daysBeforeReminder,
         );
@@ -592,12 +594,12 @@ class NotificationService {
     final thirtyDaysFromNow = now.add(const Duration(days: 30));
 
     for (var recurring in recurringList) {
-      // Check if active
-      final isActive = recurring['IsActive'] == true || recurring['IsActive'] == 1;
+      // Use camelCase keys — the API model's to_dict() returns camelCase
+      final isActive = recurring['isActive'] == true || recurring['isActive'] == 1;
       if (!isActive) continue;
 
       try {
-        final nextExecutionStr = recurring['NextExecution'];
+        final nextExecutionStr = recurring['nextExecution'];
         if (nextExecutionStr == null) continue;
 
         final nextExecution = DateTime.parse(nextExecutionStr);
@@ -605,11 +607,11 @@ class NotificationService {
         // Only include if within the next 30 days
         if (nextExecution.isAfter(now) && nextExecution.isBefore(thirtyDaysFromNow)) {
           upcomingReminders.add({
-            'recurringId': recurring['RecurringId'],
-            'name': recurring['Name'],
-            'amount': recurring['Amount'],
-            'type': recurring['TransactionType'],
-            'category': recurring['Category'],
+            'recurringId': recurring['recurringId'],
+            'name': recurring['name'],
+            'amount': recurring['amount'],
+            'type': recurring['transactionType'],
+            'category': recurring['category'],
             'nextExecution': nextExecution,
             'daysUntil': nextExecution.difference(now).inDays,   // Days until due
           });

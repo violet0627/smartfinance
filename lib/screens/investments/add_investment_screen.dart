@@ -115,14 +115,15 @@ class _AddInvestmentScreenState extends State<AddInvestmentScreen> {
     if (!mounted) return; // Safety check after async gap
 
     if (result['success']) {
-      // Investment added - go back to portfolio screen and signal to refresh
-      Navigator.pop(context, true); // 'true' tells portfolio screen to reload
+      // Show SnackBar BEFORE Navigator.pop — after pop, context is deactivated
+      // and ScaffoldMessenger.of(context) would throw a widget-tree error.
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Investment added successfully!'),
           backgroundColor: AppColors.success,
         ),
       );
+      Navigator.pop(context, true); // 'true' tells portfolio screen to reload
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

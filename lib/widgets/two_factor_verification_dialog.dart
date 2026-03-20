@@ -116,12 +116,10 @@ class _TwoFactorVerificationDialogState extends State<TwoFactorVerificationDialo
         );
       }
 
-      // Stop loading spinner
-      setState(() => _isVerifying = false);
-
-      // Safety check: ensure widget is still mounted before using context
-      // "mounted" is a property of State that's false if the widget was disposed
+      // Check mounted BEFORE setState — the dialog can be dismissed (e.g. Android
+      // back button) while the API call is in flight, disposing the widget.
       if (!mounted) return;
+      setState(() => _isVerifying = false);
 
       if (result['success'] && result['verified'] == true) {
         // Verification successful!

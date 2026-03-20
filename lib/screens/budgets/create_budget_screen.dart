@@ -144,7 +144,9 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedMonth,
-      firstDate: DateTime.now(),    // Can't create budgets for past months
+      // firstDate allows past months so that editing existing past budgets doesn't crash.
+      // Flutter throws an assertion if initialDate is before firstDate.
+      firstDate: DateTime(2020),
       lastDate: DateTime(2030),     // Max year 2030
       initialDatePickerMode: DatePickerMode.year, // Start in year/month view instead of day view
     );

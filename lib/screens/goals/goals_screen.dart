@@ -154,9 +154,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
                 setDialogState(() => isLoading = false);
 
+                // Check mounted BEFORE popping — if GoalsScreen was disposed while the
+                // API call ran, dialogContext is also stale and Navigator.pop would throw.
+                if (!this.mounted) return;
                 Navigator.pop(dialogContext); // Close the dialog
-
-                if (!this.mounted) return; // 'this.mounted' checks the GoalsScreen widget
 
                 if (result['success']) {
                   ScaffoldMessenger.of(this.context).showSnackBar(
@@ -361,7 +362,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 ),
                 _buildSummaryItem(
                   'Progress',
-                  '${_summary!['overallProgress'].toStringAsFixed(0)}%',
+                  // Cast to num before toStringAsFixed — Python may return int (e.g. 0 or 100)
+                  // and Dart's int does not have toStringAsFixed, but num does.
+                  '${(_summary!['overallProgress'] as num).toStringAsFixed(0)}%',
                   Icons.trending_up,
                 ),
               ],

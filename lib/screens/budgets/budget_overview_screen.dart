@@ -172,6 +172,7 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
                       builder: (_) => CreateBudgetScreen(budget: _currentBudget), // Pass current budget
                     ),
                   );
+                  if (!mounted) return; // Widget may have been disposed while on the edit screen
                   _loadCurrentBudget();
                 } else if (value == 'delete') {
                   _showDeleteConfirmation();

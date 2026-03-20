@@ -115,12 +115,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final result = await ApiService.updateUserSettings(userId, {key: value});
 
     if (result['success']) {
+      if (!mounted) return; // Check before setState — widget may have been disposed
       // Optimistically update local state so the UI reflects the change immediately
       setState(() {
-        _settings![key] = value; // Update the in-memory settings map
+        _settings?[key] = value; // Use ?. so we silently skip if settings failed to load
       });
-
-      if (!mounted) return; // Widget might be gone if user navigated away
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Settings updated successfully'),

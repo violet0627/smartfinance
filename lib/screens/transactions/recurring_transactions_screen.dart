@@ -83,8 +83,8 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
     final result = await ApiService.toggleRecurringTransaction(recurringId);
 
     if (result['success']) {
+      if (!mounted) return; // Check before calling setState inside _loadRecurringTransactions
       _loadRecurringTransactions(); // Refresh list to show updated status
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           // result['isActive'] is the new state after toggling

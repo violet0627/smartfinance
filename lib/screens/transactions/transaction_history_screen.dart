@@ -108,7 +108,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     setState(() => _isLoading = true);
 
     final userId = await ApiService.getCurrentUserId();
-    if (userId == null) return;
+    if (userId == null) {
+      setState(() => _isLoading = false); // Stop spinner — screen stays empty instead of spinning forever
+      return;
+    }
 
     // API call with optional type filter
     final result = await ApiService.getUserTransactions(
@@ -116,6 +119,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       type: _filterType == 'all' ? null : _filterType,
     );
 
+    if (!mounted) return; // Widget may have been removed while the API call was in flight
     if (result['success']) {
       final transactionsList = result['transactions'] as List;
       setState(() {

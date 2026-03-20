@@ -68,10 +68,11 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
       return; // Exit without navigating
     }
 
-    // popUntil navigates back through the route stack until the condition is true
-    // This pops back to either the root route or the security settings page
-    Navigator.of(context).popUntil((route) => route.isFirst || route.settings.name == '/security');
-    Navigator.of(context).pop(); // Pop one more time to reach the settings screen
+    // Pop back to SecuritySettingsScreen and pass 'true' so it knows to reload data.
+    // Simple single pop works because TwoFactorSetupScreen used pushReplacement to
+    // get here, so the route beneath BackupCodesScreen is SecuritySettingsScreen.
+    // No named routes exist in this app, so popUntil with a route name never works.
+    Navigator.of(context).pop(true);
   }
 
   @override

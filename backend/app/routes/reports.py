@@ -249,13 +249,14 @@ def get_budget_report(user_id):
             # Analyze each category within the budget
             category_performance = []
             for cat in budget.categories:
+                # Use AllocatedAmount — this is the correct column name on BudgetCategory model
                 category_performance.append({
                     'category': cat.CategoryName,
-                    'budgeted': cat.BudgetedAmount,                        # How much was allocated
+                    'budgeted': cat.AllocatedAmount,                        # How much was allocated
                     'spent': cat.SpentAmount,                               # How much was actually spent
-                    'remaining': cat.BudgetedAmount - cat.SpentAmount,     # How much is left
-                    'percentageUsed': (cat.SpentAmount / cat.BudgetedAmount * 100) if cat.BudgetedAmount > 0 else 0,
-                    'status': 'over' if cat.SpentAmount > cat.BudgetedAmount else 'under'  # Over or under budget
+                    'remaining': cat.AllocatedAmount - cat.SpentAmount,     # How much is left
+                    'percentageUsed': (cat.SpentAmount / cat.AllocatedAmount * 100) if cat.AllocatedAmount > 0 else 0,
+                    'status': 'over' if cat.SpentAmount > cat.AllocatedAmount else 'under'  # Over or under budget
                 })
 
             # Calculate budget-level totals

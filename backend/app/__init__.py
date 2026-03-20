@@ -90,8 +90,24 @@ def create_app(config_name='development'):
     # tables that already exist, so it never destroys existing data.
     # This fixes the "Table 'smartfinance.usersettings' doesn't exist" crash.
     with app.app_context():
-        # Import models here so SQLAlchemy knows about every table before create_all()
-        from app.models import user, user_settings  # noqa: F401 — imported for side effects
+        # Import ALL models so SQLAlchemy knows about every table before create_all().
+        # Missing imports mean those tables are never created on a fresh database.
+        # noqa: F401 — these are imported for SQLAlchemy's model registry side-effect only.
+        from app.models import (  # noqa: F401
+            user,
+            user_settings,
+            transaction,
+            budget,
+            investment,
+            goal,
+            achievement,
+            password_reset,
+            two_factor_auth,
+            email_verification,
+            session,
+            security_log,
+            recurring_transaction,
+        )
         db.create_all()
 
     # Return the fully configured app, ready to handle incoming HTTP requests.

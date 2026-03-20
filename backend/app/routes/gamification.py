@@ -59,8 +59,11 @@ def calculate_level(total_xp):
         level += 1                              # Move to next level
         increment = int(increment * 1.5)        # Next level requires 1.5x more XP
 
-    # We overshot by 1 level in the loop, so subtract 1
-    return level - 1, xp_needed - increment
+    # We overshot by 1 level in the loop, so subtract 1.
+    # Return xp_needed (the total XP threshold for the next level).
+    # Returning xp_needed - increment was wrong: it produced a negative value
+    # for users with 0 XP (e.g., 100 - 150 = -50), causing "0 / -50 XP" in the UI.
+    return level - 1, xp_needed
 
 
 # ==============================================================================
