@@ -81,10 +81,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   UserStats? _userStats;                           // Gamification stats (level, XP, achievements)
   Map<String, dynamic>? _goalsSummary;             // Goals overview data
   List<Map<String, dynamic>> _upcomingBills = [];  // Upcoming recurring transactions
-  bool _isLoading = true;                          // Whether data is being loaded
+  bool _isLoading = true;                          // Whether data is being loaded (initial only)
   String _userName = '';                           // User's full name from SharedPreferences
   String _userEmail = '';                          // User's email for verification banner
   bool _emailVerified = true;                      // Default true to avoid flash of banner
+
+  // ScrollController preserves the user's scroll position when returning from sub-screens.
+  // Without this, every _loadData() rebuild would jump back to the top of the page.
+  final ScrollController _scrollController = ScrollController();
 
   // ==============================================================================
   // _toDouble - Safely Convert Dynamic Values to Double
@@ -126,6 +130,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadData();                                   // Fetch all dashboard data
   }
 
+  // dispose() — free resources when this widget is removed from the widget tree
+  @override
+  void dispose() {
+    _scrollController.dispose(); // Prevent memory leak from the ScrollController
+    super.dispose();
+  }
+
   // ==============================================================================
   // _loadData - Fetch All Dashboard Data from APIs
   // ==============================================================================
@@ -136,10 +147,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Called on:
   // - Initial load (initState)
   // - Pull-to-refresh (RefreshIndicator)
-  // - Returning from other screens (.then((_) => _loadData()))
+  // - Returning from other screens (.then((_) => _loadData(silent: true)))
   // ==============================================================================
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);             // Show shimmer skeletons
+  // silent: true = refresh data in the background without showing the loading skeleton.
+  // Used when returning from sub-screens so the scroll position is preserved.
+  // silent: false (default) = show skeleton on first load and pull-to-refresh.
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent) setState(() => _isLoading = true); // Show shimmer only on initial/pull-refresh
 
     try {
       // Get the current user's ID from stored JWT token
@@ -274,9 +288,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (e) {
       print('Error in _loadData: $e');             // Catch-all for unexpected errors
     } finally {
-      // Always stop loading, even if there was an error
+      // Always stop the loading spinner (only matters when silent: false)
       // "finally" runs whether try succeeded or catch was triggered
-      setState(() => _isLoading = false);
+      if (!silent) setState(() => _isLoading = false);
     }
   }
 
@@ -347,7 +361,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              ).then((_) => _loadData());
+              ).then((_) => _loadData(silent: true));
             },
           ),
         ],
@@ -378,10 +392,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             )
           // RefreshIndicator wraps the content for pull-to-refresh
           : RefreshIndicator(
-              onRefresh: _loadData,                // Pull down to reload all data
+              onRefresh: _loadData,                // Pull down to reload all data (shows skeleton)
               child: SingleChildScrollView(
                 // AlwaysScrollableScrollPhysics ensures pull-to-refresh works
                 // even when content fits on screen
+                controller: _scrollController,     // Preserves scroll position across silent refreshes
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -492,7 +507,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(builder: (_) => const GoalsScreen()),
-                          ).then((_) => _loadData());
+                          ).then((_) => _loadData(silent: true));
                         },
                       ),
                       const SizedBox(height: 24),
@@ -531,7 +546,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               );
                               if (result == true) {
-                                _loadData();       // Refresh dashboard data
+                                _loadData(silent: true); // Refresh without scroll reset
                               }
                             },
                           ),
@@ -548,7 +563,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 MaterialPageRoute(
                                   builder: (_) => const TransactionHistoryScreen(),
                                 ),
-                              ).then((_) => _loadData());
+                              ).then((_) => _loadData(silent: true));
                             },
                           ),
                         ),
@@ -589,7 +604,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       ? const BudgetOverviewScreen()
                                       : const CreateBudgetScreen(),
                                 ),
-                              ).then((_) => _loadData());
+                              ).then((_) => _loadData(silent: true));
                             },
                           ),
                         ),
@@ -627,7 +642,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 MaterialPageRoute(
                                   builder: (_) => const PortfolioOverviewScreen(),
                                 ),
-                              ).then((_) => _loadData());
+                              ).then((_) => _loadData(silent: true));
                             },
                           ),
                         ),
@@ -649,7 +664,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 MaterialPageRoute(
                                   builder: (_) => const GoalsScreen(),
                                 ),
-                              ).then((_) => _loadData());
+                              ).then((_) => _loadData(silent: true));
                             },
                           ),
                         ),
@@ -665,7 +680,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 MaterialPageRoute(
                                   builder: (_) => const AchievementsScreen(),
                                 ),
-                              ).then((_) => _loadData());
+                              ).then((_) => _loadData(silent: true));
                             },
                           ),
                         ),
@@ -692,7 +707,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 MaterialPageRoute(
                                   builder: (_) => const TransactionHistoryScreen(),
                                 ),
-                              ).then((_) => _loadData());
+                              ).then((_) => _loadData(silent: true));
                             },
                             child: const Text('View All'),
                           ),
@@ -745,7 +760,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           builder: (_) => const AddTransactionScreen(),
                                         ),
                                       );
-                                      if (result == true) _loadData();
+                                      if (result == true) _loadData(silent: true);
                                     },
                                     icon: const Icon(Icons.add, size: 18),
                                     label: const Text('Add Transaction'),
@@ -888,7 +903,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       : const CreateBudgetScreen(),
                 ),
               );
-              _loadData();                         // Refresh data after budget changes
+              _loadData(silent: true);              // Refresh without scroll reset
               setState(() => _selectedIndex = 0);  // Reset to home tab
               break;
             case 3:
@@ -899,7 +914,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   builder: (_) => const PortfolioOverviewScreen(),
                 ),
               );
-              _loadData();
+              _loadData(silent: true);
               setState(() => _selectedIndex = 0);
               break;
           }
@@ -962,7 +977,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           MaterialPageRoute(
             builder: (_) => const BudgetOverviewScreen(),
           ),
-        ).then((_) => _loadData());
+        ).then((_) => _loadData(silent: true));
       },
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -1136,7 +1151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           MaterialPageRoute(
             builder: (_) => const PortfolioOverviewScreen(),
           ),
-        ).then((_) => _loadData());
+        ).then((_) => _loadData(silent: true));
       },
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -1274,7 +1289,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           MaterialPageRoute(
             builder: (_) => const AchievementsScreen(),
           ),
-        ).then((_) => _loadData());
+        ).then((_) => _loadData(silent: true));
       },
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -1505,7 +1520,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     MaterialPageRoute(
                       builder: (_) => const RecurringTransactionsScreen(),
                     ),
-                  ).then((_) => _loadData());
+                  ).then((_) => _loadData(silent: true));
                 },
                 child: Text(
                   'View all ${_upcomingBills.length} upcoming bills',

@@ -918,8 +918,10 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
 
         // Build one card per budget (could be multiple months if period spans months)
         ...budgets.map((budget) {
-          // Determine the progress bar color based on percentage used
-          final percentage = budget['percentageUsed'];
+          // Determine the progress bar color based on percentage used.
+          // Use _toDouble() because the API may return this as a String ("40.0")
+          // and Dart's >= operator on String throws NoSuchMethodError.
+          final percentage = _toDouble(budget['percentageUsed']);
           Color progressColor;
           if (percentage >= 100) {
             progressColor = AppColors.danger;  // Red: over budget
