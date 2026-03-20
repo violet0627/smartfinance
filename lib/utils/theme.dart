@@ -107,10 +107,10 @@ class AppTheme {
     // Configures Card widget appearance (used for dashboard cards, list items, etc.)
     cardTheme: CardThemeData(
       color: lightCardBackground,                   // White background
-      elevation: 4,                                  // Shadow depth
-      shadowColor: Colors.black.withOpacity(0.1),   // Subtle shadow (10% opacity)
+      elevation: 2,                                  // Subtle shadow depth (reduced from 4 for cleaner look)
+      shadowColor: Colors.black.withOpacity(0.08),  // Very subtle shadow
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),    // Rounded corners (20px radius)
+        borderRadius: BorderRadius.circular(16),    // Rounded corners — consistent with dashboard cards
       ),
     ),
 
@@ -185,9 +185,13 @@ class AppTheme {
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: lightPrimary, width: 2),  // Purple-blue border
       ),
-      errorBorder: OutlineInputBorder(               // When validation fails
+      errorBorder: OutlineInputBorder(               // When validation fails (not focused)
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: danger, width: 1),        // Red border
+      ),
+      focusedErrorBorder: OutlineInputBorder(        // When validation fails AND field is focused
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: danger, width: 2),        // Thicker red border when active
       ),
     ),
   );
@@ -227,10 +231,10 @@ class AppTheme {
 
     cardTheme: CardThemeData(
       color: darkCardBackground,                     // Dark grey cards
-      elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.3),   // More visible shadow for dark mode
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.3),   // Slightly more visible shadow for dark mode
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),     // Consistent with light theme
       ),
     ),
 
@@ -301,6 +305,10 @@ class AppTheme {
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: danger, width: 1),
+      ),
+      focusedErrorBorder: OutlineInputBorder(        // When validation fails AND field is focused
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: danger, width: 2),
       ),
     ),
   );

@@ -171,7 +171,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
         }
       } catch (e) {
-        print('Error loading transactions: $e');   // Log but don't crash
+        debugPrint('Error loading transactions: $e');   // Log but don't crash
       }
 
       // --- Load Financial Summary (balance, total income, total expense) ---
@@ -183,7 +183,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
         }
       } catch (e) {
-        print('Error loading summary: $e');
+        debugPrint('Error loading summary: $e');
       }
 
       // --- Load Current Month's Budget ---
@@ -201,7 +201,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
         }
       } catch (e) {
-        print('Error loading budget: $e');
+        debugPrint('Error loading budget: $e');
       }
 
       // --- Load Investment Portfolio Summary ---
@@ -213,7 +213,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
         }
       } catch (e) {
-        print('Error loading portfolio: $e');
+        debugPrint('Error loading portfolio: $e');
       }
 
       // --- Load Gamification Stats (level, XP, achievements) ---
@@ -225,7 +225,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
         }
       } catch (e) {
-        print('Error loading stats: $e');
+        debugPrint('Error loading stats: $e');
       }
 
       // --- Load Goals Summary ---
@@ -237,7 +237,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
         }
       } catch (e) {
-        print('Error loading goals: $e');
+        debugPrint('Error loading goals: $e');
       }
 
       // --- Load Upcoming Bills (from recurring transactions) ---
@@ -253,7 +253,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
         }
       } catch (e) {
-        print('Error loading recurring transactions: $e');
+        debugPrint('Error loading recurring transactions: $e');
       }
 
       // --- Check Email Verification Status ---
@@ -268,7 +268,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
         });
       } catch (e) {
-        print('Error checking email verification: $e');
+        debugPrint('Error checking email verification: $e');
       }
     } catch (e) {
       print('Error in _loadData: $e');             // Catch-all for unexpected errors
@@ -562,7 +562,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: QuickActionCard(
                             title: 'Analytics',
                             icon: Icons.bar_chart,
-                            color: const Color(0xFF9C27B0),    // Purple
+                            color: const Color(0xFF7C3AED),    // Violet — distinct from primary purple-blue
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -641,7 +641,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: QuickActionCard(
                             title: 'Goals',
                             icon: Icons.flag,
-                            color: const Color(0xFF9C27B0),    // Purple
+                            color: const Color(0xFFDB2777),    // Rose/Pink — aspirational, unique
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -657,7 +657,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: QuickActionCard(
                             title: 'Achievements',
                             icon: Icons.emoji_events,
-                            color: const Color(0xFFFF9800),    // Orange
+                            color: const Color(0xFFD97706),    // Amber/Gold — fitting for achievements
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -701,9 +701,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     // Transaction list or empty state
                     _recentTransactions.isEmpty
-                        // Empty state: icon + message
+                        // Empty state: icon + message + CTA button
                         ? Container(
-                            padding: const EdgeInsets.all(40),
+                            padding: const EdgeInsets.all(32),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
@@ -713,13 +713,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 children: [
                                   Icon(
                                     Icons.receipt_long,
-                                    size: 48,
+                                    size: 56,
                                     color: Colors.grey[300],
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 12),
                                   Text(
                                     'No transactions yet',
-                                    style: TextStyle(color: AppColors.textSecondary),
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tap below to record your first transaction',
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  // CTA button — gives user a clear next action
+                                  ElevatedButton.icon(
+                                    onPressed: () async {
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => const AddTransactionScreen(),
+                                        ),
+                                      );
+                                      if (result == true) _loadData();
+                                    },
+                                    icon: const Icon(Icons.add, size: 18),
+                                    label: const Text('Add Transaction'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -887,46 +922,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.trending_up),
             label: 'Portfolio',
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==============================================================================
-  // _buildSummaryItem - Reusable Summary Stat Display
-  // ==============================================================================
-  // Creates a single summary statistic (label + amount) used in the financial
-  // summary section. Each item shows an icon, label text, and formatted amount.
-  // Note: This method is defined but currently not used in the build method
-  // (replaced by AnimatedDashboardCard), kept for potential future use.
-  // ==============================================================================
-  Widget _buildSummaryItem(String label, double amount, Color color, IconData icon) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'RM ${amount.toStringAsFixed(2)}',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
           ),
         ],
       ),

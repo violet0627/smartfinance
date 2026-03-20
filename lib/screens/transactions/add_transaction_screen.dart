@@ -113,11 +113,25 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   // scanned results for the user to review and apply to the form.
   // ==============================================================================
   Future<void> _scanReceipt() async {
-    // Show a loading spinner while processing
+    // Show a loading spinner with descriptive text while processing
     showDialog(
       context: context,
       barrierDismissible: false,           // Can't dismiss by tapping outside
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Scanning receipt...'),  // Tells user what is happening
+              ],
+            ),
+          ),
+        ),
+      ),
     );
 
     try {
@@ -437,6 +451,52 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   // ==============================================================================
+  // _hasUnsavedChanges - Check Whether the User Has Entered Any Data
+  // ==============================================================================
+  // Returns true if the user has typed anything, selected a category, or
+  // changed the date from today. Used to decide whether to warn on back press.
+  // ==============================================================================
+  bool get _hasUnsavedChanges {
+    // In edit mode, always warn (original values are pre-filled but may be changed)
+    if (widget.transaction != null) return true;
+    // In add mode, check if the user has entered any data
+    return _amountController.text.isNotEmpty ||
+        _descriptionController.text.isNotEmpty ||
+        _selectedCategory != null ||
+        _selectedDate.day != DateTime.now().day;
+  }
+
+  // ==============================================================================
+  // _confirmDiscard - Show "Discard Changes?" Dialog
+  // ==============================================================================
+  // Shows an AlertDialog asking the user to confirm discarding unsaved changes.
+  // Returns true if the user wants to discard, false if they want to stay.
+  // ==============================================================================
+  Future<bool> _confirmDiscard() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard changes?'),
+        content: const Text(
+          'You have unsaved changes. If you go back now, your data will be lost.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),  // Stay on screen
+            child: const Text('Keep editing'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),   // Confirm discard
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;  // Default to false (don't discard) if dialog dismissed
+  }
+
+  // ==============================================================================
   // build - Render the Add/Edit Transaction Form UI
   // ==============================================================================
   @override
@@ -445,7 +505,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     // (expense categories differ from income categories)
     final categories = TransactionCategories.getCategories(_transactionType);
 
-    return Scaffold(
+    // PopScope intercepts the back gesture/button.
+    // If the user has unsaved changes, show a confirmation dialog before leaving.
+    return PopScope(
+      canPop: false,  // Prevent default pop — we handle it ourselves in onPopInvoked
+      onPopInvoked: (didPop) async {
+        if (didPop) return;  // Already popped (shouldn't happen since canPop=false)
+        if (!_hasUnsavedChanges) {
+          // No changes — allow navigation without dialog
+          Navigator.of(context).pop();
+          return;
+        }
+        // Has unsaved changes — ask for confirmation
+        final shouldDiscard = await _confirmDiscard();
+        if (shouldDiscard && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         // Show "Edit Transaction" or "Add Transaction" based on mode
@@ -582,7 +659,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
                   style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                   decoration: InputDecoration(
-                    labelText: 'AMOUNT (RM)',
+                    labelText: 'Amount (RM)',
                     prefixText: 'RM ',                 // Currency prefix
                     prefixStyle: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                     filled: true,
@@ -611,7 +688,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
                 // --- Category Selection Grid ---
                 Text(
-                  'CATEGORY',
+                  'Category',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -704,7 +781,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'DATE',
+                          'Date',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -736,7 +813,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   controller: _descriptionController,
                   maxLines: 3,                         // Multi-line input
                   decoration: InputDecoration(
-                    labelText: 'DESCRIPTION (OPTIONAL)',
+                    labelText: 'Description (optional)',
                     hintText: 'Add notes about this transaction...',
                     filled: true,
                     fillColor: Colors.white,
@@ -767,6 +844,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           ),
         ),
       ),
-    );
+    ),  // end Scaffold (child of PopScope)
+    );  // end PopScope — this is the return value
   }
 }

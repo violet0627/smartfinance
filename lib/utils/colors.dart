@@ -29,14 +29,14 @@ class AppColors {
   // These are "const" because they NEVER change after compilation.
   // Used for semantic colors that stay the same regardless of theme.
   // ==============================================================================
-  static const Color primary = Color(0xFF2196F3);    // Main brand color (Material Blue)
+  static const Color primary = Color(0xFF6C63FF);    // Main brand color (Purple-Blue — matches AppTheme.lightPrimary)
   static const Color secondary = Color(0xFF9C27B0);  // Secondary accent (Purple)
-  static const Color success = Color(0xFF4CAF50);    // Success/positive actions (Green)
-  static const Color danger = Color(0xFFF44336);     // Error/destructive actions (Red)
-  static const Color warning = Color(0xFFFF9800);    // Warnings/caution (Orange)
-  static const Color info = Color(0xFF2196F3);       // Informational (Blue)
-  static const Color income = Color(0xFF4CAF50);     // Income transactions (Green = money in)
-  static const Color expense = Color(0xFFF44336);    // Expense transactions (Red = money out)
+  static const Color success = Color(0xFF10B981);    // Success/positive actions (Emerald Green — matches AppTheme.success)
+  static const Color danger = Color(0xFFEF4444);     // Error/destructive actions (Red — matches AppTheme.danger)
+  static const Color warning = Color(0xFFF59E0B);    // Warnings/caution (Amber — matches AppTheme.warning)
+  static const Color info = Color(0xFF3B82F6);       // Informational (Blue — matches AppTheme.info)
+  static const Color income = Color(0xFF10B981);     // Income transactions (Emerald Green — matches AppTheme.income)
+  static const Color expense = Color(0xFFEF4444);    // Expense transactions (Red — matches AppTheme.expense)
 
   // ==============================================================================
   // Theme-Dependent Colors (Change Between Light and Dark Mode)
