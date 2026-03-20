@@ -292,10 +292,10 @@ def calculate_level(total_xp):
         level += 1
         increment = int(increment * 1.5) # Each level gap grows by 50%
 
-    return level - 1, xp_needed - increment  # Correct for one-step overshoot
+    return level - 1, xp_needed  # Return current level and total XP needed for next level
 ```
 
-This design deliberately slows progression at higher levels, mirroring the mechanics found in popular games and ensuring long-term engagement. The function returns both the current level and the XP threshold for the next level, enabling the frontend to render an accurate progress bar showing how close the user is to levelling up.
+This design deliberately slows progression at higher levels, mirroring the mechanics found in popular games and ensuring long-term engagement. The function returns both the current level and the cumulative XP threshold required to reach the next level. The loop exits one step past the user's current level (`level - 1` corrects this overshoot), and `xp_needed` at that point holds the total XP target for the next level boundary — enabling the frontend to render an accurate progress bar showing how close the user is to levelling up.
 
 **Habit Streaks**
 
@@ -728,7 +728,7 @@ The overall satisfaction average of **4.30 / 5.00** exceeds the pass threshold o
 
 This chapter has presented the complete implementation and testing phases of the SmartFinance system. The implementation covered nine functional modules — authentication and account security, transaction management, budget monitoring, financial goals, investment tracking, analytics and reports, and gamification — each realised through a combination of Flutter screens, Flask API endpoints, and SQLAlchemy database models. Key technical implementations discussed in detail include JWT-based stateless authentication, TOTP two-factor authentication with backup code generation, session management with revocation, parallel API loading via `Future.wait`, receipt scanning with Google ML Kit OCR, a `fl_chart`-powered analytics suite, and an exponential XP-levelling gamification engine.
 
-The testing phase applied four complementary strategies. Functional testing produced a 100% pass rate across 46 test cases spanning all seven modules, confirming that every feature behaves in accordance with its specification. Security testing achieved a 100% pass rate across seven adversarial test cases, demonstrating that the system correctly enforces authentication, resists common injection attacks, isolates user data, and enforces 2FA and session revocation. Performance testing confirmed that all measured metrics fell well within the defined thresholds: the dashboard loaded in approximately 1.8 seconds against a 3-second target, and all API endpoints responded within 45–210 milliseconds against a 500-millisecond target. Usability testing with six participants yielded a task completion rate of 91.7% and a mean satisfaction score of 4.30 / 5.00, both exceeding their respective pass criteria.
+The testing phase applied four complementary strategies. Functional testing produced a 100% pass rate across 50 test cases spanning all seven modules, confirming that every feature behaves in accordance with its specification. Security testing achieved a 100% pass rate across seven adversarial test cases, demonstrating that the system correctly enforces authentication, resists common injection attacks, isolates user data, and enforces 2FA and session revocation. Performance testing confirmed that all measured metrics fell well within the defined thresholds: the dashboard loaded in approximately 1.8 seconds against a 3-second target, and all API endpoints responded within 45–210 milliseconds against a 500-millisecond target. Usability testing with six participants yielded a task completion rate of 91.7% and a mean satisfaction score of 4.30 / 5.00, both exceeding their respective pass criteria.
 
 The usability sessions surfaced three areas warranting further design attention: the visibility of the "Add Category" control during budget creation, the labelling clarity on goal contribution actions, and the discoverability of the Reports screen from the main navigation. These findings are recorded as actionable improvement items for future iterations of the system.
 
