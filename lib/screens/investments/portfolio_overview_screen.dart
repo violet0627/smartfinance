@@ -54,7 +54,7 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
           });
         }
       } catch (e) {
-        print('Error loading portfolio summary: $e'); // Debug log; not shown to user
+        debugPrint('Error loading portfolio summary: $e'); // Debug log; not shown to user
       }
 
       // Load individual investments, optionally filtered by asset type
@@ -70,10 +70,10 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
           });
         }
       } catch (e) {
-        print('Error loading investments: $e');
+        debugPrint('Error loading investments: $e');
       }
     } catch (e) {
-      print('Error in _loadPortfolio: $e');
+      debugPrint('Error in _loadPortfolio: $e');
     } finally {
       // 'finally' always runs - ensures loading stops even on error
       setState(() => _isLoading = false);
@@ -620,9 +620,13 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                 onPressed: () => Navigator.pop(context, false),
                 child: const Text('Cancel'),
               ),
-              TextButton(
+              // ElevatedButton with danger color for destructive actions (consistent with other screens)
+              ElevatedButton(
                 onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  foregroundColor: Colors.white,
+                ),
                 child: const Text('Delete'),
               ),
             ],
@@ -672,6 +676,15 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                         Text(
                           '${investment.assetsType} • ${investment.quantity} units',
                           style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        ),
+                        // Small hint that tapping opens the price update dialog
+                        Text(
+                          'Tap to update price',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.primary.withOpacity(0.7),
+                            fontStyle: FontStyle.italic, // Italic distinguishes hint from data
+                          ),
                         ),
                       ],
                     ),

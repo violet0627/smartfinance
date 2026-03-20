@@ -324,24 +324,32 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   // This is triggered when the user swipes a transaction card to the left.
   // ==============================================================================
   void _showDeleteDialog(TransactionModel transaction) {
+    // Build a human-readable label for the transaction being deleted
+    final label =
+        '${transaction.category} (${transaction.isExpense ? "-" : "+"}RM ${transaction.amount.toStringAsFixed(2)})';
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Transaction'),
-        content: const Text('Are you sure you want to delete this transaction?'),
+        // Name the specific transaction so the user knows exactly what will be removed
+        content: Text('Delete $label? This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          // ElevatedButton with danger color for destructive confirm (consistent with other screens)
+          ElevatedButton(
             onPressed: () {
               Navigator.pop(context);              // Close dialog
               if (transaction.transactionId != null) {
                 _deleteTransaction(transaction.transactionId!);
               }
             },
-            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -719,12 +727,36 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           Text(
             _hasActiveFilters
                 ? 'Try adjusting your filters'
-                : 'Tap the + button to add your first transaction',
+                : 'Start by recording your first transaction',
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary,
             ),
           ),
+          // Show CTA button only when there are no transactions at all (not a filter result)
+          if (!_hasActiveFilters) ...[
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AddTransactionScreen(),
+                  ),
+                );
+                if (result == true) _loadTransactions();
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add Transaction'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -992,12 +1024,28 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     }
 
     try {
-      // Show loading spinner
+      // Show loading dialog with a descriptive message so the user knows what is happening
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
+        builder: (context) => Center(
+          child: Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min, // Only as tall as content
+                children: [
+                  CircularProgressIndicator(color: AppColors.primary),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Exporting transactions...',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       );
 

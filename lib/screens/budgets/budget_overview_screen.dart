@@ -59,7 +59,7 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
         try {
           await NotificationService.checkBudgetAndAlert(budget);
         } catch (e) {
-          print('Error checking budget alerts: $e'); // Debug log, not shown to user
+          debugPrint('Error checking budget alerts: $e'); // Debug log, not shown to user
         }
       } else {
         setState(() {
@@ -67,7 +67,7 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
         });
       }
     } catch (e) {
-      print('Error loading budget: $e');
+      debugPrint('Error loading budget: $e');
       setState(() {
         _hasBudget = false;
       });
@@ -92,9 +92,10 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Budget?'),
-        content: const Text(
-          'Are you sure you want to delete this budget? '
-          'This action cannot be undone.',
+        content: Text(
+          // Include the month name so the user knows exactly which budget is being deleted
+          'Delete the ${_currentBudget != null ? DateFormat("MMMM yyyy").format(DateTime.parse("${_currentBudget!.monthYear}-01")) : "current"} budget? '
+          'This cannot be undone.',
         ),
         actions: [
           TextButton(

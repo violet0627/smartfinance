@@ -102,6 +102,43 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     return _totalBudget > 0 && _remaining >= 0 && _remaining <= 1.0;
   }
 
+  // _hasUnsavedChanges returns true if the user has entered data that hasn't been saved.
+  // Used by PopScope to decide whether to warn before navigating back.
+  bool get _hasUnsavedChanges {
+    if (_isEditing) return true; // Always warn when editing — user may have changed values
+    // For new budgets: warn if the total amount or any category has been set
+    final hasAmount = _totalBudgetController.text.isNotEmpty;
+    final hasCategory = _categoryAllocations.values.any((v) => v > 0);
+    return hasAmount || hasCategory;
+  }
+
+  // _confirmDiscard shows a dialog asking whether to discard unsaved changes
+  Future<bool> _confirmDiscard() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Discard Changes?'),
+            content: const Text(
+                'You have unsaved changes. Are you sure you want to go back?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false), // Stay on screen
+                child: const Text('Keep Editing'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true), // Confirm discard
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Discard'),
+              ),
+            ],
+          ),
+        ) ??
+        false; // If dialog is dismissed without a choice, treat as cancel
+  }
+
   // _selectMonth opens a date picker to choose which month this budget applies to
   Future<void> _selectMonth() async {
     final DateTime? picked = await showDatePicker(
@@ -219,7 +256,27 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // PopScope intercepts the back navigation gesture/button.
+    // canPop: false means the system back press does NOT automatically pop this route.
+    // Instead, onPopInvoked is called so we can decide whether to allow it.
+    return PopScope(
+      canPop: false,
+      // onPopInvokedWithResult replaces the deprecated onPopInvoked
+      // The second parameter (result) is the value passed when popping — unused here
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return; // Already popped — nothing to do
+        // If no unsaved changes, allow immediate navigation back
+        if (!_hasUnsavedChanges) {
+          Navigator.of(context).pop();
+          return;
+        }
+        // Otherwise ask the user to confirm discarding their work
+        final shouldDiscard = await _confirmDiscard();
+        if (shouldDiscard && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Budget' : 'Create Budget'),
@@ -292,7 +349,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                     keyboardType: TextInputType.numberWithOptions(decimal: true),
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold), // Large text
                     decoration: InputDecoration(
-                      labelText: 'TOTAL BUDGET (RM)',
+                      labelText: 'Total Budget (RM)',
                       prefixText: 'RM ', // Shows "RM " before the entered number
                       filled: true,
                       fillColor: Colors.grey[100],
@@ -483,8 +540,23 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
+              // Show a spinner with "Saving..." text while the API call is in progress
               child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
+                  ? const Row(
+                      mainAxisSize: MainAxisSize.min, // Row only as wide as its children
+                      children: [
+                        SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2, // Thinner stroke to fit alongside text
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Text('Saving...', style: TextStyle(fontSize: 16)),
+                      ],
+                    )
                   : Text(
                       _isEditing ? 'Update Budget' : 'Create Budget',
                       style: const TextStyle(
@@ -496,6 +568,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
           ),
         ),
       ),
-    );
+      ), // end Scaffold (child of PopScope)
+    ); // end PopScope
   }
 }

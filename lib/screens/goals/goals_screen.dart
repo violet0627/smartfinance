@@ -60,50 +60,29 @@ class _GoalsScreenState extends State<GoalsScreen> {
     });
   }
 
-  // _deleteGoal asks for confirmation then permanently removes a goal
-  Future<void> _deleteGoal(int goalId) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Goal'),
-        content: const Text('Are you sure you want to delete this goal?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
+  // _deleteGoal permanently removes a goal by goalId after confirmation
+  // Called by confirmDismiss inside _buildGoalCard after the user confirms the dialog
+  Future<bool> _deleteGoal(int goalId, String goalName) async {
+    final result = await ApiService.deleteGoal(goalId);
+    if (!mounted) return false;
 
-    if (confirmed == true) {
-      final result = await ApiService.deleteGoal(goalId);
-      if (!mounted) return;
-
-      if (result['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Goal deleted successfully'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-        _loadData(); // Refresh list after deletion
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['error'] ?? 'Failed to delete goal'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
+    if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Goal deleted successfully'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      _loadData(); // Refresh the list to update summary stats
+      return true; // Signal Dismissible to remove the card from view
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['error'] ?? 'Failed to delete goal'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return false; // Keep the card — deletion failed
     }
   }
 
@@ -528,7 +507,37 @@ class _GoalsScreenState extends State<GoalsScreen> {
         child: const Icon(Icons.delete, color: Colors.white, size: 32),
       ),
       direction: DismissDirection.endToStart, // Only allow swipe from right to left
-      onDismissed: (direction) => _deleteGoal(goal['goalId']), // Delete when dismissed
+      // confirmDismiss shows the dialog BEFORE removing the card from the UI.
+      // This is the correct pattern: onDismissed fires AFTER the item is gone,
+      // making cancellation impossible. confirmDismiss returns true to confirm
+      // removal, or false to snap the card back into place.
+      confirmDismiss: (direction) async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Delete Goal'),
+            // Name the specific goal so the user knows exactly what they're deleting
+            content: Text('Delete "${goal['goalName']}"? This cannot be undone.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true) return false; // User cancelled — snap the card back
+        // Call the API to delete, returns true on success (removes card), false on failure (keeps card)
+        return _deleteGoal(goal['goalId'], goal['goalName'] as String);
+      },
       child: Card(
         elevation: 2,
         margin: const EdgeInsets.only(bottom: 12),
