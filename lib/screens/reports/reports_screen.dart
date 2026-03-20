@@ -49,9 +49,8 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
   // _error — stores error message if loading fails; empty string means no error
   String _error = '';
 
-  // _selectedTab — tracks which tab (0=Spending, 1=Budget, 2=Categories) is active
-  // Used to update state when tab changes
-  int _selectedTab = 0;
+  // _tabController.index is the source of truth for the active tab index;
+  // a separate _selectedTab field is not needed.
 
   // _tabController — manages the TabBar + TabBarView synchronization
   // "late" means we will assign it before first use (in initState), not at declaration time
@@ -91,13 +90,9 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
     // vsync prevents animations from running when the screen is off-screen (saves battery)
     _tabController = TabController(length: 3, vsync: this);
 
-    // addListener — runs a callback every time the selected tab changes
+    // addListener — triggers a rebuild when the tab changes so the UI stays in sync
     _tabController.addListener(() {
-      // Update _selectedTab to match the controller's current index
-      // This keeps our state in sync with the TabBar visual state
-      setState(() {
-        _selectedTab = _tabController.index;
-      });
+      setState(() {}); // Rebuild to reflect _tabController.index change
     });
 
     // Load all report data from the API when the screen first opens
@@ -297,6 +292,9 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
                 // Show just the filename (not the full path)
                 // filePath!.split('/').last — splits by '/' and takes the final segment (filename)
                 Text(
+                  // filePath is non-null here (inside `if (filePath != null)`).
+                  // The `!` is required because Dart cannot narrow nullable types
+                  // inside builder closures — flow analysis doesn't cross closure boundaries.
                   'File: ${filePath!.split('/').last}',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
@@ -324,7 +322,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
                   // ExportService.shareFile — opens OS share sheet with the file
                   // Returns true if sharing succeeded, false if it failed
                   final success = await ExportService.shareFile(
-                    filePath!,
+                    filePath!, // `!` needed — Dart can't narrow nullables inside closures
                     subject: 'SmartFinance Report Export',
                   );
 

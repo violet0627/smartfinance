@@ -42,15 +42,10 @@ class UserSettings(db.Model):
     QuietHoursStart = db.Column(db.Time, nullable=True)                 # Don't send notifications after this time (e.g., 22:00)
     QuietHoursEnd = db.Column(db.Time, nullable=True)                   # Resume notifications after this time (e.g., 08:00)
 
-    # --- Display Preferences ---
-    Currency = db.Column(db.String(10), default='RM')                   # Currency symbol/code (e.g., 'RM', 'USD', 'EUR')
-    ThemeMode = db.Column(db.Enum('light', 'dark', 'system'), default='system')  # App theme preference
-        # 'light' = bright theme
-        # 'dark' = dark theme
-        # 'system' = follow device setting
-    Language = db.Column(db.String(10), default='en')                   # Language code (e.g., 'en' for English, 'ms' for Malay)
-
     # --- Budget Alert Thresholds ---
+    # Note: Currency is always RM (Malaysian Ringgit — app is Malaysia-only).
+    # Theme is always Light mode. Language is always English. These are not stored
+    # in the database because they are fixed for this app's target market.
     # These define at what percentage of budget usage to show warnings.
     # For example, if budget is RM1000:
     # - At RM800 spent (80%) -> yellow "warning" alert
@@ -83,9 +78,6 @@ class UserSettings(db.Model):
             'enableStreakAlerts': self.EnableStreakAlerts,                                     # Streak alerts on/off
             'quietHoursStart': self.QuietHoursStart.strftime('%H:%M') if self.QuietHoursStart else None,  # Quiet start time
             'quietHoursEnd': self.QuietHoursEnd.strftime('%H:%M') if self.QuietHoursEnd else None,        # Quiet end time
-            'currency': self.Currency,                                                       # Currency code (e.g., 'RM')
-            'themeMode': self.ThemeMode,                                                     # Theme ('light', 'dark', 'system')
-            'language': self.Language,                                                       # Language code
             'budgetWarningThreshold': self.BudgetWarningThreshold,                           # Warning % threshold
             'budgetDangerThreshold': self.BudgetDangerThreshold,                             # Danger % threshold
             'budgetCriticalThreshold': self.BudgetCriticalThreshold,                         # Critical % threshold

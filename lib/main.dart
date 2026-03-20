@@ -16,7 +16,6 @@
 // ==============================================================================
 
 import 'package:flutter/material.dart';                    // Flutter's Material Design widgets (buttons, text, layouts, etc.)
-import 'package:provider/provider.dart';                    // State management library (shares data across widgets)
 import 'package:shared_preferences/shared_preferences.dart'; // Local storage (saves settings on the device)
 import 'screens/auth/login_screen.dart';                    // Login screen widget
 import 'screens/dashboard/dashboard_screen.dart';           // Dashboard (main app) screen widget
@@ -24,25 +23,15 @@ import 'screens/onboarding/onboarding_screen.dart';         // First-time tutori
 import 'services/api_service.dart';                         // API service (communicates with backend server)
 import 'utils/colors.dart';                                 // App color definitions
 import 'utils/theme.dart';                                  // App theme definitions (light/dark)
-import 'providers/theme_provider.dart';                     // Theme state manager (tracks light/dark mode)
 
 // ==============================================================================
 // main() - The entry point of the entire Flutter application
 // ==============================================================================
 // This is like the "main" function in Python - it's the first thing that runs.
-//
-// ChangeNotifierProvider:
-// This wraps the entire app with a "provider" that manages the theme state.
-// Think of it as a global variable that any widget in the app can read/write.
-// When the theme changes, all widgets that depend on it automatically rebuild.
+// SmartFinance is a Malaysia-only app, so the theme is always Light mode.
 // ==============================================================================
 void main() {
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),  // Create a ThemeProvider instance for the entire app
-      child: const MyApp(),            // The main app widget
-    ),
-  );
+  runApp(const MyApp()); // Create and run the root widget
 }
 
 // ==============================================================================
@@ -56,18 +45,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // --- Read the current theme from ThemeProvider ---
-    // Provider.of<ThemeProvider>(context) accesses the ThemeProvider we created above.
-    // This widget will automatically rebuild when the theme changes.
-    final themeProvider = Provider.of<ThemeProvider>(context);
-
     // --- MaterialApp is the root widget for Material Design apps ---
+    // SmartFinance always uses Light mode — dark mode is not supported.
     return MaterialApp(
       title: 'SmartFinance',                      // App title (shown in task manager/recent apps)
       debugShowCheckedModeBanner: false,           // Hide the red "DEBUG" banner in top-right corner
       theme: AppTheme.lightTheme,                  // Light theme definition (from utils/theme.dart)
-      darkTheme: AppTheme.darkTheme,               // Dark theme definition
-      themeMode: themeProvider.themeMode,           // Current theme mode (light, dark, or system)
+      themeMode: ThemeMode.light,                  // Always use light mode — no theme switching
       home: const SplashScreen(),                  // The first screen to show (splash/loading screen)
     );
   }

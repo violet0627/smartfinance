@@ -94,15 +94,9 @@ def update_user_settings(user_id):
             except ValueError:
                 pass
 
-        # --- Update display preferences ---
-        if 'currency' in data:
-            settings.Currency = data['currency']       # e.g., "RM", "USD", "EUR"
-        if 'themeMode' in data:
-            settings.ThemeMode = data['themeMode']     # "light", "dark", or "system"
-        if 'language' in data:
-            settings.Language = data['language']        # e.g., "en", "ms", "zh"
-
         # --- Update budget alert thresholds ---
+        # Note: currency (always RM), theme (always light), language (always English)
+        # are fixed for this Malaysia-only app and are not stored in UserSettings.
         # These determine when color-coded warnings appear (green -> yellow -> red)
         if 'budgetWarningThreshold' in data:
             settings.BudgetWarningThreshold = data['budgetWarningThreshold']     # e.g., 70 (70%)
@@ -240,49 +234,8 @@ def change_password(user_id):
         return jsonify({'error': str(e)}), 500
 
 
-# ==============================================================================
-# ROUTE: GET /api/settings/currencies
-# ==============================================================================
-# Returns a list of available currencies for the user to choose from.
-# The Flutter app displays this in a dropdown in the Settings screen.
-# ==============================================================================
-@settings_bp.route('/currencies', methods=['GET'])
-def get_available_currencies():
-    """Get list of available currencies"""
-    currencies = [
-        {'code': 'RM', 'name': 'Malaysian Ringgit', 'symbol': 'RM'},    # Default
-        {'code': 'USD', 'name': 'US Dollar', 'symbol': '$'},
-        {'code': 'EUR', 'name': 'Euro', 'symbol': '\u20ac'},            # Euro symbol
-        {'code': 'GBP', 'name': 'British Pound', 'symbol': '\u00a3'},   # Pound symbol
-        {'code': 'JPY', 'name': 'Japanese Yen', 'symbol': '\u00a5'},    # Yen symbol
-        {'code': 'CNY', 'name': 'Chinese Yuan', 'symbol': '\u00a5'},    # Yuan symbol
-        {'code': 'SGD', 'name': 'Singapore Dollar', 'symbol': 'S$'},
-        {'code': 'AUD', 'name': 'Australian Dollar', 'symbol': 'A$'},
-        {'code': 'CAD', 'name': 'Canadian Dollar', 'symbol': 'C$'},
-        {'code': 'INR', 'name': 'Indian Rupee', 'symbol': '\u20b9'},    # Rupee symbol
-    ]
-
-    return jsonify({
-        'currencies': currencies
-    }), 200
-
-
-# ==============================================================================
-# ROUTE: GET /api/settings/languages
-# ==============================================================================
-# Returns a list of available languages.
-# Supports Malaysian market languages: English, Malay, Chinese, Tamil.
-# ==============================================================================
-@settings_bp.route('/languages', methods=['GET'])
-def get_available_languages():
-    """Get list of available languages"""
-    languages = [
-        {'code': 'en', 'name': 'English'},
-        {'code': 'ms', 'name': 'Bahasa Melayu'},
-        {'code': 'zh', 'name': '中文 (Chinese)'},
-        {'code': 'ta', 'name': 'தமிழ் (Tamil)'},
-    ]
-
-    return jsonify({
-        'languages': languages
-    }), 200
+# Currency, theme, and language endpoint removed.
+# SmartFinance is a Malaysia-only app:
+# - Currency is always RM (Malaysian Ringgit)
+# - Theme is always Light mode
+# - Language is always English (the app UI is in English)

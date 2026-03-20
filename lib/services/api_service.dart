@@ -1255,43 +1255,8 @@ class ApiService {
     }
   }
 
-  // Get list of available currencies (e.g., MYR, USD, EUR)
-  static Future<Map<String, dynamic>> getAvailableCurrencies() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/settings/currencies'),
-      );
-
-      final data = json.decode(response.body);
-
-      if (response.statusCode == 200) {
-        return {'success': true, 'currencies': data['currencies']};
-      } else {
-        return {'success': false, 'error': 'Failed to fetch currencies'};
-      }
-    } catch (e) {
-      return {'success': false, 'error': 'Network error: $e'};
-    }
-  }
-
-  // Get list of available languages (e.g., English, Malay, Chinese)
-  static Future<Map<String, dynamic>> getAvailableLanguages() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/settings/languages'),
-      );
-
-      final data = json.decode(response.body);
-
-      if (response.statusCode == 200) {
-        return {'success': true, 'languages': data['languages']};
-      } else {
-        return {'success': false, 'error': 'Failed to fetch languages'};
-      }
-    } catch (e) {
-      return {'success': false, 'error': 'Network error: $e'};
-    }
-  }
+  // Note: getAvailableCurrencies() and getAvailableLanguages() have been removed.
+  // SmartFinance is a Malaysia-only app — currency is always RM and language is English.
 
   // ============================================================================
   // GOALS ENDPOINTS

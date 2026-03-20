@@ -84,5 +84,15 @@ def create_app(config_name='development'):
     app.register_blueprint(security_bp, url_prefix='/api/security')          # /api/security/sessions, /api/security/logs, etc.
     app.register_blueprint(recurring_bp, url_prefix='/api/recurring')        # /api/recurring/create, /api/recurring/list, etc.
 
+    # --- Create database tables if they don't exist yet ---
+    # db.create_all() looks at all imported models and creates any tables that are
+    # missing from the database. It is safe to call on every startup — it skips
+    # tables that already exist, so it never destroys existing data.
+    # This fixes the "Table 'smartfinance.usersettings' doesn't exist" crash.
+    with app.app_context():
+        # Import models here so SQLAlchemy knows about every table before create_all()
+        from app.models import user, user_settings  # noqa: F401 — imported for side effects
+        db.create_all()
+
     # Return the fully configured app, ready to handle incoming HTTP requests.
     return app

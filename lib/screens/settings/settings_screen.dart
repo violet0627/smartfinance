@@ -1,21 +1,11 @@
 // Import Flutter's core UI package — gives us Scaffold, AppBar, ListTile, Switch, etc.
 import 'package:flutter/material.dart';
 
-// Import provider package — used to access ThemeProvider (the app-wide theme state)
-// Provider is a state management approach: widgets can "consume" shared state without passing it down manually
-import 'package:provider/provider.dart';
-
-// Import shared_preferences — persistent key-value storage on the device (used indirectly via ApiService)
-import 'package:shared_preferences/shared_preferences.dart';
-
 // Import our custom API service — handles all HTTP calls to the backend
 import '../../services/api_service.dart';
 
 // Import our color constants — AppColors.primary, .success, .danger, .warning
 import '../../utils/colors.dart';
-
-// Import our theme provider — manages light/dark/system theme switching
-import '../../providers/theme_provider.dart';
 
 // Import the login screen — needed for navigation after logout
 import '../auth/login_screen.dart';
@@ -429,45 +419,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // Divider — horizontal line separating sections
                       const Divider(height: 32),
 
-                      // ── DISPLAY SECTION ───────────────────────────────────
-                      _buildSectionHeader('Display'),
-
-                      // Currency setting — shows current currency, opens picker on tap
-                      _buildSettingTile(
-                        icon: Icons.attach_money,
-                        title: 'Currency',
-                        subtitle: _settings?['currency'] ?? 'RM', // Show current currency code
-                        onTap: () => _showCurrencyPicker(),        // Open currency selection dialog
-                      ),
-
-                      // Theme setting — wrapped in Consumer to access ThemeProvider
-                      // Consumer<ThemeProvider> — rebuilds this tile whenever ThemeProvider changes
-                      // This is necessary because theme state lives in ThemeProvider, not in _settings
-                      Consumer<ThemeProvider>(
-                        builder: (context, themeProvider, child) {
-                          // themeProvider is the current ThemeProvider instance
-                          return _buildSettingTile(
-                            icon: Icons.dark_mode,
-                            title: 'Theme',
-                            // Convert the ThemeMode enum to a display string (e.g., "Light")
-                            subtitle: _getThemeLabelFromMode(themeProvider.themeMode),
-                            onTap: () => _showThemePicker(themeProvider),
-                          );
-                        },
-                      ),
-
-                      // Language setting — shows current language, opens picker on tap
-                      _buildSettingTile(
-                        icon: Icons.language,
-                        title: 'Language',
-                        // _getLanguageLabel converts code 'en' to full name 'English'
-                        subtitle: _getLanguageLabel(_settings?['language'] ?? 'en'),
-                        onTap: () => _showLanguagePicker(),
-                      ),
-
-                      const Divider(height: 32),
-
                       // ── PRIVACY SECTION ───────────────────────────────────
+                      // Note: Currency (RM), Theme (Light), and Language (English) are fixed
+                      // for this Malaysia-only app and are not user-configurable.
                       _buildSectionHeader('Privacy'),
 
                       // Leaderboard visibility — whether username appears in global rankings
@@ -639,153 +593,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           fontSize: 14,
           fontWeight: FontWeight.bold,
           color: AppColors.primary, // Blue section header
-        ),
-      ),
-    );
-  }
-
-  // _getThemeLabel — converts a theme mode string to a display label
-  // Note: this method is defined but _getThemeLabelFromMode (using ThemeMode enum) is actually used
-  String _getThemeLabel(String themeMode) {
-    // switch statement — cleaner than multiple if/else when checking one variable against many values
-    switch (themeMode) {
-      case 'light':
-        return 'Light';
-      case 'dark':
-        return 'Dark';
-      case 'system':
-      default: // "default" matches if no other case matched
-        return 'System Default';
-    }
-  }
-
-  // _getThemeLabelFromMode — converts a ThemeMode enum value to a display label
-  // ThemeMode is Flutter's built-in enum: ThemeMode.light, ThemeMode.dark, ThemeMode.system
-  String _getThemeLabelFromMode(ThemeMode themeMode) {
-    switch (themeMode) {
-      case ThemeMode.light:
-        return 'Light';
-      case ThemeMode.dark:
-        return 'Dark';
-      case ThemeMode.system:
-      default:
-        return 'System Default';
-    }
-  }
-
-  // _getLanguageLabel — converts a language code to a full display name
-  String _getLanguageLabel(String code) {
-    switch (code) {
-      case 'en':
-        return 'English';
-      case 'ms':
-        return 'Bahasa Melayu'; // Malay language
-      case 'zh':
-        return '中文 (Chinese)'; // Chinese characters + English label
-      case 'ta':
-        return 'தமிழ் (Tamil)'; // Tamil script + English label
-      default:
-        return 'English'; // Default if code is unrecognized
-    }
-  }
-
-  // _showCurrencyPicker — fetches available currencies from API and shows a radio-button dialog
-  Future<void> _showCurrencyPicker() async {
-    // Fetch the list of available currencies (e.g., [{"code": "MYR", "name": "Malaysian Ringgit", "symbol": "RM"}, ...])
-    final result = await ApiService.getAvailableCurrencies();
-    if (!result['success']) return; // If the API call failed, do nothing
-
-    final currencies = result['currencies'] as List;
-
-    if (!mounted) return; // Widget might have been unmounted during the await
-
-    // Show a dialog with a scrollable list of currency options
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Currency'),
-        content: SingleChildScrollView(
-          // Map each currency to a RadioListTile for single-selection behavior
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: currencies.map((currency) {
-              // RadioListTile — a ListTile with a radio button
-              // Only one radio can be selected at a time within the same groupValue
-              return RadioListTile<String>(
-                title: Text(currency['name']),    // e.g., "Malaysian Ringgit"
-                subtitle: Text(currency['symbol']), // e.g., "RM"
-                value: currency['code'],            // The value this radio represents (e.g., "MYR")
-                groupValue: _settings?['currency'] ?? 'RM', // Currently selected value
-                onChanged: (value) {
-                  Navigator.pop(context); // Close the dialog
-                  if (value != null) {
-                    _updateSetting('currency', value); // Save the new currency to API
-                  }
-                },
-              );
-            }).toList(),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // _showThemePicker — currently forces light mode and shows an info message
-  // Dark mode has been temporarily disabled due to visibility issues
-  Future<void> _showThemePicker(ThemeProvider themeProvider) async {
-    // If not already in light mode, force it back to light
-    if (themeProvider.themeMode != ThemeMode.light) {
-      themeProvider.setThemeMode(ThemeMode.light);
-    }
-
-    // Show an informational dialog explaining that dark mode is disabled
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Theme'),
-        content: const Text(
-          'The app is currently set to Light mode only. '
-          'Dark mode has been temporarily disabled due to visibility issues '
-          'and will be improved in a future update.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // _showLanguagePicker — fetches available languages from API and shows a radio-button dialog
-  Future<void> _showLanguagePicker() async {
-    final result = await ApiService.getAvailableLanguages();
-    if (!result['success']) return;
-
-    final languages = result['languages'] as List;
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Language'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: languages.map((lang) {
-            return RadioListTile<String>(
-              title: Text(lang['name']),  // e.g., "English" or "Bahasa Melayu"
-              value: lang['code'],        // The value this radio represents (e.g., "en" or "ms")
-              groupValue: _settings?['language'] ?? 'en', // Currently selected language
-              onChanged: (value) {
-                Navigator.pop(context);
-                if (value != null) {
-                  _updateSetting('language', value); // Save the new language code to API
-                }
-              },
-            );
-          }).toList(),
         ),
       ),
     );

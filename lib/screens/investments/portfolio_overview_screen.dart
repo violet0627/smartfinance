@@ -315,7 +315,9 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
   // _buildPortfolioSummaryCard creates the large gradient header card
   Widget _buildPortfolioSummaryCard() {
     final portfolio = _portfolio!;
-    final profitColor = portfolio.isProfit ? AppColors.success : AppColors.danger;
+    // profitColor is referenced in the return/rebuild, but profit/loss coloring
+    // in this card is handled inline via InvestmentTypes.getColorForPerformance().
+    // The variable is not needed here.
 
     return Container(
       padding: const EdgeInsets.all(20),
