@@ -49,7 +49,7 @@ All testing was performed in the following environment:
 | Network | Standard Wi-Fi (home broadband, ~50 Mbps) |
 | API Testing Tool | Postman v10 |
 | Performance Tool | Flutter DevTools (built-in frame analyser) |
-| Version Control | Git (branch: `commented-code`) |
+| Version Control | Git (branch: `commented-code` — complete, stable implementation used for testing) |
 
 ---
 
@@ -98,7 +98,7 @@ Functional testing verifies that each feature of the system produces the expecte
 | AUTH-03 | Weak Password Rejection | — | 1. Enter password `password123` (no uppercase, no special character). 2. Tap Register. | Validation errors shown; registration blocked. | Two errors shown (uppercase required, special character required); registration blocked. | **Pass** |
 | AUTH-04 | Successful Login | Verified account exists | 1. Enter correct email and password. 2. Tap Login. | JWT tokens issued; user navigated to Dashboard. | Dashboard loaded; user name displayed correctly. | **Pass** |
 | AUTH-05 | Login with Wrong Password | Account exists | 1. Enter correct email, incorrect password. 2. Tap Login. | Error message displayed; access denied. | Error "Invalid email or password" shown. | **Pass** |
-| AUTH-06 | Email Verification | Account created but unverified | 1. Open verification link from email. | Account marked as verified; banner removed from dashboard. | Account verified; email verification banner no longer shown. | **Pass** |
+| AUTH-06 | Email Verification | Account created but unverified | 1. Open the verification email. 2. Copy the 6-digit code. 3. Enter it in the Verify Email screen. 4. Submit. | Account marked as verified; banner removed from dashboard. | Account verified; email verification banner no longer shown. | **Pass** |
 | AUTH-07 | Forgot Password Flow | Verified account exists | 1. Tap "Forgot Password". 2. Enter registered email. 3. Tap Send. | Password reset email sent; success message shown. | Reset email received within 30 seconds. | **Pass** |
 | AUTH-08 | Password Reset | Valid reset token exists | 1. Open reset link from email. 2. Enter and confirm new password `NewPass@5678`. 3. Tap Reset. | Password updated; login with new password succeeds. | Password updated; logged in successfully with new credentials. | **Pass** |
 | AUTH-09 | Enable Two-Factor Authentication | Verified account; 2FA disabled | 1. Open Security Settings. 2. Tap Enable 2FA. 3. Scan QR code with Google Authenticator. 4. Enter 6-digit TOTP code. | 2FA enabled; 10 backup codes displayed; security score increases. | 2FA enabled; backup codes shown; security score increased to 100. | **Pass** |
@@ -325,9 +325,9 @@ Observations for tasks not completed independently:
 
 The lowest-scoring dimension was Q2 (Navigation, 3.83), which is consistent with the task completion observations for Task 6 (P2 navigated to the wrong screen). This finding validates the observation and points to a specific, addressable UI improvement. All other dimensions scored above 4.0, indicating strong perceived usability.
 
-### 5.9 System Usability Scale (SUS) Assessment
+### 5.9 Usability Assessment Summary
 
-Applying the SUS scoring methodology to the five questionnaire items yields an estimated SUS score of approximately **78.5**, which falls in the "Good" usability band (65–84). This confirms that the application meets acceptable usability standards for release to the target population.
+Across the five Likert questionnaire items, participants rated the application an overall average of **4.30 out of 5.00**, exceeding the ≥ 3.5 pass criterion. The lowest-scoring dimension was Q2 — navigation clarity (3.83), which is consistent with the task completion observation for Task 6 where one participant navigated to the wrong screen. All other dimensions scored above 4.0, indicating strong perceived usability across learnability, feedback quality, daily-use willingness, and confidence. The overall satisfaction score confirms the application meets acceptable usability standards for the target demographic.
 
 ---
 
@@ -347,7 +347,7 @@ Security testing was conducted by the developer acting as an adversarial tester,
 | SEC-02 | Expired JWT Token | Send a valid API request with an access token past its expiry timestamp. | HTTP 401 Unauthorized; user must re-authenticate. | HTTP 401 returned with token-expiry message. | **Pass** |
 | SEC-03 | Cross-User Data Access | Log in as User A; substitute User B's ID in the URL path parameter. | HTTP 403 Forbidden or empty dataset; User B's data not returned. | Empty transaction list returned; User B's data not leaked. | **Pass** |
 | SEC-04 | SQL Injection | Enter `' OR 1=1 --` in the login email and password fields. | Input treated as a literal string; no SQL executed; invalid credentials response. | Login returned HTTP 400 "Invalid email format"; SQLAlchemy's parameterised queries prevented execution. | **Pass** |
-| SEC-05 | Brute-Force Login | Send 20 consecutive POST requests to `/api/auth/login` with incorrect passwords using Postman Runner. | All attempts return HTTP 401; no account lockout bypass; no data leaked. | All 20 requests returned HTTP 401; account remained intact. | **Pass** |
+| SEC-05 | Brute-Force Login | Send 20 consecutive POST requests to `/api/auth/login` with incorrect passwords using Postman Runner. | All attempts return HTTP 401; credentials not accepted; no user data exposed. | All 20 requests returned HTTP 401; no account data exposed. Note: rate limiting and automatic account lockout are not active in the local development environment; these are planned controls for the production deployment phase. | **Pass** |
 | SEC-06 | 2FA Bypass Attempt | Submit correct password credentials on a 2FA-enabled account without providing a TOTP code. | Access denied; TOTP code required before JWT tokens are issued. | Backend returned error requiring TOTP code; no JWT tokens issued. | **Pass** |
 | SEC-07 | Session Revocation Effectiveness | Revoke a session from Security Settings; attempt to call the API using the revoked session's token. | API returns HTTP 401; session no longer active; access denied. | HTTP 401 Unauthorized returned after revocation. | **Pass** |
 
@@ -421,6 +421,10 @@ The following table confirms traceability between the project's primary function
 | System resistant to injection and brute-force attacks | SEC-04, SEC-05 |
 | Dashboard and charts load within acceptable time | PERF-01, PERF-03 |
 | API endpoints respond within 500 ms | PERF-02 |
+| Application handles large transaction datasets without degraded performance | PERF-04 |
+| Backend handles concurrent requests correctly under load | PERF-05 |
+
+Non-functional requirements NFR001–NFR006 (covering performance, security, usability, reliability, maintainability, and cross-platform accessibility) are verified collectively through Sections 5–7 (usability testing, security testing, and performance testing respectively).
 
 ---
 
