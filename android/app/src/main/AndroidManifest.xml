@@ -41,5 +41,16 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Required for url_launcher canLaunchUrl on Android 11+ (API 30+).
+             Without this, canLaunchUrl returns false for http/https URLs and
+             the CSV download silently does nothing. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="http"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>

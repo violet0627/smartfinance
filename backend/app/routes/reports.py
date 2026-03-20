@@ -175,6 +175,8 @@ def get_spending_report(user_id):
         savings_rate = (net_savings / total_income * 100) if total_income > 0 else 0
 
         # --- Step 7: Return the complete report ---
+        # float() converts Python Decimal (from MySQL NUMERIC columns) to a plain float
+        # that Flask's jsonify can serialize. Without this, jsonify raises TypeError.
         return jsonify({
             'period': {
                 'type': period_type,
@@ -183,24 +185,27 @@ def get_spending_report(user_id):
                 'days': days_in_period
             },
             'summary': {
-                'totalIncome': total_income,
-                'totalExpense': total_expense,
-                'netSavings': net_savings,
-                'savingsRate': savings_rate,                # Percentage of income saved
+                'totalIncome': float(total_income),
+                'totalExpense': float(total_expense),
+                'netSavings': float(net_savings),
+                'savingsRate': float(savings_rate),          # Percentage of income saved
                 'transactionCount': len(transactions),
-                'avgDailyExpense': avg_daily_expense         # Average daily spending
+                'avgDailyExpense': float(avg_daily_expense)  # Average daily spending
             },
             'categoryBreakdown': [
                 {
                     'category': cat,
-                    'amount': data['amount'],
+                    'amount': float(data['amount']),          # float() for Decimal serialization
                     'count': data['count'],
-                    'percentage': (data['amount'] / total_expense * 100) if total_expense > 0 else 0,
-                    'transactions': data['transactions']
+                    'percentage': float((data['amount'] / total_expense * 100) if total_expense > 0 else 0),
+                    'transactions': [
+                        {**txn, 'amount': float(txn['amount'])}  # Convert each transaction's amount too
+                        for txn in data['transactions']
+                    ]
                 }
                 for cat, data in sorted_categories           # List comprehension from sorted data
             ],
-            'dailySpending': daily_spending
+            'dailySpending': {k: float(v) for k, v in daily_spending.items()}  # Convert daily amounts
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -250,26 +255,31 @@ def get_budget_report(user_id):
             category_performance = []
             for cat in budget.categories:
                 # Use AllocatedAmount — this is the correct column name on BudgetCategory model
+                # float() converts Decimal (from MySQL NUMERIC) to a serializable float
+                allocated = float(cat.AllocatedAmount)
+                spent_cat = float(cat.SpentAmount)
                 category_performance.append({
                     'category': cat.CategoryName,
-                    'budgeted': cat.AllocatedAmount,                        # How much was allocated
-                    'spent': cat.SpentAmount,                               # How much was actually spent
-                    'remaining': cat.AllocatedAmount - cat.SpentAmount,     # How much is left
-                    'percentageUsed': (cat.SpentAmount / cat.AllocatedAmount * 100) if cat.AllocatedAmount > 0 else 0,
-                    'status': 'over' if cat.SpentAmount > cat.AllocatedAmount else 'under'  # Over or under budget
+                    'budgeted': allocated,                                   # How much was allocated
+                    'allocated': allocated,                                  # Alias — matches export_service.dart key
+                    'spent': spent_cat,                                      # How much was actually spent
+                    'remaining': allocated - spent_cat,                      # How much is left
+                    'percentageUsed': (spent_cat / allocated * 100) if allocated > 0 else 0,
+                    'status': 'over' if spent_cat > allocated else 'under'   # Over or under budget
                 })
 
             # Calculate budget-level totals
-            total_spent = sum(cat.SpentAmount for cat in budget.categories)
+            total_spent = float(sum(cat.SpentAmount for cat in budget.categories))
+            total_budget = float(budget.TotalBudget)
 
             budget_analysis.append({
                 'monthYear': budget.MonthYear,
-                'totalBudget': budget.TotalBudget,
+                'totalBudget': total_budget,
                 'totalSpent': total_spent,
-                'totalRemaining': budget.TotalBudget - total_spent,
-                'percentageUsed': (total_spent / budget.TotalBudget * 100) if budget.TotalBudget > 0 else 0,
+                'totalRemaining': total_budget - total_spent,
+                'percentageUsed': (total_spent / total_budget * 100) if total_budget > 0 else 0,
                 'categoryPerformance': category_performance,
-                'isOverBudget': total_spent > budget.TotalBudget           # True if over budget
+                'isOverBudget': total_spent > total_budget                  # True if over budget
             })
 
         # --- Overall statistics across all budgets in the period ---
@@ -285,9 +295,9 @@ def get_budget_report(user_id):
                 'endDate': end_date.isoformat()
             },
             'summary': {
-                'totalBudgeted': total_budgeted,
-                'totalSpent': total_spent,
-                'adherenceRate': adherence_rate,
+                'totalBudgeted': float(total_budgeted),
+                'totalSpent': float(total_spent),
+                'adherenceRate': float(adherence_rate),
                 'budgetCount': len(budget_analysis)
             },
             'budgets': budget_analysis
@@ -369,17 +379,17 @@ def get_category_analysis(user_id):
                 'startDate': start_date.isoformat(),
                 'endDate': end_date.isoformat()
             },
-            'totalExpense': total_expense,
+            'totalExpense': float(total_expense),
             'categories': [
                 {
                     'name': cat,
-                    'total': data['total'],
+                    'total': float(data['total']),
                     'count': data['count'],
-                    'average': data['average'],
-                    'max': data['max'],
-                    'min': data['min'],
-                    'percentage': (data['total'] / total_expense * 100) if total_expense > 0 else 0,
-                    'monthlyTrend': data['monthly_trend']
+                    'average': float(data['average']),
+                    'max': float(data['max']),
+                    'min': float(data['min']),
+                    'percentage': float((data['total'] / total_expense * 100) if total_expense > 0 else 0),
+                    'monthlyTrend': {k: float(v) for k, v in data['monthly_trend'].items()}
                 }
                 for cat, data in sorted_categories
             ]

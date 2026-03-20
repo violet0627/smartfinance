@@ -202,6 +202,17 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
             backgroundColor: AppColors.success, // Green background
           ),
         );
+      } else {
+        // canLaunchUrl returned false — device cannot open the URL
+        // This happens on Android 11+ when the <queries> block is missing in AndroidManifest.xml,
+        // or when no browser app is installed
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open download link. Please ensure a browser is installed.'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } catch (e) {
       if (!mounted) return;
@@ -246,14 +257,16 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
       if (type == 'spending') {
         // Generate a spending report PDF if spending data is available
         if (_spendingReport != null) {
+          // Backend returns 'categoryBreakdown' (not 'categories') for the spending report
+          final rawCategories = _spendingReport!['categoryBreakdown'];
           filePath = await ExportService.exportReportToPDF(
             // The ?? {} means: use _spendingReport!['summary'] if not null, else use an empty map {}
             summary: _spendingReport!['summary'] ?? {},
 
-            // Convert the categories list to a typed List<Map<String, dynamic>>
+            // Convert the category list to a typed List<Map<String, dynamic>>
             // List.from() creates a new list from any iterable
-            categoryBreakdown: _spendingReport!['categories'] != null
-                ? List<Map<String, dynamic>>.from(_spendingReport!['categories'])
+            categoryBreakdown: rawCategories != null
+                ? List<Map<String, dynamic>>.from(rawCategories)
                 : null,
 
             // Create a filename with the period and today's date
@@ -264,8 +277,35 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
       } else if (type == 'budget') {
         // Generate a budget report PDF if budget data is available
         if (_budgetReport != null) {
+          // The budget API returns a nested structure: {summary: {...}, budgets: [...], period: {...}}
+          // Build a flat map that exportBudgetReportToPDF expects
+          final summary = (_budgetReport!['summary'] as Map<String, dynamic>?) ?? {};
+          final budgets = _budgetReport!['budgets'] as List? ?? [];
+          final period = (_budgetReport!['period'] as Map<String, dynamic>?) ?? {};
+          final startDate = (period['startDate'] as String?) ?? '';
+
+          // Collect all category performance entries across all budgets
+          final allCategories = <Map<String, dynamic>>[];
+          for (final b in budgets) {
+            final catPerf = b['categoryPerformance'] as List? ?? [];
+            allCategories.addAll(catPerf.cast<Map<String, dynamic>>());
+          }
+
+          // Build the flat budgetData map that the export service expects
+          final budgetDataFlat = <String, dynamic>{
+            'month': startDate.length >= 7 ? startDate.substring(0, 7) : 'N/A',
+            'year': startDate.length >= 4 ? startDate.substring(0, 4) : '',
+            'totalAmount': summary['totalBudgeted'] ?? 0,
+            'totalSpent': summary['totalSpent'] ?? 0,
+            'remaining': _toDouble(summary['totalBudgeted']) - _toDouble(summary['totalSpent']),
+            'percentageUsed': _toDouble(summary['totalBudgeted']) > 0
+                ? (_toDouble(summary['totalSpent']) / _toDouble(summary['totalBudgeted']) * 100)
+                : 0.0,
+            'categories': allCategories.isNotEmpty ? allCategories : null,
+          };
+
           filePath = await ExportService.exportBudgetReportToPDF(
-            budgetData: _budgetReport!,
+            budgetData: budgetDataFlat,
             filename: 'budget_report_${_selectedPeriod}_${DateFormat('yyyy-MM-dd').format(DateTime.now())}.pdf',
           );
         }

@@ -36,6 +36,22 @@ import '../models/transaction_model.dart';     // Transaction data model
 class ExportService {
 
   // ==============================================================================
+  // _toDouble - Safely Convert Any JSON Value to double
+  // ==============================================================================
+  // JSON numbers can come back as int, double, or even String depending on the
+  // backend. Using "as num" throws TypeError if the value is a String.
+  // This helper handles all cases safely.
+  // ==============================================================================
+  static double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is num) return value.toDouble();
+    // If it's a String (some backends serialize numbers as strings), parse it
+    return double.tryParse(value.toString()) ?? 0.0;
+  }
+
+  // ==============================================================================
   // exportTransactionsToCSV - Export Transaction List to CSV File
   // ==============================================================================
   // Creates a CSV file with columns: Date, Type, Category, Amount, Description
@@ -181,21 +197,21 @@ class ExportService {
                   ['Metric', 'Amount (RM)'],               // Header row
                   [
                     'Total Income',
-                    ((summary['totalIncome'] ?? 0) as num).toDouble().toStringAsFixed(2),
-                    // (as num).toDouble() handles both int and double from JSON
+                    _toDouble(summary['totalIncome']).toStringAsFixed(2),
+                    // _toDouble() safely converts int, double, or String to double
                     // .toStringAsFixed(2) formats as "1234.56"
                   ],
                   [
                     'Total Expense',
-                    ((summary['totalExpense'] ?? 0) as num).toDouble().toStringAsFixed(2),
+                    _toDouble(summary['totalExpense']).toStringAsFixed(2),
                   ],
                   [
                     'Net Savings',
-                    ((summary['netSavings'] ?? 0) as num).toDouble().toStringAsFixed(2),
+                    _toDouble(summary['netSavings']).toStringAsFixed(2),
                   ],
                   [
                     'Savings Rate',
-                    '${((summary['savingsRate'] ?? 0) as num).toDouble().toStringAsFixed(1)}%',
+                    '${_toDouble(summary['savingsRate']).toStringAsFixed(1)}%',
                   ],
                 ],
               ),
@@ -231,8 +247,8 @@ class ExportService {
                     // Map each category to a table row using the spread operator (...)
                     ...categoryBreakdown.map((cat) => [
                           cat['category'] ?? '',
-                          ((cat['amount'] ?? 0) as num).toDouble().toStringAsFixed(2),
-                          '${((cat['percentage'] ?? 0) as num).toDouble().toStringAsFixed(1)}%',
+                          _toDouble(cat['amount']).toStringAsFixed(2),
+                          '${_toDouble(cat['percentage']).toStringAsFixed(1)}%',
                         ]),
                   ],
                 ),
@@ -429,19 +445,19 @@ class ExportService {
                   ['Metric', 'Amount (RM)'],
                   [
                     'Total Budget',
-                    ((budgetData['totalAmount'] ?? 0) as num).toDouble().toStringAsFixed(2),
+                    _toDouble(budgetData['totalAmount']).toStringAsFixed(2),
                   ],
                   [
                     'Total Spent',
-                    ((budgetData['totalSpent'] ?? 0) as num).toDouble().toStringAsFixed(2),
+                    _toDouble(budgetData['totalSpent']).toStringAsFixed(2),
                   ],
                   [
                     'Remaining',
-                    ((budgetData['remaining'] ?? 0) as num).toDouble().toStringAsFixed(2),
+                    _toDouble(budgetData['remaining']).toStringAsFixed(2),
                   ],
                   [
                     'Percentage Used',
-                    '${((budgetData['percentageUsed'] ?? 0) as num).toDouble().toStringAsFixed(1)}%',
+                    '${_toDouble(budgetData['percentageUsed']).toStringAsFixed(1)}%',
                   ],
                 ],
               ),
@@ -469,9 +485,10 @@ class ExportService {
                     // Map each category to a row
                     ...(budgetData['categories'] as List).map((cat) => [
                           cat['category'] ?? '',
-                          ((cat['allocated'] ?? 0) as num).toDouble().toStringAsFixed(2),
-                          ((cat['spent'] ?? 0) as num).toDouble().toStringAsFixed(2),
-                          ((cat['remaining'] ?? 0) as num).toDouble().toStringAsFixed(2),
+                          // 'allocated' and 'budgeted' are both present (backend sends both)
+                          _toDouble(cat['allocated'] ?? cat['budgeted']).toStringAsFixed(2),
+                          _toDouble(cat['spent']).toStringAsFixed(2),
+                          _toDouble(cat['remaining']).toStringAsFixed(2),
                         ]),
                   ],
                 ),
