@@ -4,8 +4,14 @@ import 'package:flutter/material.dart';
 // Import the intl package — provides DateFormat for formatting dates (e.g., "March 2024")
 import 'package:intl/intl.dart';
 
-// Import url_launcher — lets the app open URLs in a browser or external app (used for CSV downloads)
-import 'package:url_launcher/url_launcher.dart';
+// Import dart:io — provides File class for reading/writing files on disk
+import 'dart:io';
+
+// Import http — lets the app make HTTP GET requests to download CSV bytes from the backend
+import 'package:http/http.dart' as http;
+
+// Import path_provider — gives us getApplicationDocumentsDirectory() to find a writable folder
+import 'package:path_provider/path_provider.dart';
 
 // Import fl_chart — a third-party Flutter charting library that provides PieChart widget
 import 'package:fl_chart/fl_chart.dart';
@@ -162,63 +168,130 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
     }
   }
 
-  // _downloadCSV — opens the CSV export URL in an external browser/app for download
+  // _downloadCSV — downloads the CSV from the backend and saves it locally,
+  // then shows a share dialog — same flow as PDF export.
   // "type" is either 'transactions' or 'spending_report'
   Future<void> _downloadCSV(String type) async {
+    final userId = await ApiService.getCurrentUserId();
+    if (userId == null) return; // Can't download without a user ID
+
+    // Build the backend CSV endpoint URL (same URL as before, just fetched in-app now)
+    final String url = type == 'transactions'
+        ? ApiService.getExportTransactionsUrl(userId, period: _selectedPeriod)
+        : ApiService.getExportSpendingReportUrl(userId, period: _selectedPeriod);
+
+    // Choose a filename based on the type and today's date
+    final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final filename = type == 'transactions'
+        ? 'transactions_${_selectedPeriod}_$dateStr.csv'
+        : 'spending_report_${_selectedPeriod}_$dateStr.csv';
+
+    // Show a loading dialog while the file downloads (same pattern as PDF export)
+    // barrierDismissible: false — user cannot tap outside to cancel
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
     try {
-      final userId = await ApiService.getCurrentUserId();
-      if (userId == null) return; // Can't download without a user ID
+      // http.get() — sends an HTTP GET request to the backend CSV endpoint
+      // The backend returns the CSV as raw bytes (binary response body)
+      final response = await http.get(Uri.parse(url));
 
-      // Choose the correct URL based on which type of CSV was requested
-      String url;
-      if (type == 'transactions') {
-        // Get the URL for exporting all transactions as CSV
-        url = ApiService.getExportTransactionsUrl(userId, period: _selectedPeriod);
-      } else {
-        // Get the URL for exporting the spending summary report as CSV
-        url = ApiService.getExportSpendingReportUrl(userId, period: _selectedPeriod);
-      }
-
-      // Uri.parse() — converts the URL string into a structured Uri object
-      // The url_launcher package works with Uri objects, not plain strings
-      final uri = Uri.parse(url);
-
-      // launchUrl — opens the URL in the default external browser/app
-      // LaunchMode.externalApplication — forces open in external browser, not in-app WebView
-      // We skip canLaunchUrl() because it is unreliable on Android 11+ (can return false
-      // even when the device has a browser). Instead we call launchUrl directly and
-      // catch PlatformException if it genuinely fails.
-      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-
-      // !mounted check — by the time the await completes, the widget might have been removed
-      // If !mounted (widget destroyed), don't try to update the UI — it would crash
+      // Close the loading dialog now that the download is complete
       if (!mounted) return;
+      Navigator.pop(context);
 
-      if (launched) {
-        // Show a green success snackbar at the bottom of the screen
+      if (response.statusCode != 200) {
+        // Backend returned an error (e.g. 500) — show error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            // Ternary expression: condition ? valueIfTrue : valueIfFalse
-            content: Text('Downloading ${type == "transactions" ? "Transactions" : "Spending Report"} CSV...'),
-            backgroundColor: AppColors.success, // Green background
-          ),
-        );
-      } else {
-        // launchUrl returned false — device could not handle the URL
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open download link. Please ensure a browser is installed.'),
+            content: Text('Export failed (server error ${response.statusCode})'),
             backgroundColor: AppColors.danger,
           ),
         );
+        return;
       }
-    } catch (e) {
+
+      // getApplicationDocumentsDirectory() — returns the app's private documents folder.
+      // On Android: /data/data/com.example.app/app_flutter/
+      // On iOS: <app_sandbox>/Documents/
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/$filename';
+
+      // Write the raw CSV bytes from the HTTP response to the file
+      // response.bodyBytes is a Uint8List (list of bytes from the HTTP response body)
+      await File(filePath).writeAsBytes(response.bodyBytes);
+
       if (!mounted) return;
-      // Show a red error snackbar if something went wrong
+
+      // Show the same success dialog as PDF export — with OK and Share buttons
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Export Successful'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min, // Only as tall as the content needs
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Exported ${type == "transactions" ? "transactions" : "spending report"} to CSV'),
+              const SizedBox(height: 8),
+              // Show just the filename (not the full path)
+              Text(
+                'File: $filename',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 4),
+              // Show the file size in a human-readable format (e.g., "12 KB")
+              Text(
+                'Size: ${ExportService.getFileSize(filePath)}',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            // OK button — just closes the dialog
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+            // Share button — opens the OS share sheet so user can save/send the CSV file
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(context); // Close this dialog first
+                final success = await ExportService.shareFile(
+                  filePath,
+                  subject: 'SmartFinance CSV Export',
+                );
+                if (!mounted) return;
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('File shared successfully'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.share),
+              label: const Text('Share'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog if still open
+      if (!mounted) return;
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error downloading CSV: $e'),
-          backgroundColor: AppColors.danger, // Red background
+          content: Text('Error exporting CSV: $e'),
+          backgroundColor: AppColors.danger,
         ),
       );
     }
@@ -1279,7 +1352,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
               final type = value['type']!;     // 'transactions', 'spending_report', 'spending', or 'budget'
               final format = value['format']!; // 'csv' or 'pdf'
               if (format == 'csv') {
-                _downloadCSV(type);   // Open download URL in browser
+                _downloadCSV(type);   // Download CSV in-app and show share dialog
               } else {
                 _exportToPDF(type);   // Generate PDF file
               }
