@@ -189,6 +189,12 @@ def delete_recurring_transaction(recurring_id):
         if not recurring:
             return jsonify({'error': 'Recurring transaction not found'}), 404
 
+        # Also delete all transactions that were created by this recurring template
+        # so they no longer appear in transaction history or on the dashboard
+        Transaction.query.filter_by(UserId=recurring.UserId).filter(
+            Transaction.Description == f"{recurring.Name} (Recurring)"
+        ).delete(synchronize_session=False)
+
         db.session.delete(recurring)
         db.session.commit()
 
@@ -329,6 +335,17 @@ def toggle_recurring_transaction(recurring_id):
         # Toggle the active status (True becomes False, False becomes True)
         recurring.IsActive = not recurring.IsActive
         recurring.UpdatedAt = datetime.utcnow()
+
+        # When resuming (IsActive just became True), if NextExecution date has
+        # already passed while the transaction was paused, advance it to the next
+        # period. This prevents the paused transaction from auto-executing
+        # immediately on resume and creating a duplicate.
+        if recurring.IsActive:
+            today = datetime.now().date()
+            if recurring.NextExecution <= today:
+                recurring.LastExecuted = recurring.NextExecution  # Treat missed date as executed
+                recurring.NextExecution = recurring.calculate_next_execution()
+
         db.session.commit()
 
         # Return appropriate message based on new status

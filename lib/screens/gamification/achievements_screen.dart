@@ -16,23 +16,40 @@ class AchievementsScreen extends StatefulWidget {
   State<AchievementsScreen> createState() => _AchievementsScreenState();
 }
 
-class _AchievementsScreenState extends State<AchievementsScreen> {
+// _AchievementsScreenState uses SingleTickerProviderStateMixin so it can own a TabController
+// (which needs a TickerProvider for its animation).
+class _AchievementsScreenState extends State<AchievementsScreen>
+    with SingleTickerProviderStateMixin {
   List<UserAchievement> _achievements = []; // All achievements from the API
-  bool _isLoading = true; // True while fetching data
-  String _error = '';     // Holds error message if loading fails; empty string = no error
-  String _selectedDifficulty = 'all'; // Current difficulty filter; 'all' = show everything
+  List<Map<String, dynamic>> _leaderboard = []; // Leaderboard entries from the API
+  bool _isLoading = true;     // True while fetching achievements
+  bool _leaderboardLoading = true; // True while fetching leaderboard
+  String _error = '';         // Holds error message; empty = no error
+  String _selectedDifficulty = 'all'; // Current difficulty filter
+
+  // TabController manages which tab is currently active (Achievements or Leaderboard)
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _loadAchievements(); // Fetch achievements when the screen first opens
+    // Create a TabController with 2 tabs, using this State as the TickerProvider
+    _tabController = TabController(length: 2, vsync: this);
+    _loadAchievements();
+    _loadLeaderboard();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose(); // Always dispose controllers to free resources
+    super.dispose();
   }
 
   // _loadAchievements fetches all achievements for the current user from the backend
   Future<void> _loadAchievements() async {
     setState(() {
       _isLoading = true;
-      _error = ''; // Clear any previous error
+      _error = '';
     });
 
     try {
@@ -48,12 +65,9 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
       final result = await ApiService.getUserAchievements(userId);
 
       if (result['success']) {
-        // Convert raw JSON list to a typed List<UserAchievement>
-        // (result['userAchievements'] is a List of Map objects from the API)
         final achievementsList = (result['userAchievements'] as List)
-            .map((json) => UserAchievement.fromJson(json)) // Parse each JSON map into a model
-            .toList(); // Convert the Iterable to a List
-
+            .map((json) => UserAchievement.fromJson(json))
+            .toList();
         setState(() {
           _achievements = achievementsList;
           _isLoading = false;
@@ -65,11 +79,29 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         });
       }
     } catch (e) {
-      // catch(e) handles any unexpected errors (network issues, parsing errors, etc.)
       setState(() {
-        _error = 'Error: $e'; // $e inserts the error message using string interpolation
+        _error = 'Error: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  // _loadLeaderboard fetches the global XP leaderboard from the backend
+  Future<void> _loadLeaderboard() async {
+    setState(() => _leaderboardLoading = true);
+    try {
+      final result = await ApiService.getLeaderboard();
+      if (result['success']) {
+        // leaderboard is a List of Maps with user name, level, totalXp, rank
+        setState(() {
+          _leaderboard = List<Map<String, dynamic>>.from(result['leaderboard'] ?? []);
+          _leaderboardLoading = false;
+        });
+      } else {
+        setState(() => _leaderboardLoading = false);
+      }
+    } catch (e) {
+      setState(() => _leaderboardLoading = false);
     }
   }
 
@@ -383,6 +415,85 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
+  // _buildLeaderboard builds the ranked leaderboard tab content
+  Widget _buildLeaderboard() {
+    if (_leaderboardLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_leaderboard.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.leaderboard, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('No leaderboard data yet', style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _loadLeaderboard,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _leaderboard.length,
+        itemBuilder: (context, index) {
+          final entry = _leaderboard[index];
+          final rank = (entry['rank'] ?? index + 1) as int;
+          final name = entry['fullName'] ?? entry['name'] ?? 'Unknown';
+          final xp = entry['totalXp'] ?? entry['xp'] ?? 0;
+          final level = entry['level'] ?? 1;
+
+          // Gold / silver / bronze colours for top 3
+          Color rankColor = Colors.grey.shade600;
+          if (rank == 1) rankColor = const Color(0xFFFFD700); // Gold
+          if (rank == 2) rankColor = const Color(0xFFC0C0C0); // Silver
+          if (rank == 3) rankColor = const Color(0xFFCD7F32); // Bronze
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            elevation: rank <= 3 ? 3 : 1,
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: rankColor.withOpacity(0.15),
+                child: Text(
+                  '#$rank',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: rankColor,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              title: Text(
+                name,
+                style: TextStyle(
+                  fontWeight: rank <= 3 ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              subtitle: Text('Level $level'),
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$xp XP',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -390,23 +501,37 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         title: const Text('Achievements'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        elevation: 0, // No shadow under the app bar (merges with the stats header)
+        elevation: 0,
+        // TabBar sits at the bottom of the AppBar, giving two tabs
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,     // White underline under active tab
+          labelColor: Colors.white,         // Active tab label colour
+          unselectedLabelColor: Colors.white70, // Inactive tab label colour
+          tabs: const [
+            Tab(icon: Icon(Icons.emoji_events), text: 'Achievements'),
+            Tab(icon: Icon(Icons.leaderboard), text: 'Leaderboard'),
+          ],
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator()) // Loading spinner
-          : _error.isNotEmpty
-              // Error state: show error icon, message, and a retry button
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
-                      const SizedBox(height: 16),
-                      Text(_error, style: const TextStyle(color: Colors.red)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadAchievements, // Retry loading
-                        child: const Text('Retry'),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // ── TAB 1: ACHIEVEMENTS ─────────────────────────────────────────────
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _error.isNotEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
+                          const SizedBox(height: 16),
+                          Text(_error, style: const TextStyle(color: Colors.red)),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loadAchievements,
+                            child: const Text('Retry'),
                       ),
                     ],
                   ),
@@ -500,7 +625,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                                 padding: const EdgeInsets.only(top: 8, bottom: 16),
                                 itemCount: _filteredAchievements.length,
                                 itemBuilder: (context, index) {
-                                  // Build one card per achievement in the filtered list
                                   return _buildAchievementCard(_filteredAchievements[index]);
                                 },
                               ),
@@ -508,6 +632,11 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                     ],
                   ),
                 ),
+
+          // ── TAB 2: LEADERBOARD ──────────────────────────────────────────────
+          _buildLeaderboard(),
+        ],
+      ),
     );
   }
 }

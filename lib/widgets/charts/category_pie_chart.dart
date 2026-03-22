@@ -106,10 +106,11 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
         const SizedBox(height: 12),
 
         // ── LEGEND ───────────────────────────────────────────────────────────
-        // Expanded takes all remaining vertical space after the chart
-        Expanded(
+        // Fixed height so the legend does not overflow the chart container.
+        // SingleChildScrollView allows scrolling when there are many categories.
+        SizedBox(
+          height: 130,
           child: SingleChildScrollView(
-            // _buildLegend() builds the colored pill badges below the chart
             child: _buildLegend(),
           ),
         ),

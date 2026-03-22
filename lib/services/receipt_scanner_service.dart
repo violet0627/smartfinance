@@ -283,39 +283,50 @@ class ReceiptScannerService {
   static double? _extractAmount(List<String> numbers, String fullText) {
     if (numbers.isEmpty) return null;
 
-    // Convert string numbers to doubles, filtering invalid ones
-    List<double> amounts = [];
-    for (var numStr in numbers) {
+    // Helper: parse a string to a valid receipt amount (0.01 – 100,000)
+    double? _toAmount(String s) {
       try {
-        final cleaned = numStr.replaceAll(',', '');   // Remove comma separators "1,234" -> "1234"
-        final amount = double.parse(cleaned);
-
-        // Only keep reasonable amounts (not phone numbers, account numbers, etc.)
-        if (amount > 0.01 && amount < 100000) {
-          amounts.add(amount);
-        }
-      } catch (e) {
-        // Skip unparseable numbers
+        final v = double.parse(s.replaceAll(',', ''));
+        return (v > 0.01 && v < 100000) ? v : null;
+      } catch (_) {
+        return null;
       }
     }
 
-    if (amounts.isEmpty) return null;
+    // Keywords that indicate the line containing the final payable amount.
+    // Ordered from most to least specific so we match "grand total" before "total".
+    final totalKeywords = [
+      'grand total', 'total amount', 'amount due', 'total due',
+      'total payable', 'jumlah', 'jumlah keseluruhan',   // Malay
+      'total', 'amount', 'balance', 'due',
+    ];
 
-    // Look for keywords that indicate a total line
-    final totalKeywords = ['total', 'amount', 'grand total', 'balance', 'due'];
-    final lowerText = fullText.toLowerCase();
-
-    // If any total keyword is found, return the largest amount
+    // Strategy 1: find the SPECIFIC LINE that contains a total keyword and
+    // extract the LAST number on that line — this is almost always the amount.
+    final lines = fullText.split('\n');
     for (var keyword in totalKeywords) {
-      if (lowerText.contains(keyword)) {
-        amounts.sort((a, b) => b.compareTo(a));    // Sort descending (largest first)
-        return amounts.first;                       // Return the largest
+      for (var line in lines) {
+        if (line.toLowerCase().contains(keyword)) {
+          // Find all numbers on this line
+          final lineNumbers = RegExp(r'\d+[\.,]?\d*').allMatches(line)
+              .map((m) => _toAmount(m.group(0)!))
+              .whereType<double>()
+              .toList();
+          if (lineNumbers.isNotEmpty) {
+            return lineNumbers.last; // Rightmost number on the total line
+          }
+        }
       }
     }
 
-    // No total keyword found - still return the largest amount as best guess
-    amounts.sort((a, b) => b.compareTo(a));
-    return amounts.first;
+    // Strategy 2: fall back to the largest valid number in the whole receipt
+    final allAmounts = numbers
+        .map(_toAmount)
+        .whereType<double>()
+        .toList();
+    if (allAmounts.isEmpty) return null;
+    allAmounts.sort((a, b) => b.compareTo(a));
+    return allAmounts.first;
   }
 
   // ==============================================================================

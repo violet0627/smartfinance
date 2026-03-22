@@ -204,14 +204,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       // --- Load Current Month's Budget ---
       try {
         final budgetResult = await ApiService.getCurrentBudget(userId);
-        if (budgetResult['success'] && budgetResult['budget'] != null) {
-          final budget = BudgetModel.fromJson(budgetResult['budget']);
+        if (budgetResult['success']) {
+          final budgetData = budgetResult['budget'];
+          final budget = budgetData != null ? BudgetModel.fromJson(budgetData) : null;
           setState(() {
-            _currentBudget = budget;
+            _currentBudget = budget; // Clears card when budget is deleted (null case)
           });
 
           // Send budget alerts for critical situations (over budget or 90%+ used)
-          if (budget.isOverBudget || budget.percentageUsed >= 90) {
+          if (budget != null && (budget.isOverBudget || budget.percentageUsed >= 90)) {
             await NotificationService.checkBudgetAndAlert(budget);
           }
         }
@@ -222,9 +223,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       // --- Load Investment Portfolio Summary ---
       try {
         final portfolioResult = await ApiService.getPortfolioSummary(userId);
-        if (portfolioResult['success'] && portfolioResult['portfolio'] != null) {
+        if (portfolioResult['success']) {
+          final portfolioData = portfolioResult['portfolio'];
           setState(() {
-            _portfolio = PortfolioSummary.fromJson(portfolioResult['portfolio']);
+            // Clears the portfolio card when all investments are deleted (null case)
+            _portfolio = portfolioData != null ? PortfolioSummary.fromJson(portfolioData) : null;
           });
         }
       } catch (e) {

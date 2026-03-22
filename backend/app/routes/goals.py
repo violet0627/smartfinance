@@ -223,6 +223,11 @@ def contribute_to_goal(goal_id):
         if amount <= 0:
             return jsonify({'error': 'Contribution amount must be positive'}), 400
 
+        # Validate that contribution does not exceed remaining amount
+        remaining = float(goal.TargetAmount) - float(goal.CurrentAmount)
+        if float(amount) > remaining:
+            return jsonify({'error': 'Contribution exceeds remaining amount'}), 400
+
         # Add the contribution to the current amount
         goal.CurrentAmount = float(goal.CurrentAmount) + float(amount)
 

@@ -135,10 +135,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     const SizedBox(height: 24),
 
                     // Pie chart showing expense distribution by category
+                    // height: 310 gives 160 for the donut + 150 for the legend
                     _buildChartSection(
                       'Expense Breakdown',
                       Icons.pie_chart,
                       _buildCategoryPieChart(),
+                      height: 310,
                     ),
                     const SizedBox(height: 24),
 
@@ -324,8 +326,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  // _buildChartSection wraps a chart widget in a white card with title and icon
-  Widget _buildChartSection(String title, IconData icon, Widget chart) {
+  // _buildChartSection wraps a chart widget in a white card with title and icon.
+  // height defaults to 250 but can be overridden for charts that need more space
+  // (e.g., the pie chart which includes a legend below).
+  Widget _buildChartSection(String title, IconData icon, Widget chart, {double height = 250}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -357,8 +361,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ),
           const SizedBox(height: 16),
           SizedBox(
-            height: 250, // Fixed height for all charts
-            child: chart, // The chart widget (passed as parameter)
+            height: height, // Height is customisable per chart type
+            child: chart,
           ),
         ],
       ),
