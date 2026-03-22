@@ -85,8 +85,13 @@ class ApiService {
       final data = json.decode(response.body);              // Parse JSON response string to Dart Map
 
       if (response.statusCode == 201) {                     // 201 = Created (success)
-        // Don't auto-login on registration - user should login manually
-        return {'success': true, 'user': UserModel.fromJson(data['user'])};
+        // Return verificationToken alongside user so the register screen
+        // can pass it to VerifyEmailScreen for auto-fill (dev mode convenience)
+        return {
+          'success': true,
+          'user': UserModel.fromJson(data['user']),
+          'verificationToken': data['verificationToken'],   // null in production, token string in dev
+        };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Registration failed'};
       }

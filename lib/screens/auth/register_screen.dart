@@ -243,6 +243,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   MaterialPageRoute(
                     builder: (_) => VerifyEmailScreen(
                       email: _emailController.text.trim(),
+                      // Pass the token returned by the backend so the field
+                      // auto-fills when email sending is unavailable in dev
+                      token: result['verificationToken'],
                     ),
                   ),
                 );
