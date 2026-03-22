@@ -157,7 +157,7 @@ class PortfolioSummary {
       bottomPerformers: (json['bottomPerformers'] as List)    // Parse list of bottom performers
           .map((item) => InvestmentPerformance.fromJson(item))
           .toList(),
-      totalAssets: json['totalAssets'],
+      totalAssets: (json['totalAssets'] as num?)?.toInt() ?? 0, // Default 0 if key missing (empty portfolio response)
     );
   }
 

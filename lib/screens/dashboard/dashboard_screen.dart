@@ -11,7 +11,7 @@
 // - Gamification card (level progress from LevelProgressWidget)
 // - Goals progress card
 // - Upcoming bills card (from recurring transactions)
-// - Quick action grid (6 shortcuts to main features)
+// - Quick action grid (shortcuts to main features, including Financial Insights)
 // - Recent transactions list (last 5 transactions)
 // - Logout button
 // - Bottom navigation bar (Home, Analytics, Budget, Portfolio)
@@ -55,6 +55,7 @@ import '../gamification/achievements_screen.dart';           // For Achievements
 import '../reports/reports_screen.dart';                     // For ReportsScreen
 import '../settings/settings_screen.dart';                   // For SettingsScreen
 import '../goals/goals_screen.dart';                         // For GoalsScreen
+import '../insights/financial_insights_screen.dart';         // For FinancialInsightsScreen
 
 // ==============================================================================
 // DashboardScreen - StatefulWidget for Main Dashboard
@@ -653,7 +654,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Row 4: Goals + Achievements
+                    // Row 4: Goals + Insights
                     Row(
                       children: [
                         Expanded(
@@ -672,6 +673,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
+                        // Insights replaces receipt scanner — analyses real transaction data
+                        // to produce a Financial Health Score and personalised insight cards.
+                        Expanded(
+                          child: QuickActionCard(
+                            title: 'Insights',
+                            icon: Icons.auto_graph,
+                            color: const Color(0xFF0EA5E9),    // Sky blue — distinct, represents intelligence
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const FinancialInsightsScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Row 5: Achievements (full-width so it stands out)
+                    Row(
+                      children: [
                         Expanded(
                           child: QuickActionCard(
                             title: 'Achievements',

@@ -1944,4 +1944,28 @@ class ApiService {
       return {'success': false, 'error': 'Network error: $e'};
     }
   }
+
+  // ==============================================================================
+  // getFinancialInsights — Fetch Financial Health Report
+  // ==============================================================================
+  // Calls the /api/insights/user/<userId> endpoint which analyses the user's
+  // transaction history and returns a health score + personalised insights.
+  // ==============================================================================
+  static Future<Map<String, dynamic>> getFinancialInsights(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/insights/user/$userId'),
+      ).timeout(const Duration(seconds: 15)); // Allow more time — does server-side aggregation
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data}; // data contains score, pillars, insights list
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Failed to load insights'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
 }

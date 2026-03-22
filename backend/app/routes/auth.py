@@ -476,7 +476,7 @@ def verify_email():
         # --- Step 2: Check the database record ---
         email_verification = EmailVerification.query.filter_by(
             Token=verification_token,
-            Verified=False              # Only find unused tokens
+            Used=False                  # Only find unused tokens (model column is 'Used', not 'Verified')
         ).first()
 
         if not email_verification or not email_verification.is_valid():
@@ -488,7 +488,7 @@ def verify_email():
             return jsonify({'error': 'User not found'}), 404
 
         user.EmailVerified = True             # Mark user's email as verified
-        email_verification.Verified = True     # Mark the token as used
+        email_verification.Used = True        # Mark the token as used (model column is 'Used', not 'Verified')
         db.session.commit()
 
         return jsonify({

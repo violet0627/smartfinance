@@ -10,7 +10,6 @@
 // - Category selection grid (changes based on transaction type)
 // - Date picker
 // - Description (optional) text area
-// - Receipt scanning via camera/gallery (OCR)
 // - Budget alert checking after adding an expense
 // - Gamification: updates streak and checks for new achievements
 //
@@ -30,7 +29,6 @@ import '../../models/transaction_model.dart';               // For TransactionMo
 import '../../models/gamification_model.dart';               // For NewAchievement
 import '../../services/api_service.dart';                    // For API calls (create, update, budget)
 import '../../services/notification_service.dart';           // For budget alerts and achievement notifications
-import '../../services/receipt_scanner_service.dart';        // For OCR receipt scanning
 import '../../utils/categories.dart';                        // For TransactionCategories
 import '../../utils/colors.dart';                            // For AppColors
 import '../../utils/app_gradients.dart';                     // For gradient button styles
@@ -106,224 +104,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   // ==============================================================================
-  // _scanReceipt - Scan a Receipt Using Camera or Gallery
-  // ==============================================================================
-  // Opens a dialog for the user to choose camera or gallery, captures/selects
-  // an image, runs OCR (Optical Character Recognition) on it, and shows the
-  // scanned results for the user to review and apply to the form.
-  // ==============================================================================
-  Future<void> _scanReceipt() async {
-    // Show a loading spinner with descriptive text while processing
-    showDialog(
-      context: context,
-      barrierDismissible: false,           // Can't dismiss by tapping outside
-      builder: (_) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Scanning receipt...'),  // Tells user what is happening
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    try {
-      // Step 1: Let user choose camera or gallery, get the image file
-      final imageFile = await ReceiptScannerService.showSourceSelectionDialog(context);
-
-      if (imageFile == null) {
-        if (!mounted) return;
-        Navigator.pop(context);            // Close loading dialog
-        return;                            // User cancelled
-      }
-
-      // Step 2: Run OCR on the image to extract receipt data
-      final receiptData = await ReceiptScannerService.scanReceipt(imageFile);
-
-      if (!mounted) return;
-      Navigator.pop(context);              // Close loading dialog
-
-      if (receiptData == null) {
-        // OCR failed to extract any data
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to scan receipt. Please try again or enter manually.'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-        return;
-      }
-
-      // Step 3: Show the extracted data and let user confirm
-      _showScanResults(receiptData);
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context);              // Close loading dialog on error
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error scanning receipt: $e'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
-    }
-  }
-
-  // ==============================================================================
-  // _showScanResults - Display OCR Results Dialog
-  // ==============================================================================
-  // Shows an AlertDialog with the data extracted from the scanned receipt.
-  // User can either "Use Data" (auto-fill the form) or "Cancel" (enter manually).
-  // ==============================================================================
-  void _showScanResults(ReceiptData data) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Receipt Scanned'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'We found the following information:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              // Display each piece of extracted data (if available)
-              if (data.merchantName != null) ...[
-                _resultRow('Merchant', data.merchantName!),
-                const Divider(),
-              ],
-              if (data.amount != null) ...[
-                _resultRow('Amount', 'RM ${data.amount!.toStringAsFixed(2)}'),
-                const Divider(),
-              ],
-              if (data.date != null) ...[
-                _resultRow('Date', DateFormat('MMM dd, yyyy').format(data.date!)),
-                const Divider(),
-              ],
-              if (data.category != null) ...[
-                _resultRow('Suggested Category', data.category!),
-                const Divider(),
-              ],
-              const SizedBox(height: 8),
-              const Text(
-                'Tap "Use Data" to fill the form, or "Cancel" to enter manually.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),   // Cancel: close dialog
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              _prefillForm(data);                      // Auto-fill form with scanned data
-              Navigator.pop(context);                  // Close dialog
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Use Data'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==============================================================================
-  // _resultRow - Reusable Label-Value Row for Scan Results
-  // ==============================================================================
-  // Creates a two-column row showing a label (left) and value (right).
-  // Used inside the scan results dialog.
-  // ==============================================================================
-  Widget _resultRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Label column (fixed width)
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          // Value column (takes remaining space)
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==============================================================================
-  // _prefillForm - Auto-Fill Form with Scanned Receipt Data
-  // ==============================================================================
-  // Takes the ReceiptData from OCR and populates the form fields.
-  // Each field is only set if the OCR successfully extracted that piece of data.
-  // ==============================================================================
-  void _prefillForm(ReceiptData data) {
-    setState(() {
-      // Prefill amount if extracted
-      if (data.amount != null) {
-        _amountController.text = data.amount!.toStringAsFixed(2);
-      }
-
-      // Prefill description with the merchant name if extracted
-      if (data.merchantName != null) {
-        _descriptionController.text = data.merchantName!;
-      }
-
-      // Set date if extracted from receipt
-      if (data.date != null) {
-        _selectedDate = data.date!;
-      }
-
-      // Set category if the OCR suggested one
-      if (data.category != null) {
-        _selectedCategory = data.category;
-      }
-
-      // Receipts are typically expenses
-      _transactionType = 'expense';
-    });
-
-    // Show confirmation message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Form filled with scanned data. Please review and submit.'),
-        backgroundColor: AppColors.success,
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
   // ==============================================================================
   // _handleSubmit - Validate and Submit the Transaction
   // ==============================================================================
@@ -536,14 +316,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         title: Text(widget.transaction != null ? 'Edit Transaction' : 'Add Transaction'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        // Camera icon for receipt scanning (only in add mode)
-        actions: widget.transaction == null ? [
-          IconButton(
-            icon: const Icon(Icons.camera_alt),
-            onPressed: _scanReceipt,
-            tooltip: 'Scan Receipt',
-          ),
-        ] : null,
+        // No action buttons needed in add mode (receipt scanner removed)
+        actions: null,
       ),
       body: SafeArea(
         child: SingleChildScrollView(

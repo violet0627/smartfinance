@@ -226,20 +226,33 @@ def execute_recurring_transaction(recurring_id):
         if not recurring:
             return jsonify({'error': 'Recurring transaction not found'}), 404
 
-        # --- Step 1: Create an actual transaction from the template ---
+        # --- Step 1: Guard against duplicate execution today ---
+        # Prevent the same recurring transaction from being manually executed more than once
+        # on the same day (e.g., if the user presses "Execute Now" multiple times)
+        today = datetime.now().date()
+        already_executed_today = Transaction.query.filter_by(
+            UserId=recurring.UserId,
+            Description=f"{recurring.Name} (Recurring)",
+            TransactionDate=today
+        ).first()
+
+        if already_executed_today:
+            return jsonify({'error': 'Already executed today. Only one execution per day is allowed.'}), 409
+
+        # --- Step 2: Create an actual transaction from the template ---
         transaction = Transaction(
             UserId=recurring.UserId,
             TransactionType=recurring.TransactionType,         # income or expense
             Category=recurring.Category,                       # Same category
             Amount=recurring.Amount,                           # Same amount
             Description=f"{recurring.Name} (Recurring)",       # Add "(Recurring)" to description
-            TransactionDate=datetime.now().date()              # Transaction date = today
+            TransactionDate=today                              # Transaction date = today
         )
 
         db.session.add(transaction)
 
-        # --- Step 2: Update the recurring transaction ---
-        recurring.LastExecuted = datetime.now().date()                     # Record when it was last executed
+        # --- Step 3: Update the recurring transaction ---
+        recurring.LastExecuted = today                                      # Record when it was last executed
         recurring.NextExecution = recurring.calculate_next_execution()     # Calculate next date
 
         db.session.commit()

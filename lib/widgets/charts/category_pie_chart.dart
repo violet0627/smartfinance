@@ -61,11 +61,15 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
     final total = widget.categoryData.values.fold(0.0, (sum, value) => sum + value);
 
     return Column(
+      // mainAxisSize.min — Column only takes the space its children actually need.
+      // Without this, it would try to expand to fill all available height, leaving
+      // a large empty gap below the legend when there are few categories.
+      mainAxisSize: MainAxisSize.min,
       children: [
         // ── PIE CHART ────────────────────────────────────────────────────────
-        // Fixed height container for the chart (charts need explicit size constraints)
+        // Fixed height container for the chart (PieChart needs a bounded height to render)
         SizedBox(
-          height: 160,
+          height: 200,
           child: PieChart(
             PieChartData(
               // ── TOUCH INTERACTION ──────────────────────────────────────────
@@ -106,10 +110,12 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
         const SizedBox(height: 12),
 
         // ── LEGEND ───────────────────────────────────────────────────────────
-        // Fixed height so the legend does not overflow the chart container.
-        // SingleChildScrollView allows scrolling when there are many categories.
-        SizedBox(
-          height: 130,
+        // No fixed height — the Wrap sizes to its natural content height.
+        // This prevents an empty gap when there are few categories.
+        // ConstrainedBox caps the legend at 120px so many categories don't overflow;
+        // SingleChildScrollView lets the user scroll if the content is taller.
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 120),
           child: SingleChildScrollView(
             child: _buildLegend(),
           ),

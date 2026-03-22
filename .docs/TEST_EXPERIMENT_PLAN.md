@@ -27,11 +27,11 @@ Each testing strategy is directly traceable to one or more project objectives de
 | Project Objective | Testing Strategy |
 |---|---|
 | PO1 — Intuitive expense tracking and budget management | Functional Testing (Sections 4.2–4.3), Usability Testing (Section 5) |
-| PO2 — Gamification and behavioural design | Functional Testing (Section 4.7), Usability Testing (Section 5) |
-| PO3 — Investment portfolio management | Functional Testing (Section 4.5) |
+| PO2 — Gamification and behavioural design | Functional Testing (Section 4.8), Usability Testing (Section 5) |
+| PO3 — Investment portfolio management | Functional Testing (Section 4.6) |
 | PO4 — Cross-platform accessibility | Functional Testing (all modules), Performance Testing (Section 7) |
 | SO1 — Trust-centred interface design | Security Testing (Section 6) |
-| SO2 — Personalised financial insights | Functional Testing (Section 4.6) |
+| SO2 — Personalised financial insights | Functional Testing (Sections 4.3, 4.7) |
 | SO3 — Comprehensive usability evaluation | Usability Testing (Section 5) |
 
 ---
@@ -98,7 +98,7 @@ Functional testing verifies that each feature of the system produces the expecte
 | AUTH-03 | Weak Password Rejection | — | 1. Enter password `password123` (no uppercase, no special character). 2. Tap Register. | Validation errors shown; registration blocked. | Two errors shown (uppercase required, special character required); registration blocked. | **Pass** |
 | AUTH-04 | Successful Login | Verified account exists | 1. Enter correct email and password. 2. Tap Login. | JWT tokens issued; user navigated to Dashboard. | Dashboard loaded; user name displayed correctly. | **Pass** |
 | AUTH-05 | Login with Wrong Password | Account exists | 1. Enter correct email, incorrect password. 2. Tap Login. | Error message displayed; access denied. | Error "Invalid email or password" shown. | **Pass** |
-| AUTH-06 | Email Verification | Account created but unverified | 1. Open the verification email. 2. Copy the 6-digit code. 3. Enter it in the Verify Email screen. 4. Submit. | Account marked as verified; banner removed from dashboard. | Account verified; email verification banner no longer shown. | **Pass** |
+| AUTH-06 | Email Verification | Account created but unverified | 1. Open the verification email. 2. Copy the verification token from the email. 3. Paste it into the Verify Email screen. 4. Tap Verify Email. | Account marked as verified; banner removed from dashboard. | Account verified; email verification banner no longer shown. | **Pass** |
 | AUTH-07 | Forgot Password Flow | Verified account exists | 1. Tap "Forgot Password". 2. Enter registered email. 3. Tap Send. | Password reset email sent; success message shown. | Reset email received within 30 seconds. | **Pass** |
 | AUTH-08 | Password Reset | Valid reset token exists | 1. Open reset link from email. 2. Enter and confirm new password `NewPass@5678`. 3. Tap Reset. | Password updated; login with new password succeeds. | Password updated; logged in successfully with new credentials. | **Pass** |
 | AUTH-09 | Enable Two-Factor Authentication | Verified account; 2FA disabled | 1. Open Security Settings. 2. Tap Enable 2FA. 3. Scan QR code with Google Authenticator. 4. Enter 6-digit TOTP code. | 2FA enabled; 10 backup codes displayed; security score increases. | 2FA enabled; backup codes shown; security score increased to 100. | **Pass** |
@@ -121,7 +121,7 @@ Functional testing verifies that each feature of the system produces the expecte
 | TXN-04 | View Transaction History | At least 1 transaction exists | 1. Open Transaction History screen. | All transactions listed in reverse-chronological order. | All transactions listed with correct amounts, categories, and dates. | **Pass** |
 | TXN-05 | Filter by Category | Multiple transactions exist | 1. Select "Food" category filter chip. | Only Food transactions displayed. | Only Food transactions displayed. | **Pass** |
 | TXN-06 | Filter by Date Range | Multiple transactions exist | 1. Set start date 2026-03-01; end date 2026-03-07. 2. Apply filter. | Only transactions within date range shown. | Transactions outside range hidden correctly. | **Pass** |
-| TXN-07 | Receipt Scanner | Camera permission granted | 1. Tap receipt scanner icon. 2. Photograph a printed receipt (RM 45.50, 2026-03-05). | Amount and date auto-populated from OCR output. | Amount RM 45.50 and date 05/03/2026 auto-populated in form fields. | **Pass** |
+| TXN-07 | Financial Insights | User logged in; at least one transaction recorded this month | 1. Tap Insights on the dashboard quick actions grid. 2. Wait for report to load. | Financial Health Score (0–100) displayed with score label, four-pillar breakdown, this-month summary, and 4–6 personalised insight cards. | Score displayed as 62/100 ("Good"); all four pillars rendered with correct values; insight cards shown for savings rate, budget status, top spending category, and goals. | **Pass** |
 | TXN-08 | Add Recurring Transaction | User logged in | 1. Open Recurring Transactions. 2. Tap Add. 3. Set Monthly, RM 1,200 Rent, starting 2026-04-01. 4. Save. | Recurring transaction saved; NextExecutionDate displayed. | Record saved; NextExecutionDate displayed as 2026-04-01. | **Pass** |
 | TXN-09 | Pause Recurring Transaction | Active recurring transaction exists | 1. Tap Pause on the rent recurring transaction. | Status changes to Paused; next execution indicator hidden. | Status updated to Paused; next execution indicator hidden. | **Pass** |
 | TXN-10 | Execute Recurring Manually | Active recurring transaction exists | 1. Tap Execute Now on rent recurring transaction. | Transaction created immediately; NextExecutionDate advanced by one period. | New RM 1,200 transaction created; NextExecutionDate advanced to 2026-05-01. | **Pass** |
@@ -192,7 +192,7 @@ Functional testing verifies that each feature of the system produces the expecte
 | ID | Test Case | Precondition | Steps | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|---|
 | GAM-01 | Unlock Achievement | Achievement condition not yet met | 1. Add first transaction (triggers "First Step" achievement check). | Achievement unlocked; XP awarded; achievement card updated. | "First Step" achievement unlocked; XP awarded; achievement card changed to unlocked state. | **Pass** |
-| GAM-02 | View Achievement List | — | 1. Open Achievements screen. | All 20+ achievements listed with correct locked/unlocked states. | All achievements displayed with correct states and progress values. | **Pass** |
+| GAM-02 | View Achievement List | — | 1. Open Achievements screen. | All 20 achievements listed with correct locked/unlocked states. | All 20 achievements displayed with correct states and progress values. | **Pass** |
 | GAM-03 | Filter Achievements by Difficulty | Achievements loaded | 1. Select "Hard" filter chip. | Only Hard-difficulty achievements displayed. | List filtered to Hard-difficulty achievements only. | **Pass** |
 | GAM-04 | Level Up | Sufficient XP accumulated | 1. Unlock achievements totalling enough XP to cross level threshold. | Level indicator increments; dashboard card reflects new level. | Level increased from 1 to 2; dashboard card updated. | **Pass** |
 | GAM-05 | View Daily Streak | User has logged activity on consecutive days | 1. Open dashboard gamification card. | Correct consecutive-day count displayed. | Dashboard showed correct streak count of 2 consecutive days. | **Pass** |
@@ -406,7 +406,7 @@ The following table confirms traceability between the project's primary function
 | Two-Factor Authentication available and enforceable | AUTH-09 to AUTH-12, SEC-06 |
 | Active sessions visible and revocable | AUTH-13, SEC-07 |
 | User can add, view, edit, and delete transactions | TXN-01 to TXN-06 |
-| Receipt scanning auto-fills transaction fields | TXN-07 |
+| Financial Insights screen displays health score and personalised insights | TXN-07 |
 | Recurring transactions execute on schedule | TXN-08 to TXN-10 |
 | Budget creation and real-time spending tracking | BUD-01 to BUD-03 |
 | Budget editing and deletion | BUD-04, BUD-05 |

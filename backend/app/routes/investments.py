@@ -215,7 +215,8 @@ def get_portfolio_summary(user_id):
                 'percentageChange': 0.0,
                 'assetBreakdown': [],
                 'topPerformers': [],
-                'bottomPerformers': []
+                'bottomPerformers': [],
+                'totalAssets': 0          # Must match the non-empty response shape so fromJson doesn't crash
             }), 200
 
         # --- Step 2: Calculate totals for each investment ---

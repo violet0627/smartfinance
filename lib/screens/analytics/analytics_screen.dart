@@ -134,13 +134,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Pie chart showing expense distribution by category
-                    // height: 310 gives 160 for the donut + 150 for the legend
+                    // Pie chart showing expense distribution by category.
+                    // height: null — CategoryPieChart manages its own height internally
+                    // (200px donut + natural legend height) to avoid empty whitespace.
                     _buildChartSection(
                       'Expense Breakdown',
                       Icons.pie_chart,
                       _buildCategoryPieChart(),
-                      height: 310,
+                      height: null,
                     ),
                     const SizedBox(height: 24),
 
@@ -327,9 +328,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   // _buildChartSection wraps a chart widget in a white card with title and icon.
-  // height defaults to 250 but can be overridden for charts that need more space
-  // (e.g., the pie chart which includes a legend below).
-  Widget _buildChartSection(String title, IconData icon, Widget chart, {double height = 250}) {
+  // height — when provided, the chart is placed in a SizedBox of that exact height.
+  //          Pass null for self-sizing charts like CategoryPieChart that manage their
+  //          own height internally (avoids empty whitespace from over-allocation).
+  Widget _buildChartSection(String title, IconData icon, Widget chart, {double? height = 250}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -345,6 +347,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        // mainAxisSize.min — don't expand the card taller than its content
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -360,10 +364,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            height: height, // Height is customisable per chart type
-            child: chart,
-          ),
+          // When height is provided, constrain the chart to that exact height.
+          // When null, the chart sizes itself (used for pie chart with dynamic legend).
+          if (height != null)
+            SizedBox(height: height, child: chart)
+          else
+            chart,
         ],
       ),
     );

@@ -68,6 +68,7 @@ def create_app(config_name='development'):
     from app.routes.two_factor_auth import two_factor_bp          # Two-factor authentication routes
     from app.routes.security import security_bp                   # Security routes (sessions, activity logs)
     from app.routes.recurring_transactions import recurring_bp    # Recurring transactions routes
+    from app.routes.financial_insights import insights_bp        # Financial health & insights routes
 
     # Register each blueprint with a URL prefix.
     # The url_prefix means all routes in that blueprint start with that path.
@@ -83,6 +84,7 @@ def create_app(config_name='development'):
     app.register_blueprint(two_factor_bp, url_prefix='/api/auth')            # /api/auth/2fa/setup, /api/auth/2fa/verify, etc.
     app.register_blueprint(security_bp, url_prefix='/api/security')          # /api/security/sessions, /api/security/logs, etc.
     app.register_blueprint(recurring_bp, url_prefix='/api/recurring')        # /api/recurring/create, /api/recurring/list, etc.
+    app.register_blueprint(insights_bp, url_prefix='/api/insights')          # /api/insights/user/<id>
 
     # --- Create database tables if they don't exist yet ---
     # db.create_all() looks at all imported models and creates any tables that are

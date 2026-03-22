@@ -60,7 +60,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     OnboardingPage(
       title: 'Track Your Transactions',
-      description: 'Easily add income and expenses. Scan receipts with OCR for instant data entry. Search and filter to find any transaction.',
+      description: 'Easily add income and expenses. Search and filter to find any transaction. Get AI-powered financial insights from your spending data.',
       icon: Icons.receipt_long,                // Receipt icon for transactions
       color: AppColors.info,                   // Blue info color
     ),
