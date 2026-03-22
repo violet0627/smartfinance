@@ -20,8 +20,6 @@
 
 from flask_mail import Message       # Message class for creating emails
 from app import mail                  # Flask-Mail instance (initialized in app/__init__.py)
-from flask import render_template_string  # For rendering HTML templates (not used here but imported)
-import os                             # For reading environment variables
 
 
 # ==============================================================================
@@ -41,19 +39,17 @@ import os                             # For reading environment variables
 def send_verification_email(user_email, user_name, verification_token):
     """Send email verification email"""
     try:
-        # --- Step 1: Build the verification link ---
-        # FRONTEND_URL is where the Flutter web app or verification page is hosted.
-        # The token is passed as a query parameter in the URL.
-        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
-        verification_link = f"{frontend_url}/verify-email?token={verification_token}"
-
-        # --- Step 2: Email subject line ---
+        # --- Step 1: Email subject line ---
         subject = "Verify Your SmartFinance Account"
 
-        # --- Step 3: HTML email body ---
-        # This is a full HTML page with CSS styling that will display in the user's email.
-        # Note: {{ and }} are escaped as {{ }} in f-strings (double braces = literal brace)
-        # The f-string variables ({user_name}, {verification_link}) are inserted into the HTML.
+        # --- Step 2: HTML email body ---
+        # Shows the raw verification token prominently so the user can copy-paste it
+        # into the SmartFinance mobile app's Verify Email screen.
+        #
+        # We do NOT embed a localhost URL here because:
+        # - localhost links are flagged as spam by email providers
+        # - The Flutter mobile app cannot open a localhost web link anyway
+        # - The app expects the raw JWT token to be pasted directly
         html_body = f"""
         <!DOCTYPE html>
         <html>
@@ -81,27 +77,27 @@ def send_verification_email(user_email, user_name, verification_token):
                     padding: 30px;
                     border-radius: 0 0 5px 5px;
                 }}
-                .button {{
-                    display: inline-block;
-                    padding: 12px 30px;
-                    background-color: #4CAF50;
-                    color: white;
-                    text-decoration: none;
-                    border-radius: 5px;
+                .token-box {{
+                    background-color: #e8f5e9;
+                    border: 2px solid #4CAF50;
+                    padding: 16px;
+                    border-radius: 6px;
+                    font-family: monospace;
+                    font-size: 13px;
+                    word-break: break-all;
                     margin: 20px 0;
+                }}
+                .steps {{
+                    background-color: #f1f8e9;
+                    border-left: 4px solid #4CAF50;
+                    padding: 12px 16px;
+                    margin: 16px 0;
                 }}
                 .footer {{
                     text-align: center;
                     margin-top: 20px;
                     color: #666;
                     font-size: 12px;
-                }}
-                .code {{
-                    background-color: #e0e0e0;
-                    padding: 10px;
-                    border-radius: 3px;
-                    font-family: monospace;
-                    word-break: break-all;
                 }}
             </style>
         </head>
@@ -112,16 +108,20 @@ def send_verification_email(user_email, user_name, verification_token):
                 </div>
                 <div class="content">
                     <h2>Hi {user_name},</h2>
-                    <p>Thank you for registering with SmartFinance. To complete your registration, please verify your email address by clicking the button below:</p>
+                    <p>Thank you for registering with SmartFinance. To complete your registration, copy the verification token below and paste it into the SmartFinance app.</p>
 
-                    <div style="text-align: center;">
-                        <a href="{verification_link}" class="button">Verify Email Address</a>
+                    <p><strong>Your verification token:</strong></p>
+                    <div class="token-box">{verification_token}</div>
+
+                    <div class="steps">
+                        <strong>How to verify:</strong><br>
+                        1. Open the SmartFinance app<br>
+                        2. Go to the <em>Verify Email</em> screen<br>
+                        3. Copy the token above and paste it into the token field<br>
+                        4. Tap <strong>Verify Email</strong>
                     </div>
 
-                    <p>Or copy and paste this link into your browser:</p>
-                    <div class="code">{verification_link}</div>
-
-                    <p><strong>This link will expire in 24 hours.</strong></p>
+                    <p><strong>This token will expire in 24 hours.</strong></p>
 
                     <p>If you didn't create an account with SmartFinance, please ignore this email.</p>
 
@@ -136,21 +136,28 @@ def send_verification_email(user_email, user_name, verification_token):
         </html>
         """
 
-        # --- Step 4: Plain text fallback ---
-        # For email clients that can't display HTML (rare but important for accessibility)
+        # --- Step 3: Plain text fallback ---
+        # For email clients that can't display HTML
         text_body = f"""
-        Hi {user_name},
+Hi {user_name},
 
-        Thank you for registering with SmartFinance. To complete your registration, please verify your email address by clicking the link below:
+Thank you for registering with SmartFinance. To verify your email, copy the token below and paste it into the Verify Email screen in the SmartFinance app.
 
-        {verification_link}
+Your verification token:
+{verification_token}
 
-        This link will expire in 24 hours.
+Steps:
+1. Open the SmartFinance app
+2. Go to the Verify Email screen
+3. Paste the token above into the token field
+4. Tap Verify Email
 
-        If you didn't create an account with SmartFinance, please ignore this email.
+This token will expire in 24 hours.
 
-        Best regards,
-        The SmartFinance Team
+If you didn't create an account with SmartFinance, please ignore this email.
+
+Best regards,
+The SmartFinance Team
         """
 
         # --- Step 5: Create the email message ---
@@ -194,15 +201,12 @@ def send_verification_email(user_email, user_name, verification_token):
 def send_password_reset_email(user_email, user_name, reset_token):
     """Send password reset email"""
     try:
-        # --- Build the reset link ---
-        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
-        reset_link = f"{frontend_url}/reset-password?token={reset_token}"
-
         subject = "Reset Your SmartFinance Password"
 
         # --- HTML email body ---
-        # Similar structure to the verification email but with different colors (orange)
-        # and different messaging (password reset instead of welcome)
+        # Shows the raw reset token so the user can copy-paste it into the app.
+        # We do NOT use a localhost URL here — it triggers spam filters and
+        # cannot be opened on a mobile device.
         html_body = f"""
         <!DOCTYPE html>
         <html>
@@ -230,33 +234,33 @@ def send_password_reset_email(user_email, user_name, reset_token):
                     padding: 30px;
                     border-radius: 0 0 5px 5px;
                 }}
-                .button {{
-                    display: inline-block;
-                    padding: 12px 30px;
-                    background-color: #FF9800;
-                    color: white;
-                    text-decoration: none;
-                    border-radius: 5px;
+                .token-box {{
+                    background-color: #fff8e1;
+                    border: 2px solid #FF9800;
+                    padding: 16px;
+                    border-radius: 6px;
+                    font-family: monospace;
+                    font-size: 13px;
+                    word-break: break-all;
                     margin: 20px 0;
                 }}
-                .footer {{
-                    text-align: center;
-                    margin-top: 20px;
-                    color: #666;
-                    font-size: 12px;
-                }}
-                .code {{
-                    background-color: #e0e0e0;
-                    padding: 10px;
-                    border-radius: 3px;
-                    font-family: monospace;
-                    word-break: break-all;
+                .steps {{
+                    background-color: #fff3e0;
+                    border-left: 4px solid #FF9800;
+                    padding: 12px 16px;
+                    margin: 16px 0;
                 }}
                 .warning {{
                     background-color: #fff3cd;
                     border-left: 4px solid #FF9800;
                     padding: 10px;
                     margin: 15px 0;
+                }}
+                .footer {{
+                    text-align: center;
+                    margin-top: 20px;
+                    color: #666;
+                    font-size: 12px;
                 }}
             </style>
         </head>
@@ -267,17 +271,21 @@ def send_password_reset_email(user_email, user_name, reset_token):
                 </div>
                 <div class="content">
                     <h2>Hi {user_name},</h2>
-                    <p>We received a request to reset your SmartFinance password. Click the button below to set a new password:</p>
+                    <p>We received a request to reset your SmartFinance password. Copy the reset token below and paste it into the SmartFinance app.</p>
 
-                    <div style="text-align: center;">
-                        <a href="{reset_link}" class="button">Reset Password</a>
+                    <p><strong>Your password reset token:</strong></p>
+                    <div class="token-box">{reset_token}</div>
+
+                    <div class="steps">
+                        <strong>How to reset your password:</strong><br>
+                        1. Open the SmartFinance app<br>
+                        2. Go to <em>Forgot Password</em> → <em>Reset Password</em> screen<br>
+                        3. Copy the token above and paste it into the token field<br>
+                        4. Enter your new password and tap <strong>Reset Password</strong>
                     </div>
 
-                    <p>Or copy and paste this link into your browser:</p>
-                    <div class="code">{reset_link}</div>
-
                     <div class="warning">
-                        <strong>Important:</strong> This link will expire in 1 hour for security reasons.
+                        <strong>Important:</strong> This token will expire in 1 hour for security reasons.
                     </div>
 
                     <p>If you didn't request a password reset, please ignore this email. Your password will remain unchanged.</p>
@@ -295,18 +303,25 @@ def send_password_reset_email(user_email, user_name, reset_token):
 
         # --- Plain text fallback ---
         text_body = f"""
-        Hi {user_name},
+Hi {user_name},
 
-        We received a request to reset your SmartFinance password. Click the link below to set a new password:
+We received a request to reset your SmartFinance password.
 
-        {reset_link}
+Your password reset token:
+{reset_token}
 
-        This link will expire in 1 hour for security reasons.
+Steps:
+1. Open the SmartFinance app
+2. Go to Forgot Password -> Reset Password screen
+3. Paste the token above into the token field
+4. Enter your new password and tap Reset Password
 
-        If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
+This token will expire in 1 hour for security reasons.
 
-        Best regards,
-        The SmartFinance Team
+If you didn't request a password reset, please ignore this email.
+
+Best regards,
+The SmartFinance Team
         """
 
         # --- Create and send the email ---

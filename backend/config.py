@@ -56,7 +56,11 @@ class Config:
     MAIL_USE_SSL = os.getenv('MAIL_USE_SSL', 'False') == 'True'  # SSL = alternative encryption (not used here)
     MAIL_USERNAME = os.getenv('MAIL_USERNAME', '')               # Gmail address to send from
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', '')               # Gmail app password (not regular password)
-    MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@smartfinance.com')  # "From" address
+    # "From" address shown in the email header.
+    # IMPORTANT: For Gmail SMTP, the From address MUST match MAIL_USERNAME — if they differ,
+    # Gmail overrides it anyway and email providers flag the mismatch as spam.
+    # Defaults to MAIL_USERNAME so they always stay in sync.
+    MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', os.getenv('MAIL_USERNAME', 'noreply@smartfinance.com'))
 
 
 class DevelopmentConfig(Config):
