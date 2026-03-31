@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for showing notifications on Android 13+ (API 33+).
+         Without this, the runtime permission dialog won't appear and
+         notifications are silently blocked on newer Android devices. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="SmartFinance"
         android:name="${applicationName}"

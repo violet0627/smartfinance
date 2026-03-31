@@ -27,6 +27,7 @@ import 'dart:convert';                                    // For json.encode() a
 import 'package:http/http.dart' as http;                  // HTTP client for making API requests
 import 'package:shared_preferences/shared_preferences.dart'; // Local device storage for tokens/user data
 import '../models/user_model.dart';                       // User data model
+import '../config.dart';                                  // App configuration — update IP in config.dart on demo day
 
 class ApiService {
   // ==============================================================================
@@ -43,9 +44,10 @@ class ApiService {
   //                         *** Device and computer must be on the SAME Wi-Fi ***
   // - For iOS simulator:    use localhost or 127.0.0.1
   //
-  // ⚠️  UPDATE THIS IP before running on a new network or different device
+  // ⚠️  To change the server IP, edit lib/config.dart — change _serverIp there.
+  //     Do NOT change this line directly.
   // ==============================================================================
-  static const String baseUrl = 'http://192.168.1.38:5000/api';
+  static const String baseUrl = AppConfig.baseUrl; // Reads from lib/config.dart
 
   // ============================================================================
   // AUTHENTICATION ENDPOINTS

@@ -33,7 +33,7 @@ The SmartFinance system was developed using a combination of industry-standard t
 | Shared Preferences | shared_preferences | 2.x | Local storage of user session data |
 | File Sharing | share_plus | 7.x | CSV and PDF sharing via system share sheet |
 | State Management | Provider | 6.x | Theme (dark/light mode) state management |
-| OCR / Receipt Scanning | Google ML Kit Text Recognition | 0.x | Automatic text extraction from receipt photos |
+| Financial Insights Engine | Custom Flask analytics module | — | Financial health score computation and personalised insight generation |
 | API Testing | Postman | — | Manual backend endpoint testing |
 | IDE (Frontend) | Android Studio / VS Code | — | Flutter development |
 | IDE (Backend) | Visual Studio Code | — | Python/Flask development |
@@ -54,7 +54,7 @@ The Flutter codebase is organised into logical layers that separate concerns:
 ```
 lib/
 ├── main.dart                  — App entry point, theme setup, routing
-├── screens/                   — 25 feature screens grouped by module
+├── screens/                   — 26 feature screens grouped by module
 │   ├── auth/                  — Login, Register, Verify Email, Forgot/Reset Password
 │   ├── onboarding/            — 3-page onboarding introduction
 │   ├── dashboard/             — Main dashboard (home screen)
@@ -64,9 +64,10 @@ lib/
 │   ├── investments/           — Add Investment, Portfolio Overview
 │   ├── analytics/             — Spending analytics with charts
 │   ├── reports/               — Tabbed reports with export
+│   ├── insights/              — Financial health score and personalised insight cards
 │   ├── gamification/          — Achievements screen
 │   └── settings/              — Settings, Profile Edit, Security, 2FA, Backup Codes
-├── services/                  — API calls, analytics logic, export, notifications, OCR
+├── services/                  — API calls, analytics logic, export, notifications, financial insights
 ├── models/                    — Typed Dart data models (TransactionModel, BudgetModel, etc.)
 ├── widgets/                   — Reusable UI components and chart widgets
 ├── providers/                 — ThemeProvider for dark/light mode
@@ -93,7 +94,8 @@ backend/
         ├── two_factor_auth.py — TOTP 2FA setup, verification, disable
         ├── security.py        — Session management, security log, account deletion
         ├── recurring_transactions.py — Recurring transaction CRUD and execution
-        └── reports.py         — Spending analytics, category breakdown, CSV/PDF export
+        ├── reports.py         — Spending analytics, category breakdown, CSV/PDF export
+        └── financial_insights.py — Financial health score and personalised insight generation
 ```
 
 All Flask blueprints are registered with a consistent URL prefix (e.g., `/api/auth`, `/api/transactions`) in `app/__init__.py`. This design enforces clean separation of concerns and makes individual modules independently testable via Postman.
@@ -168,7 +170,7 @@ Each successful login creates a `UserSession` record in the database containing 
 
 **Security Score**
 
-A composite security score (0, 30, 60, or 100) is computed on the Flutter side based on three binary factors: email verified (+30), 2FA enabled (+40), and password strength (+30). This score is displayed prominently on the Security Settings screen to encourage users to improve their account security posture.
+A composite security score is computed on the Flutter side and takes one of three values: 30 (account not email-verified), 60 (email verified, 2FA not enabled), or 100 (email verified and 2FA enabled). The score is displayed as a colour-coded progress bar on the Security Settings screen — red below 50, amber at 50–79, and green at 80 and above — to encourage users to improve their account security posture by completing email verification and enabling 2FA.
 
 ---
 
@@ -184,9 +186,9 @@ The `POST /api/transactions/` endpoint validates all required fields on the serv
 
 Recurring transactions extend the base transaction concept with additional fields: `Frequency` (`daily`, `weekly`, `monthly`, `yearly`), `StartDate`, `NextExecutionDate`, `Status` (`active` or `paused`), and `EndDate`. The backend calculates `NextExecutionDate` automatically after each execution by advancing the date by the appropriate interval. Users can pause or resume recurring transactions and execute them manually on demand. This feature addresses the requirement for automated bill tracking without requiring users to re-enter transactions each period.
 
-**Receipt Scanner**
+**Financial Insights**
 
-The receipt scanning feature uses Google ML Kit's text recognition engine, integrated into the Flutter app via the `google_mlkit_text_recognition` package. When a user photographs a receipt, the OCR engine extracts raw text, which is then parsed by a custom pattern-matching function that identifies monetary amounts (using regular expressions for currency formats) and date strings. The matched values are used to pre-fill the amount and date fields on the Add Transaction screen, reducing manual data entry and input errors.
+The transaction module is complemented by a dedicated Financial Insights screen that analyses the user's transaction history and presents a personalised financial health report. The backend `financial_insights.py` module exposes a `GET /api/insights/user/<id>` endpoint that computes a Financial Health Score (0–100) from four equally-weighted pillars: savings rate, budget adherence, spending consistency, and goal progress. Each pillar contributes up to 25 points. Alongside the score, the endpoint returns a this-month summary (total income, total expenses, net savings amount and savings rate percentage) and a ranked list of 4–6 human-readable insight cards categorised as positive, informational, warning, or danger. The Flutter `FinancialInsightsScreen` renders the score as a circular progress gauge with a colour-coded label, the pillar breakdown as horizontal progress bars, the monthly summary as three stat boxes, and the insight cards with colour-coded left-accent borders. Pull-to-refresh reloads the full report.
 
 ---
 
@@ -307,6 +309,31 @@ The leaderboard endpoint aggregates total XP per user across the platform, order
 
 ---
 
+### 5.2.10 Financial Insights Module
+
+The Financial Insights module provides users with a personalised financial health report computed from their actual transaction history. It is implemented as a dedicated screen (`FinancialInsightsScreen`) and a Flask backend module (`financial_insights.py`) registered at the `/api/insights` prefix.
+
+**Financial Health Score**
+
+The `GET /api/insights/user/<id>` endpoint computes a Financial Health Score on a 0–100 scale by evaluating four equally-weighted pillars, each contributing up to 25 points:
+
+- **Savings Rate** — the proportion of income saved this month relative to a 20% savings rate target.
+- **Budget Adherence** — how closely total spending aligns with the user's configured budget limit.
+- **Spending Consistency** — the stability of spending patterns compared to the previous calendar month.
+- **Goal Progress** — the proportion of active savings goals that are on track relative to their deadlines.
+
+The sum of the four pillar scores (0–25 each) produces the final health score. The backend also assigns a qualitative label: *Needs Work* (0–49), *Fair* (50–69), *Good* (70–89), or *Excellent* (90–100).
+
+**Personalised Insight Cards**
+
+In addition to the score, the endpoint generates 4–6 ranked insight messages derived from the same data. Each insight carries a type (`positive`, `info`, `warning`, or `danger`), a short title, a one-sentence explanation, and an icon name. The Flutter client renders each card with a colour-coded left-accent border — green for positive, blue for informational, amber for warning, and red for danger — providing an at-a-glance prioritisation of the user's most important financial actions.
+
+**Monthly Summary**
+
+A summary section reports the current month's total income, total expenses, net savings amount, and savings rate percentage. This gives users an immediate snapshot of their financial position without navigating to the analytics or reports screens.
+
+---
+
 ## 5.3 Testing Strategies and Approaches
 
 Testing for SmartFinance was conducted across four complementary strategies, each targeting a different quality dimension of the system. This multi-strategy approach ensures that the software is evaluated from technical, experiential, and operational perspectives, providing comprehensive coverage of the stated functional and non-functional requirements.
@@ -385,7 +412,7 @@ The following sub-sections enumerate the planned test cases for each module.
 | TXN-04 | View Transaction History | At least 1 transaction exists | 1. Open Transaction History screen. | All transactions listed in chronological order. |
 | TXN-05 | Filter by Category | Multiple transactions exist | 1. Select a category filter. | Only transactions in selected category displayed. |
 | TXN-06 | Filter by Date Range | Multiple transactions exist | 1. Set start and end date. 2. Apply filter. | Only transactions within date range displayed. |
-| TXN-07 | Receipt Scanner | Camera permission granted | 1. Tap receipt scanner icon. 2. Photograph a receipt. | Amount and date fields auto-populated from recognised text. |
+| TXN-07 | Financial Insights | At least one month of transaction data exists | 1. Open Financial Insights screen. 2. View the Financial Health Score and pillar breakdown. 3. Scroll to personalised insight cards. | Health score (0–100) displayed with correct label; pillar bars rendered; this-month summary and insight cards shown. |
 | TXN-08 | Add Recurring Transaction | User logged in | 1. Open Recurring Transactions. 2. Tap Add. 3. Set frequency to Monthly, enter details. 4. Save. | Recurring transaction saved; NextExecutionDate calculated and displayed. |
 | TXN-09 | Pause Recurring Transaction | Active recurring transaction exists | 1. Tap Pause on a recurring transaction. | Status changes to Paused; upcoming execution skipped. |
 | TXN-10 | Execute Recurring Manually | Active recurring transaction exists | 1. Tap Execute Now. | Transaction created immediately; NextExecutionDate advanced. |
@@ -596,7 +623,7 @@ This section presents the detailed test case results recorded during test execut
 | TXN-04 | View Transaction History | Opened Transaction History screen. | All transactions listed. | All transactions listed with correct amounts, categories, and dates. | Pass |
 | TXN-05 | Filter by Category | Selected "Food" category filter. | Only Food transactions shown. | Only Food transactions displayed. | Pass |
 | TXN-06 | Filter by Date Range | Set 2026-03-01 to 2026-03-07. | Only transactions in range shown. | Transactions outside range hidden correctly. | Pass |
-| TXN-07 | Receipt Scanner | Photographed a printed receipt (RM 45.50, 2026-03-05). | Amount and date auto-filled. | Amount RM 45.50 and date 05/03/2026 auto-populated in form fields. | Pass |
+| TXN-07 | Financial Insights | Opened Financial Insights screen with 3 months of transaction data loaded. | Health score displayed with pillar breakdown, summary, and insight cards. | Financial Health Score rendered correctly; four pillar bars shown; this-month income, expense, and savings displayed; personalised insight cards listed. | Pass |
 | TXN-08 | Add Recurring Transaction | Set Monthly, RM 1,200 rent, starting 2026-04-01. | Recurring transaction saved; next date shown. | Record saved; NextExecutionDate displayed as 2026-04-01. | Pass |
 | TXN-09 | Pause Recurring Transaction | Tapped Pause on the rent recurring transaction. | Status changes to Paused. | Status updated to Paused; next execution indicator hidden. | Pass |
 | TXN-10 | Execute Recurring Manually | Tapped Execute Now on rent recurring transaction. | Transaction created immediately; date advanced. | New transaction created for RM 1,200; NextExecutionDate advanced to 2026-05-01. | Pass |
@@ -726,7 +753,7 @@ The overall satisfaction average of **4.30 / 5.00** exceeds the pass threshold o
 
 ## 5.7 Chapter Summary and Evaluation
 
-This chapter has presented the complete implementation and testing phases of the SmartFinance system. The implementation covered nine functional modules — authentication and account security, transaction management, budget monitoring, financial goals, investment tracking, analytics and reports, and gamification — each realised through a combination of Flutter screens, Flask API endpoints, and SQLAlchemy database models. Key technical implementations discussed in detail include JWT-based stateless authentication, TOTP two-factor authentication with backup code generation, session management with revocation, parallel API loading via `Future.wait`, receipt scanning with Google ML Kit OCR, a `fl_chart`-powered analytics suite, and an exponential XP-levelling gamification engine.
+This chapter has presented the complete implementation and testing phases of the SmartFinance system. The implementation covered eight functional modules — authentication and account security, transaction management, budget monitoring, financial goals, investment tracking, analytics and reports, gamification, and financial insights — each realised through a combination of Flutter screens, Flask API endpoints, and SQLAlchemy database models. Key technical implementations discussed in detail include JWT-based stateless authentication, TOTP two-factor authentication with backup code generation, session management with revocation, parallel API loading via `Future.wait`, a financial health scoring engine with four-pillar breakdown and personalised insight generation, a `fl_chart`-powered analytics suite, and an exponential XP-levelling gamification engine.
 
 The testing phase applied four complementary strategies. Functional testing produced a 100% pass rate across 50 test cases spanning all seven modules, confirming that every feature behaves in accordance with its specification. Security testing achieved a 100% pass rate across seven adversarial test cases, demonstrating that the system correctly enforces authentication, resists common injection attacks, isolates user data, and enforces 2FA and session revocation. Performance testing confirmed that all measured metrics fell well within the defined thresholds: the dashboard loaded in approximately 1.8 seconds against a 3-second target, and all API endpoints responded within 45–210 milliseconds against a 500-millisecond target. Usability testing with six participants yielded a task completion rate of 91.7% and a mean satisfaction score of 4.30 / 5.00, both exceeding their respective pass criteria.
 

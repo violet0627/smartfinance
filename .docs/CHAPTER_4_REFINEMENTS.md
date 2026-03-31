@@ -44,7 +44,6 @@ The column headings used throughout these tables are defined as follows. **Metho
 | POST | `/api/transactions` | Create a new income or expense transaction |
 | PUT | `/api/transactions/<id>` | Update an existing transaction by ID |
 | DELETE | `/api/transactions/<id>` | Delete a transaction by ID |
-| POST | `/api/transactions/scan-receipt` | Extract transaction data from a receipt image via OCR |
 
 ---
 
@@ -156,7 +155,15 @@ The column headings used throughout these tables are defined as follows. **Metho
 
 ---
 
-#### Table 4.1.4.12: Dashboard Endpoint
+#### Table 4.1.4.12: Financial Insights Endpoints (`/api/insights`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/insights/user/<id>` | Compute and return a personalised financial health report: overall score (0–100), four-pillar breakdown, this-month income/expense/savings summary, and ranked insight cards |
+
+---
+
+#### Table 4.1.4.13: Dashboard Endpoint
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -164,7 +171,7 @@ The column headings used throughout these tables are defined as follows. **Metho
 
 ---
 
-The total API surface comprises **52 endpoints** across the twelve modules enumerated above. This represents a significant expansion from the nine endpoints specified in the original design, reflecting the broader feature scope delivered during implementation.
+The total API surface comprises **52 endpoints** across the thirteen modules enumerated above. This represents a significant expansion from the nine endpoints specified in the original design, reflecting the broader feature scope delivered during implementation.
 
 ---
 
@@ -194,16 +201,15 @@ SmartFinance implements Two-Factor Authentication (2FA) using the Time-based One
 
 To encourage users to adopt available security measures, SmartFinance presents a security score on the Security Settings screen. The score is computed server-side on a 0–100 point scale according to the criteria in Table 4.7.2.5.1.
 
-**Table 4.7.2.5.1: Security Score Criteria**
+**Table 4.7.2.5.1: Security Score Values**
 
-| Criterion | Points Awarded |
-|-----------|---------------|
-| Email address verified | +30 |
-| Two-Factor Authentication enabled | +60 |
-| User profile fully completed | +10 |
-| **Maximum total** | **100** |
+| Account State | Score |
+|---------------|-------|
+| Email not verified (no 2FA) | 30 |
+| Email verified, 2FA not enabled | 60 |
+| Email verified and 2FA enabled | 100 |
 
-The score is presented as a filled progress bar whose colour conveys the security level. Scores of 0 carry the label *Not Secure*; scores of 30 are labelled *Basic*; scores of 90 are labelled *Good*; and a perfect score of 100 is labelled *Excellent*. This graduated labelling communicates to the user that email verification alone (30 points) provides only a baseline level of protection, and that enabling 2FA (contributing an additional 60 points) is the single most impactful step available.
+The score takes one of three discrete values rather than accumulating points incrementally. A base score of 30 reflects the minimum state of any registered account. Completing email verification raises the score to 60, and enabling 2FA raises it further to 100. The score is presented as a filled progress bar whose colour conveys the security level: red for scores below 50 (*low security*), amber for scores of 50–79 (*medium security*), and green for scores of 80 and above (*high security*). This design communicates to the user that email verification is a prerequisite for a meaningful security posture, and that enabling 2FA is the single most impactful step available to reach maximum protection.
 
 ---
 

@@ -25,6 +25,7 @@
 // Usage: DashboardScreen() — navigated to after successful login
 // ==============================================================================
 
+import 'dart:io';                                            // For File class — loads local avatar image
 import 'package:flutter/material.dart';                    // For StatefulWidget, Scaffold, etc.
 import 'package:intl/intl.dart';                            // For DateFormat (date formatting)
 import 'package:shared_preferences/shared_preferences.dart'; // For reading stored user data
@@ -54,6 +55,7 @@ import '../analytics/analytics_screen.dart';                 // For AnalyticsScr
 import '../gamification/achievements_screen.dart';           // For AchievementsScreen
 import '../reports/reports_screen.dart';                     // For ReportsScreen
 import '../settings/settings_screen.dart';                   // For SettingsScreen
+import '../settings/profile_edit_screen.dart';               // For ProfileEditScreen (avatar tap)
 import '../goals/goals_screen.dart';                         // For GoalsScreen
 import '../insights/financial_insights_screen.dart';         // For FinancialInsightsScreen
 
@@ -86,6 +88,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _userName = '';                           // User's full name from SharedPreferences
   String _userEmail = '';                          // User's email for verification banner
   bool _emailVerified = true;                      // Default true to avoid flash of banner
+  double? _lastMonthExpense;                       // Last month's total expense for comparison
+  String? _avatarPath;                             // Local path to user's profile photo (null = not set)
 
   // ScrollController preserves the user's scroll position when returning from sub-screens.
   // Without this, every _loadData() rebuild would jump back to the top of the page.
@@ -102,6 +106,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (value is num) return value.toDouble();     // int or double → double
     if (value is String) return double.tryParse(value) ?? 0.0;  // String → parse or 0.0
     return 0.0;                                    // Anything else → 0.0
+  }
+
+  // ==============================================================================
+  // _buildExpenseComparison - Build "vs last month" subtitle string
+  // ==============================================================================
+  // Compares this month's total expenses with last month's.
+  // Returns a string like "↑ 12% vs last month" or "↓ 8% vs last month".
+  // Returns null if last month data is unavailable (hides the subtitle).
+  // ==============================================================================
+  String? _buildExpenseComparison() {
+    final thisMonth = _toDouble(_summary?['totalExpense'] ?? 0);
+    final lastMonth = _lastMonthExpense;
+    if (lastMonth == null || lastMonth == 0) return null; // No comparison possible
+    final diff = ((thisMonth - lastMonth) / lastMonth) * 100;
+    final arrow = diff >= 0 ? '↑' : '↓';
+    return '$arrow ${diff.abs().toStringAsFixed(0)}% vs last month';
   }
 
   // ==============================================================================
@@ -160,14 +180,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       // Get the current user's ID from stored JWT token
       final userId = await ApiService.getCurrentUserId();
       if (userId == null) {
+        if (!mounted) return;
         setState(() => _isLoading = false);
         return;                                    // No user logged in
       }
 
-      // Get user name from SharedPreferences (saved during login)
+      // Get user name and avatar from SharedPreferences (saved during login / profile edit)
       final prefs = await SharedPreferences.getInstance();
+      final savedPath = prefs.getString('avatarPath');
       setState(() {
         _userName = prefs.getString('userFullName') ?? 'User';
+        // Only use the avatar path if the file still exists on disk
+        _avatarPath = (savedPath != null && File(savedPath).existsSync()) ? savedPath : null;
       });
 
       // --- Load Recent Transactions ---
@@ -192,10 +216,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       // --- Load Financial Summary (balance, total income, total expense) ---
       try {
-        final summaryResult = await ApiService.getTransactionSummary(userId);
-        if (summaryResult['success']) {
+        // Calculate this month's and last month's date ranges for comparison
+        final now = DateTime.now();
+        final thisMonthStart = DateTime(now.year, now.month, 1);
+        final lastMonthStart = DateTime(now.year, now.month - 1, 1);
+        final lastMonthEnd = DateTime(now.year, now.month, 0); // Last day of last month
+
+        // Format dates as YYYY-MM-DD strings for the API
+        String _fmt(DateTime d) =>
+            '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+        // Fetch this month's summary and last month's summary in parallel
+        final summaryResults = await Future.wait([
+          ApiService.getTransactionSummary(userId),
+          ApiService.getTransactionSummary(
+            userId,
+            startDate: _fmt(lastMonthStart),
+            endDate: _fmt(lastMonthEnd),
+          ),
+        ]);
+
+        if (summaryResults[0]['success']) {
           setState(() {
-            _summary = summaryResult;
+            _summary = summaryResults[0];
+          });
+        }
+        if (summaryResults[1]['success']) {
+          setState(() {
+            _lastMonthExpense = _toDouble(summaryResults[1]['totalExpense']);
           });
         }
       } catch (e) {
@@ -290,7 +338,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         debugPrint('Error checking email verification: $e');
       }
     } catch (e) {
-      print('Error in _loadData: $e');             // Catch-all for unexpected errors
+      debugPrint('Error in _loadData: $e');             // Catch-all for unexpected errors
     } finally {
       // Always stop the loading spinner (only matters when silent: false)
       // "finally" runs whether try succeeded or catch was triggered
@@ -356,6 +404,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
           style: TextStyle(color: Colors.white),
         ),
         actions: [
+          // Profile avatar — tapping navigates to Profile Edit screen
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: GestureDetector(
+              onTap: () {
+                // Navigate to Profile Edit; reload data when returning so avatar updates
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfileEditScreen()),
+                ).then((_) => _loadData(silent: true));
+              },
+              child: CircleAvatar(
+                radius: 17,
+                backgroundColor: Colors.white,
+                // Show photo if available, otherwise show initials
+                backgroundImage: _avatarPath != null
+                    ? FileImage(File(_avatarPath!)) // Local file image
+                    : null,
+                child: _avatarPath == null
+                    ? Text(
+                        // Initials: first letter of each word, max 2 letters
+                        _userName.trim().split(' ').where((w) => w.isNotEmpty)
+                            .take(2).map((w) => w[0].toUpperCase()).join(),
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      )
+                    : null, // Hide text when photo is shown
+              ),
+            ),
+          ),
           // Settings gear icon in the top-right
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.white),
@@ -468,13 +549,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        // Expense Card (right half)
+                        // Expense Card (right half) — with vs-last-month comparison
                         Expanded(
                           child: AnimatedDashboardCard(
                             title: 'Expenses',
                             amount: 'RM ${_toDouble(_summary?['totalExpense'] ?? 0).toStringAsFixed(2)}',
                             icon: Icons.trending_down,
                             gradient: AppGradients.expenseCardGradient,
+                            // Show % change vs last month when both values are available
+                            subtitle: _buildExpenseComparison(),
                           ),
                         ),
                       ],
@@ -945,6 +1028,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _loadData(silent: true);
               setState(() => _selectedIndex = 0);
               break;
+            case 4:
+              // Financial Insights tab
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const FinancialInsightsScreen(),
+                ),
+              );
+              setState(() => _selectedIndex = 0);
+              break;
           }
         },
         type: BottomNavigationBarType.fixed,       // Fixed tabs (no shifting animation)
@@ -966,6 +1059,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.trending_up),
             label: 'Portfolio',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite),            // Heart icon — represents financial health
+            label: 'Insights',
           ),
         ],
       ),

@@ -25,6 +25,7 @@
 // ==============================================================================
 
 import 'dart:io';                              // For File operations (read/write/delete)
+import 'package:flutter/foundation.dart';      // For debugPrint (only prints in debug mode, not release)
 import 'package:csv/csv.dart';                 // For converting data to CSV format
 import 'package:intl/intl.dart';               // For date formatting (DateFormat)
 import 'package:path_provider/path_provider.dart'; // For getting app documents directory
@@ -105,7 +106,7 @@ class ExportService {
 
       return filePath;                        // Return the path where file was saved
     } catch (e) {
-      print('Error exporting to CSV: $e');
+      debugPrint('Error exporting to CSV: $e');
       return null;
     }
   }
@@ -277,7 +278,7 @@ class ExportService {
 
       return filePath;
     } catch (e) {
-      print('Error exporting to PDF: $e');
+      debugPrint('Error exporting to PDF: $e');
       return null;
     }
   }
@@ -295,7 +296,7 @@ class ExportService {
     try {
       final file = File(filePath);
       if (!await file.exists()) {
-        print('File does not exist: $filePath');
+        debugPrint('File does not exist: $filePath');
         return false;
       }
 
@@ -308,7 +309,7 @@ class ExportService {
 
       return true;
     } catch (e) {
-      print('Error sharing file: $e');
+      debugPrint('Error sharing file: $e');
       return false;
     }
   }
@@ -347,7 +348,7 @@ class ExportService {
       }
       return false;    // File doesn't exist
     } catch (e) {
-      print('Error deleting file: $e');
+      debugPrint('Error deleting file: $e');
       return false;
     }
   }
@@ -514,7 +515,7 @@ class ExportService {
 
       return filePath;
     } catch (e) {
-      print('Error exporting budget to PDF: $e');
+      debugPrint('Error exporting budget to PDF: $e');
       return null;
     }
   }

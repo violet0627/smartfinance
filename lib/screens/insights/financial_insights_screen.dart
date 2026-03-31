@@ -182,7 +182,14 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        ...insights.map((insight) => _buildInsightCard(insight)),
+
+        // If no insights returned, the user has no transactions yet this month.
+        // Show an encouraging empty state instead of a blank section.
+        if (insights.isEmpty)
+          _buildEmptyInsights()
+        else
+          ...insights.map((insight) => _buildInsightCard(insight)),
+
         const SizedBox(height: 8),
 
         // Footer note
@@ -554,6 +561,45 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // ==============================================================================
+  // _buildEmptyInsights — shown when the user has no transactions yet this month
+  // ==============================================================================
+  // A new user (or someone who hasn't logged any transactions this month) will
+  // have no data for the insights engine to analyse. Instead of showing nothing,
+  // we show a friendly prompt encouraging them to start tracking.
+  // ==============================================================================
+  Widget _buildEmptyInsights() {
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            // Lightbulb icon — implies "insights waiting to be discovered"
+            Icon(Icons.lightbulb_outline, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 12),
+            Text(
+              'No insights yet',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Start adding your income and expenses this month — '
+              'your personalised financial insights will appear here.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey[500], height: 1.4),
+            ),
+          ],
         ),
       ),
     );

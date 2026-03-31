@@ -79,7 +79,42 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
   // _toggleTransaction activates or pauses a recurring transaction
   // recurringId: the database ID of the transaction to toggle
   // currentStatus: current active state (true = active, false = paused)
+  // Shows a confirmation dialog before toggling — prevents accidental pausing of critical bills
   Future<void> _toggleTransaction(int recurringId, bool currentStatus) async {
+    // Show confirmation dialog before making the irreversible toggle
+    // This prevents accidental pausing of critical payments like rent or salary
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        // Dialog title changes based on whether we're pausing or resuming
+        title: Text(currentStatus ? 'Pause Transaction?' : 'Resume Transaction?'),
+        content: Text(
+          currentStatus
+              ? 'This transaction will stop executing on its scheduled dates until you resume it.'
+              : 'This transaction will resume on its next scheduled date.',
+        ),
+        actions: [
+          // Cancel — do nothing
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          // Confirm — orange for pause (caution), green for resume
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: currentStatus ? Colors.orange : AppColors.success,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(currentStatus ? 'Pause' : 'Resume'),
+          ),
+        ],
+      ),
+    );
+
+    // User cancelled — do nothing
+    if (confirmed != true) return;
+
     final result = await ApiService.toggleRecurringTransaction(recurringId);
 
     if (result['success']) {
@@ -88,7 +123,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           // result['isActive'] is the new state after toggling
-          content: Text(result['isActive'] ? 'Activated' : 'Paused'),
+          content: Text(result['isActive'] ? 'Transaction resumed' : 'Transaction paused'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -297,9 +332,9 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
+                      Icon(Icons.error_outline, size: 64, color: AppColors.danger),
                       const SizedBox(height: 16),
-                      Text(_error, style: const TextStyle(color: Colors.red)),
+                      Text(_error, style: const TextStyle(color: AppColors.danger)),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _loadRecurringTransactions,

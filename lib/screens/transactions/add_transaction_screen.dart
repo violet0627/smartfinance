@@ -238,15 +238,27 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   // ==============================================================================
-  // _hasUnsavedChanges - Check Whether the User Has Entered Any Data
+  // _hasUnsavedChanges - Check Whether the User Has Made Any Changes
   // ==============================================================================
-  // Returns true if the user has typed anything, selected a category, or
-  // changed the date from today. Used to decide whether to warn on back press.
+  // In ADD mode: returns true if any field has been filled in.
+  // In EDIT mode: compares current field values against the original transaction
+  //   to detect actual changes — avoids showing the "Discard?" dialog if nothing
+  //   was actually modified.
   // ==============================================================================
   bool get _hasUnsavedChanges {
-    // In edit mode, always warn (original values are pre-filled but may be changed)
-    if (widget.transaction != null) return true;
-    // In add mode, check if the user has entered any data
+    if (widget.transaction != null) {
+      // EDIT MODE — compare each field against the original value
+      final original = widget.transaction!;
+      // Convert original amount to string for comparison (same as what controller holds)
+      final originalAmountStr = original.amount.toString();
+      final originalDescription = original.description ?? '';
+      return _amountController.text != originalAmountStr ||
+          _descriptionController.text != originalDescription ||
+          _transactionType != original.transactionType ||
+          _selectedCategory != original.category ||
+          _selectedDate != original.transactionDate;
+    }
+    // ADD MODE — warn if any field has been touched
     return _amountController.text.isNotEmpty ||
         _descriptionController.text.isNotEmpty ||
         _selectedCategory != null ||

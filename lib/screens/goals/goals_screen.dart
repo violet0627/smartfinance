@@ -87,17 +87,20 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   // _showContributeDialog shows an AlertDialog for adding money to a goal
-  // StatefulBuilder is used so the dialog can show its own loading state
+  // StatefulBuilder is used so the dialog can show its own loading state and
+  // update the over-contribution warning in real time as the user types.
   Future<void> _showContributeDialog(Map<String, dynamic> goal) async {
     final amountController = TextEditingController();
     final remainingAmount = (goal['remainingAmount'] ?? 0).toDouble();
-    bool isLoading = false; // Local state just for this dialog
+    bool isLoading = false;     // Local state just for this dialog
+    String? warningText;        // Shown when the entered amount exceeds remaining
 
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         // StatefulBuilder provides a local setState (setDialogState) inside the dialog
-        // This lets us update the dialog's UI (e.g., show a spinner) without rebuilding the whole screen
+        // This lets us update the dialog's UI (e.g., show a spinner or warning) without
+        // rebuilding the whole GoalsScreen
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Add Contribution'),
           content: Column(
@@ -126,7 +129,47 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 ),
                 keyboardType: TextInputType.number,
                 enabled: !isLoading, // Disable input while API call is in progress
+                // onChanged fires every time the text changes — used to validate in real time
+                onChanged: (value) {
+                  final parsed = double.tryParse(value);
+                  setDialogState(() {
+                    // Warn if the entered amount exceeds what's still needed
+                    if (parsed != null && parsed > remainingAmount) {
+                      final excess = parsed - remainingAmount;
+                      warningText = 'Exceeds remaining by RM ${excess.toStringAsFixed(2)}. '
+                          'The goal will be marked as completed.';
+                    } else {
+                      warningText = null; // Clear warning when amount is within range
+                    }
+                  });
+                },
               ),
+              // Warning message — only shown when amount > remaining
+              // AnimatedSize smoothly animates the height change when the warning appears/disappears
+              if (warningText != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withOpacity(0.4)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.info_outline, size: 16, color: Colors.orange),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          warningText!,
+                          style: const TextStyle(fontSize: 12, color: Colors.orange),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
           actions: [
@@ -322,7 +365,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
   // _buildSummaryCard creates the gradient overview card at the top
   Widget _buildSummaryCard() {
     return Card(
-      elevation: 4,
+      elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -665,8 +708,12 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             Icon(
                               Icons.calendar_today,
                               size: 14,
-                              // Red calendar icon if overdue
-                              color: isOverdue ? AppColors.danger : Colors.grey.shade600,
+                              // Red if overdue, orange if ≤7 days, grey otherwise
+                              color: isOverdue
+                                  ? AppColors.danger
+                                  : daysRemaining <= 7 && !isCompleted
+                                      ? Colors.orange
+                                      : Colors.grey.shade600,
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -674,15 +721,19 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                   ? 'Completed'
                                   : isOverdue
                                       ? 'Overdue'
-                                      : '$daysRemaining days left',
+                                      : daysRemaining <= 7
+                                          ? '⚠ $daysRemaining days left'
+                                          : '$daysRemaining days left',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: isCompleted
-                                    ? AppColors.success  // Green for completed
+                                    ? AppColors.success        // Green for completed
                                     : isOverdue
-                                        ? AppColors.danger // Red for overdue
-                                        : Colors.black87,
+                                        ? AppColors.danger     // Red for overdue
+                                        : daysRemaining <= 7
+                                            ? Colors.orange    // Orange for urgent (≤7 days)
+                                            : Colors.black87,  // Normal otherwise
                               ),
                             ),
                           ],

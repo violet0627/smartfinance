@@ -21,6 +21,7 @@ import 'screens/auth/login_screen.dart';                    // Login screen widg
 import 'screens/dashboard/dashboard_screen.dart';           // Dashboard (main app) screen widget
 import 'screens/onboarding/onboarding_screen.dart';         // First-time tutorial screen widget
 import 'services/api_service.dart';                         // API service (communicates with backend server)
+import 'services/notification_service.dart';                // Notification service — must be initialized at startup
 import 'utils/colors.dart';                                 // App color definitions
 import 'utils/theme.dart';                                  // App theme definitions (light/dark)
 
@@ -29,8 +30,26 @@ import 'utils/theme.dart';                                  // App theme definit
 // ==============================================================================
 // This is like the "main" function in Python - it's the first thing that runs.
 // SmartFinance is a Malaysia-only app, so the theme is always Light mode.
+//
+// "async" means this function can use "await" to wait for asynchronous operations.
+// WidgetsFlutterBinding.ensureInitialized() must be called before any async work
+// in main() — it connects the Flutter framework to the device's native layer.
 // ==============================================================================
-void main() {
+void main() async {
+  // WidgetsFlutterBinding.ensureInitialized() must be called before any plugin
+  // usage in main() — it sets up the bridge between Flutter and native Android/iOS code.
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize the notification plugin at app startup so it's ready to use anywhere.
+  // Without this, notifications silently fail even if the code looks correct.
+  await NotificationService.initialize();
+
+  // Request permission to show notifications.
+  // On Android 13+ (API 33+): shows a system dialog asking the user to allow notifications.
+  // On older Android: no dialog shown (permission granted automatically).
+  // On iOS: shows the standard "Allow Notifications?" alert.
+  await NotificationService.requestPermissions();
+
   runApp(const MyApp()); // Create and run the root widget
 }
 

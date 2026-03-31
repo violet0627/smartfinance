@@ -22,6 +22,7 @@
 // Uses the flutter_local_notifications package for cross-platform notifications.
 // ==============================================================================
 
+import 'package:flutter/foundation.dart';                                        // For debugPrint (only prints in debug mode, not release)
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Notification plugin
 import 'package:shared_preferences/shared_preferences.dart';  // For saving notification settings
 import 'package:intl/intl.dart';                               // For date formatting
@@ -395,22 +396,36 @@ class NotificationService {
   // ============================================================================
 
   // ==============================================================================
-  // requestPermissions - Request Notification Permissions (iOS Only)
+  // requestPermissions - Request Notification Permissions (Android 13+ and iOS)
   // ==============================================================================
-  // iOS requires explicit user permission for notifications.
-  // Android doesn't need this (returns true by default).
+  // Android 13+ (API 33+) requires the POST_NOTIFICATIONS runtime permission.
+  // The user sees a system dialog: "Allow SmartFinance to send notifications?"
+  // Without this, notifications are silently blocked on Android 13+ devices.
   //
-  // resolvePlatformSpecificImplementation gets the iOS-specific plugin instance.
-  // ?. means: only call requestPermissions if the iOS plugin exists (not on Android).
+  // iOS also requires explicit permission — same behavior as before.
+  //
+  // resolvePlatformSpecificImplementation<T>() returns the platform plugin
+  // instance (Android or iOS) — returns null if on the other platform.
+  // ?. is null-safe call — skips the call if the implementation doesn't exist.
   // ==============================================================================
   static Future<bool> requestPermissions() async {
     if (!_initialized) await initialize();
 
+    // --- Android 13+ (API 33+): Request POST_NOTIFICATIONS runtime permission ---
+    // On Android 12 and below this call is a no-op (permission auto-granted).
+    // On Android 13+ it shows the system "Allow Notifications?" dialog once.
+    final androidPlugin = _notifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin != null) {
+      await androidPlugin.requestNotificationsPermission();
+    }
+
+    // --- iOS: Request permission to show alerts, badges, and play sounds ---
     final result = await _notifications
         .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
         ?.requestPermissions(alert: true, badge: true, sound: true);
 
-    return result ?? true; // Android doesn't need runtime permission, so default to true
+    return result ?? true; // Default true — Android returns null here but is handled above
   }
 
   // ==============================================================================
@@ -488,9 +503,9 @@ class NotificationService {
         }),
       );
 
-      print('Scheduled reminder for $name (ID: $notificationId) on $reminderDate');
+      debugPrint('Scheduled reminder for $name (ID: $notificationId) on $reminderDate');
     } catch (e) {
-      print('Error scheduling notification: $e');
+      debugPrint('Error scheduling notification: $e');
     }
   }
 
@@ -499,7 +514,7 @@ class NotificationService {
     await initialize();
     final notificationId = 10000 + recurringId;    // Reconstruct the notification ID
     await _notifications.cancel(notificationId);
-    print('Cancelled reminder for recurring transaction $recurringId');
+    debugPrint('Cancelled reminder for recurring transaction $recurringId');
   }
 
   // ==============================================================================
@@ -568,7 +583,7 @@ class NotificationService {
           daysBeforeReminder: daysBeforeReminder,
         );
       } catch (e) {
-        print('Error scheduling reminder for recurring ${recurring['RecurringId']}: $e');
+        debugPrint('Error scheduling reminder for recurring ${recurring['RecurringId']}: $e');
       }
     }
   }
@@ -617,7 +632,7 @@ class NotificationService {
           });
         }
       } catch (e) {
-        print('Error processing recurring ${recurring['RecurringId']}: $e');
+        debugPrint('Error processing recurring ${recurring['RecurringId']}: $e');
       }
     }
 

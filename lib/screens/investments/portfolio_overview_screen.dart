@@ -105,36 +105,56 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
   }
 
   // _showUpdatePriceDialog shows a dialog to update the current market price of an investment
-  // This recalculates the profit/loss based on the new price
+  // This recalculates the profit/loss based on the new price.
+  // Uses StatefulBuilder so we can show inline validation errors without closing the dialog.
   void _showUpdatePriceDialog(InvestmentModel investment) {
     // Pre-fill with current price (or purchase price if no current price is set)
     final priceController = TextEditingController(
       text: investment.currentPrice?.toString() ?? investment.purchasePrice.toString(),
     );
+    String? errorText; // Shown below the input when validation fails
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Update ${investment.assetName} Price'),
-        content: TextField(
-          controller: priceController,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Current Price',
-            prefixText: 'RM ',
-            border: OutlineInputBorder(),
+      builder: (context) => StatefulBuilder(
+        // StatefulBuilder gives this dialog its own local setState (setDialogState)
+        // so we can update errorText without rebuilding the whole portfolio screen
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Update ${investment.assetName} Price'),
+          content: TextField(
+            controller: priceController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Current Price',
+              prefixText: 'RM ',
+              border: const OutlineInputBorder(),
+              // errorText shows a red error message directly below the input field
+              // null = no error (field looks normal)
+              errorText: errorText,
+            ),
+            // Clear the error as soon as the user starts typing again
+            onChanged: (_) {
+              if (errorText != null) {
+                setDialogState(() => errorText = null);
+              }
+            },
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final price = double.tryParse(priceController.text);
-              if (price != null && investment.investmentId != null) {
-                Navigator.pop(context); // Close dialog first
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final price = double.tryParse(priceController.text);
+                // Validate — show inline error if input is not a valid number
+                if (price == null || price <= 0) {
+                  setDialogState(() => errorText = 'Please enter a valid price');
+                  return; // Keep dialog open so user can correct the input
+                }
+                if (investment.investmentId == null) return;
+
+                Navigator.pop(context); // Close dialog before the async API call
                 final result = await ApiService.updateInvestmentPrice(
                   investment.investmentId!,
                   price,
@@ -148,12 +168,24 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                     ),
                   );
                   _loadPortfolio(); // Refresh to show new profit/loss
+                } else {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result['error'] ?? 'Failed to update price'),
+                      backgroundColor: AppColors.danger,
+                    ),
+                  );
                 }
-              }
-            },
-            child: const Text('Update'),
-          ),
-        ],
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Update'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -167,9 +199,15 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
-          // Filter button - shows a dropdown with asset type options
+          // Filter button — icon turns yellow when a filter is active so the user
+          // can immediately see that results are filtered, not showing everything
           PopupMenuButton<String>(
-            icon: const Icon(Icons.filter_list),
+            icon: Icon(
+              _filterType != null ? Icons.filter_alt : Icons.filter_list,
+              // Yellow tint when filtered, white when showing all — clear visual signal
+              color: _filterType != null ? Colors.yellow : Colors.white,
+            ),
+            tooltip: _filterType != null ? 'Filtering: $_filterType' : 'Filter by type',
             onSelected: (value) {
               setState(() {
                 // 'All' means no filter; otherwise store the type name
@@ -178,7 +216,17 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
               _loadPortfolio(); // Reload with new filter
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(value: 'All', child: Text('All Types')),
+              // 'All Types' option — clears the filter
+              const PopupMenuItem(
+                value: 'All',
+                child: Row(
+                  children: [
+                    Icon(Icons.clear, size: 18),
+                    SizedBox(width: 8),
+                    Text('All Types'),
+                  ],
+                ),
+              ),
               // Dynamically generate menu items from InvestmentTypes.allTypes list
               ...InvestmentTypes.allTypes.map((type) =>
                   PopupMenuItem(value: type, child: Text(type))),
@@ -191,7 +239,57 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
           // Show empty state if no portfolio data or portfolio is empty
           : _portfolio == null || _portfolio!.isEmpty
               ? _buildEmptyState()
-              : RefreshIndicator(
+              : Column(
+                  children: [
+                    // Active filter banner — only shown when a filter is selected.
+                    // Lets the user immediately see what they're filtering by and
+                    // tap × to clear it without opening the menu again.
+                    if (_filterType != null)
+                      Container(
+                        width: double.infinity,
+                        color: AppColors.primary.withOpacity(0.08),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Row(
+                          children: [
+                            Icon(Icons.filter_alt, size: 16, color: AppColors.primary),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Showing: $_filterType only',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const Spacer(), // Push the clear button to the right
+                            // × button — clears the filter and reloads all investments
+                            GestureDetector(
+                              onTap: () {
+                                setState(() => _filterType = null);
+                                _loadPortfolio();
+                              },
+                              child: Row(
+                                children: [
+                                  Text(
+                                    'Clear',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Icon(Icons.close, size: 16, color: AppColors.primary),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Main scrollable content — Expanded fills remaining height after the banner
+                    Expanded(
+                      child: RefreshIndicator(
                   onRefresh: _loadPortfolio,
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -227,7 +325,10 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
                     ),
                   ),
                 ),
-      // FAB to add a new investment
+              ),   // close Expanded
+            ],
+          ),       // close outer Column — this ends the body: parameter of Scaffold
+      // FAB to add a new investment — floatingActionButton is a separate Scaffold property
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.push(
