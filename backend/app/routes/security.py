@@ -24,6 +24,8 @@ from app import db                                  # Database instance
 from app.models.user import User                    # User model
 from app.models.session import UserSession          # UserSession model (active login sessions)
 from app.models.security_log import SecurityLog     # SecurityLog model (audit trail)
+from app.models.achievement import UserAchievement, HabitStreak  # Gamification models — no DB-level cascade, must delete manually
+from app.models.user_settings import UserSettings   # User settings — no DB-level cascade, must delete manually
 from datetime import datetime                        # For timestamps
 
 # --- Create the Blueprint ---
@@ -264,9 +266,20 @@ def delete_account():
             device_info=request.headers.get('User-Agent')
         )
 
+        # --- Manually delete records without DB-level CASCADE first ---
+        # UserAchievements and HabitStreaks have no ON DELETE CASCADE on their foreign keys,
+        # so MySQL will throw a constraint error if we try to delete the user without clearing these first.
+        # UserSettings also has no cascade — must be removed before the user row is deleted.
+        UserAchievement.query.filter_by(UserId=user_id).delete()  # Remove all earned achievements
+        HabitStreak.query.filter_by(UserId=user_id).delete()      # Remove streak record
+        UserSettings.query.filter_by(UserId=user_id).delete()     # Remove user settings
+        db.session.flush()  # Send the above DELETEs to MySQL before deleting the user row
+
         # --- Delete the user ---
-        # CASCADE in the database will automatically delete all related records:
-        # transactions, budgets, investments, goals, achievements, sessions, etc.
+        # SQLAlchemy cascade='all, delete-orphan' on the User relationships will automatically
+        # clean up: transactions, budgets (+ categories), investments, goals.
+        # DB-level ON DELETE CASCADE handles: sessions, security logs, 2FA, password resets,
+        # email verifications, recurring transactions.
         db.session.delete(user)
         db.session.commit()
 
