@@ -24,8 +24,16 @@ from app import db                                  # Database instance
 from app.models.user import User                    # User model
 from app.models.session import UserSession          # UserSession model (active login sessions)
 from app.models.security_log import SecurityLog     # SecurityLog model (audit trail)
-from app.models.achievement import UserAchievement, HabitStreak  # Gamification models — no DB-level cascade, must delete manually
-from app.models.user_settings import UserSettings   # User settings — no DB-level cascade, must delete manually
+from app.models.achievement import UserAchievement, HabitStreak  # Gamification models
+from app.models.user_settings import UserSettings   # User settings
+from app.models.password_reset import PasswordReset # Password reset tokens
+from app.models.two_factor_auth import TwoFactorAuth # 2FA records
+from app.models.email_verification import EmailVerification  # Email verification tokens
+from app.models.recurring_transaction import RecurringTransaction  # Recurring transactions
+from app.models.transaction import Transaction      # Transactions
+from app.models.budget import Budget, BudgetCategory  # Budgets and their categories
+from app.models.investment import Investment        # Investments
+from app.models.goal import Goal                   # Savings goals
 from datetime import datetime                        # For timestamps
 
 # --- Create the Blueprint ---
@@ -266,20 +274,41 @@ def delete_account():
             device_info=request.headers.get('User-Agent')
         )
 
-        # --- Manually delete records without DB-level CASCADE first ---
-        # UserAchievements and HabitStreaks have no ON DELETE CASCADE on their foreign keys,
-        # so MySQL will throw a constraint error if we try to delete the user without clearing these first.
-        # UserSettings also has no cascade — must be removed before the user row is deleted.
-        UserAchievement.query.filter_by(UserId=user_id).delete()  # Remove all earned achievements
-        HabitStreak.query.filter_by(UserId=user_id).delete()      # Remove streak record
-        UserSettings.query.filter_by(UserId=user_id).delete()     # Remove user settings
-        db.session.flush()  # Send the above DELETEs to MySQL before deleting the user row
+        # --- Manually delete ALL related records before deleting the user ---
+        # We do this explicitly for every table rather than relying on SQLAlchemy cascade
+        # or DB-level ON DELETE CASCADE. This is safer because SQLAlchemy sometimes intercepts
+        # the cascade and tries to SET UserId = NULL (nullify) instead of deleting the rows,
+        # which fails when UserId is nullable=False (causing IntegrityError).
 
-        # --- Delete the user ---
-        # SQLAlchemy cascade='all, delete-orphan' on the User relationships will automatically
-        # clean up: transactions, budgets (+ categories), investments, goals.
-        # DB-level ON DELETE CASCADE handles: sessions, security logs, 2FA, password resets,
-        # email verifications, recurring transactions.
+        # Security & auth records
+        PasswordReset.query.filter_by(UserId=user_id).delete()         # Password reset tokens
+        TwoFactorAuth.query.filter_by(UserId=user_id).delete()         # 2FA codes
+        EmailVerification.query.filter_by(UserId=user_id).delete()     # Email verification tokens
+        UserSession.query.filter_by(UserId=user_id).delete()           # Active sessions
+        SecurityLog.query.filter_by(UserId=user_id).delete()           # Security audit log
+
+        # Gamification records
+        UserAchievement.query.filter_by(UserId=user_id).delete()       # Earned achievements
+        HabitStreak.query.filter_by(UserId=user_id).delete()           # Daily streak
+
+        # Settings
+        UserSettings.query.filter_by(UserId=user_id).delete()         # User preferences
+
+        # Financial records
+        RecurringTransaction.query.filter_by(UserId=user_id).delete()  # Recurring transactions
+        Transaction.query.filter_by(UserId=user_id).delete()           # All transactions
+        Investment.query.filter_by(UserId=user_id).delete()            # Portfolio holdings
+        Goal.query.filter_by(UserId=user_id).delete()                  # Savings goals
+
+        # Budgets — must delete child categories before parent budgets
+        budget_ids = [b.BudgetId for b in Budget.query.filter_by(UserId=user_id).all()]
+        if budget_ids:
+            BudgetCategory.query.filter(BudgetCategory.BudgetId.in_(budget_ids)).delete(synchronize_session=False)
+        Budget.query.filter_by(UserId=user_id).delete()               # Monthly budgets
+
+        db.session.flush()  # Send all DELETEs to MySQL before removing the user row
+
+        # --- Now delete the user row itself ---
         db.session.delete(user)
         db.session.commit()
 
