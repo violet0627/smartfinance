@@ -1,37 +1,54 @@
 # SmartFinance — FYP System Preview Script
-### Final Version · Word-for-word · ~30 minutes
+### Revised Final Version · Word-for-word · ~30 minutes
 
 > **How to use this script:**
 > - Read every word naturally — do not rush
 > - Stage directions in *italics inside brackets* — do not read these aloud
 > - **Bold text** = emphasise slightly when speaking
-> - Practice the demo flow at least once so your hands know where to tap
+> - Sections marked **[OPTIONAL]** — present them if time allows, skip if running short
+> - Practice the full demo at least once the night before so your hands know where to tap
 
 ---
 
 ## SECTION 1 — Project Overview
-### (~3 minutes)
+### (~4 minutes)
 
 "Good [morning / afternoon]. My name is [Your Name], student ID [Your ID], and my Final Year Project is called **SmartFinance** — a personal finance management mobile application built for Android.
 
-Let me start by explaining the problem I am solving.
+Let me start by explaining the problem I am trying to solve, and why existing solutions are not good enough.
 
-Managing personal finances is something most people know they should do, but very few actually do consistently. The main reasons are: it feels tedious, existing tools are either too complicated, or they just show raw numbers without telling you what those numbers actually mean. You open your banking app, you see your account balance, and that is it. You have no idea whether you are overspending on food, whether you are on track with your savings, or how your investments are performing overall.
+**The Problem.**
 
-This problem is especially common among students and young working adults in Malaysia — people who are just starting to earn money but have no structured financial guidance.
+Managing personal finances is one of the most important life skills — but most people, especially students and young working adults in Malaysia, do not do it consistently. Based on my research, there are three main reasons for this.
 
-**SmartFinance solves this** with an all-in-one mobile application covering five core areas: transaction tracking, budget management, savings goals, investment portfolio tracking, and a financial insights engine that analyses the user's actual spending behaviour and produces a personalised health score with specific recommendations.
+First, **awareness** — most people have no idea where their money actually goes every month. They know their salary, they know their rent, but the small daily expenses — food, transport, online shopping — add up silently. By the time they realise they have overspent, it is already too late.
 
-What makes this different from a basic finance tracker is two key things. First, the **Financial Insights Engine** — it does not just record your data, it interprets your data and tells you what it means. Second, a **gamification system** — users earn experience points, unlock achievements, and maintain daily streaks, which encourages consistent tracking instead of giving up after the first week.
+Second, **tools are either too difficult or too simple**. On one side, you have spreadsheets — they are powerful but require you to do everything manually: enter data, write formulas, create charts, and interpret the results yourself. Most people give up within a week. On the other side, you have your banking app — it shows your balance and transaction list, but nothing more. It does not tell you whether your spending pattern is healthy. It does not warn you before you overspend. It does not give you any advice.
 
-The system is built using **Flutter** for the mobile frontend, **Python Flask** for the backend REST API, and **MySQL** for the database. The Flutter app sends HTTP requests to the Flask server, Flask processes the logic and queries MySQL, then returns results as JSON back to the app.
+Third, **motivation** — even people who start tracking their finances tend to stop after a few weeks. There is no reward for being consistent, no feedback telling them they are improving, and no consequence for skipping a day. Finance apps do not engage users the way other apps do.
+
+**The Gap.**
+
+So the gap in the market is this: there is no affordable, simple mobile application that tracks transactions, manages budgets, monitors investments, analyses your financial behaviour, and keeps you motivated to continue — all in one place.
+
+**The Solution — SmartFinance.**
+
+SmartFinance fills this gap with three core ideas.
+
+One — **automatic analysis**. You record your transactions, and the system automatically calculates your budget usage, updates your portfolio, and analyses your spending pattern. You do not need to do the maths yourself.
+
+Two — **intelligent feedback**. Instead of just showing raw numbers, SmartFinance produces a **Financial Health Score** from 0 to 100, based on four pillars of financial behaviour: how much you save, whether you stay within budget, whether your spending is consistent, and how well you are progressing on your savings goals. The system then generates personalised recommendations — not generic tips, but advice based on your actual numbers.
+
+Three — **gamification**. The app uses experience points, achievement badges, daily streaks, and a leaderboard to make financial tracking feel rewarding. This is the engagement layer that encourages users to open the app every day and record their transactions consistently.
+
+The system is built with **Flutter** for the mobile frontend, **Python Flask** for the backend REST API, and **MySQL** for the database. Flutter handles all the user interface. Flask handles all the business logic — including the financial health score calculation. MySQL stores all the data. The three components communicate through HTTP requests and JSON responses.
 
 Now let me demonstrate the system."
 
 ---
 
 ## SECTION 2 — Live Demo
-### (~20 minutes)
+### (~18 minutes)
 
 ---
 
@@ -42,211 +59,281 @@ Now let me demonstrate the system."
 
 *(Open the app to the login screen.)*
 
-I will log in with an existing account. *(Type email and password, tap Login.)* When the user taps Login, the app sends the credentials to my Flask backend at the authentication endpoint. The server checks the email and password against the MySQL database — if they match, it generates a **JWT access token** and returns it to the app. The app stores this token on the device, and every subsequent API call includes this token in the request header so the server knows who is making the request.
+I will log in with my account. *(Type email and password, tap Login.)*
 
-The access token expires after **one hour** for security. When it expires, the app uses a separate long-lived **refresh token** — valid for 30 days — to obtain a new access token silently, without asking the user to log in again.
+Here is what happens technically when I tap Login. The Flutter app takes my email and password, packages them as a JSON object, and sends a **POST request** to my Flask backend at the `/api/auth/login` endpoint. The Flask server receives this request, looks up the email in the MySQL Users table, and uses **bcrypt** to verify the password. Bcrypt does not compare passwords directly — it re-hashes the input using the same salt that was stored when the account was created, then compares the two hashes. This means the plain-text password is never stored anywhere in the system.
 
-My system also supports **Two-Factor Authentication**. When 2FA is enabled, after the correct password is entered, a six-digit one-time code is sent to the user's email. They must enter this within the time limit to complete login. Even if someone knows your password, they still cannot access the account without your email.
+If the credentials are correct, the server generates a **JWT access token** — a signed string that encodes my user ID, email, and an expiry time. This token is returned to the Flutter app and stored on the device. Every API call I make after this point includes the token in the request header, so the server always knows who is making the request without asking me to log in again.
 
-New accounts require **email verification** — a verification link is sent on registration, and the account is only fully activated after clicking that link.
+The access token expires after **one hour** for security. When it expires, the app automatically uses a separate **refresh token** — valid for 30 days — to get a new access token in the background, without interrupting the user.
 
-There is also a **Security Score** in the settings — 30 points if email is not verified, 60 if verified, and 100 if both email is verified and 2FA is enabled. This encourages users to fully secure their account."
+My system also supports **Two-Factor Authentication**. When 2FA is enabled, after the correct password is entered, the server generates a random six-digit code, stores it in the database with an expiry time, and emails it to the user. The user must enter this code to complete login. Even if someone steals your password, they still cannot access your account without your email inbox.
+
+*(Navigate to Settings → Security to show the Security Score.)*
+
+There is also a **Security Score** — 60 points for email verified, 100 if both email verified and 2FA enabled. This makes security visible and encourages users to take action."
 
 ---
 
 ### 2B — Dashboard
-#### (~3 minutes)
+#### (~2.5 minutes)
 
-"After login, the user arrives at the **Dashboard** — the central hub of the application.
+"After login, the user arrives at the **Dashboard**.
 
 *(Show the dashboard screen.)*
 
-At the top is the user's **profile photo** — uploadable from their gallery or camera — with a personalised greeting.
+The dashboard is designed to give the user a complete financial snapshot in one glance, without needing to open any other screen.
 
-Below that is the **Financial Summary card** showing total income, total expenses, and net savings for the current month. Underneath the expense amount is a percentage comparison against last month — so if it says '↑ 12% vs last month', the user is spending 12% more than they did last month. This gives immediate context without navigating anywhere else.
+At the top is the user's name and profile photo — uploaded from gallery or camera.
 
-Further down are quick-access cards for Budget, Portfolio, and Gamification progress — all live data refreshed on every load.
+Below that is the **Financial Summary card** — it shows total income, total expenses, and net savings for the current calendar month. Underneath the expense figure is a **percentage comparison against last month**. So if it says '↑ 8% vs last month', the user is spending 8% more than they did last month. This context is important — a number alone does not mean much, but a comparison immediately tells the user whether their spending is trending in the right direction.
 
-Below that are **upcoming bills** from the recurring transactions module and the five most recent transactions.
+Further down are quick-access cards showing budget usage percentage, portfolio total value, and gamification level — all live data.
 
-The **bottom navigation bar** has five tabs: Dashboard, Transactions, Goals, Portfolio, and Financial Insights. Let me walk through each one.
+Below that are **upcoming bills** from the recurring transactions module, and the five most recent transactions.
 
-One technical detail — the dashboard loads all data simultaneously using `Future.wait()` for parallel API calls. All sections appear together at the same time rather than loading one after another, making the experience feel much faster."
+Now — a technical detail about how this dashboard loads. In Flutter, if you call each API endpoint one after another, the user sees sections popping in one by one, which looks unprofessional. Instead, I use **`Future.wait()`** — a Dart function that fires all the API calls in parallel simultaneously and waits for all of them to finish before updating the screen. This means the entire dashboard appears at once, which feels much faster and more polished.
+
+Let me now walk through the main features."
 
 ---
 
-### 2C — Transaction Tracking
+### 2C — Transaction Tracking ⭐ MAIN FEATURE
 #### (~3 minutes)
 
-"Transactions are the foundation of the entire system — every feature depends on what is recorded here.
+"**Transactions** are the foundation of the entire system. Every other feature — budgets, insights, goals — depends entirely on the transaction data entered here. If this part does not work correctly, nothing else can.
 
 *(Navigate to Add Transaction.)*
 
-I will add an expense now. I select **Expense**, enter RM 25, choose **Food and Dining** as the category, keep today's date, and optionally add a description. *(Fill in and tap Save.)*
+I will add an expense now. I select **Expense**, enter **RM 25**, choose **Food and Dining** as the category, and keep today's date. *(Fill in and tap Save.)*
 
-*(Navigate to Transaction History.)* It appears immediately in the list with the correct icon, colour, and date. This record is now in the MySQL database and is instantly reflected across the dashboard, budget tracker, and financial insights engine.
+Let me explain what just happened technically. When I tapped Save, the Flutter app validated the input on the client side — checking that the amount is a positive number, a category is selected, and a date is chosen. It then sent a **POST request** to `/api/transactions/add` with the data as a JSON body.
 
-The history screen has **search, filter, and sort** built in. I can search by category or description, filter to income or expenses only, sort by date or amount, and apply advanced filters for date ranges or amount ranges. *(Demonstrate briefly.)*
+On the Flask server, the route function receives this request, extracts the fields, and uses **SQLAlchemy** — my ORM — to construct a parameterised SQL INSERT statement. SQLAlchemy never builds raw SQL strings from user input — this is how I prevent SQL injection. The new row is inserted into the Transactions table in MySQL, and the server returns the created record back to the app. The Flutter app then adds this transaction to the top of the list without reloading the entire screen.
 
-To **edit** a transaction, I tap on it. The form pre-fills with the original values. If I make no changes and go back, nothing happens — the app compares current field values against the originals. If I change something and try to leave, it asks 'Discard changes?' to prevent data loss.
+*(Navigate to Transaction History.)*
 
-To **delete**, I swipe left. A confirmation dialog appears before anything is removed permanently.
+The history screen has **search, filter, and sort** built in. I can search by description or category, filter to show only income or only expenses, sort by date or amount, and use advanced filters for date ranges or amount ranges. All of this filtering happens on the data already fetched from the server — it is instant with no additional API calls.
 
-For **recurring transactions** — like monthly rent or a weekly salary — I set them up once with the name, amount, category, and frequency. The system shows them as upcoming bills on the dashboard and sends reminder notifications before they fall due."
+To **edit** a transaction, I tap on it. The form pre-fills with the original values. The app tracks whether any field has actually changed — if I tap back without changing anything, it goes back silently. If I change a value and try to leave, it shows a 'Discard changes?' dialog to prevent accidental data loss.
+
+To **delete**, I swipe left on any transaction. A confirmation dialog appears before the delete request is sent, because this is an irreversible action.
+
+The app also supports **recurring transactions** — for example, monthly salary or rent. I set them up once with a name, amount, category, and frequency. The dashboard shows them as upcoming bills, and the system can execute them on demand."
 
 ---
 
-### 2D — Budget Management
+### 2D — Budget Management ⭐ MAIN FEATURE
 #### (~3 minutes)
 
 "Now the **Budget** feature. *(Navigate to Budget.)*
 
-A budget is a monthly spending plan with a total amount allocated across spending categories.
+A budget is a monthly spending plan. The user sets a total amount for the month and divides it across spending categories — for example, RM 800 for Food, RM 400 for Transport, RM 300 for Entertainment.
 
 *(Show the budget overview screen.)*
 
-You can see the overall progress bar and below it the category breakdown — Food, Transport, Entertainment — each with its own progress bar, amount used, and remaining amount.
+Here you can see the overall budget progress bar at the top — this shows how much of the total monthly budget has been used. Below it is the **category breakdown** — each category has its own progress bar, amount spent, and remaining amount. This layout allows the user to see at a glance not just that they have spent money, but specifically *where* they have spent it.
 
-The key feature is the **intelligent alert system**. When a category reaches **90%** of its limit, or the overall budget reaches **80%**, the system automatically sends a push notification to the device — even when the app is closed. This warns users before they overspend, not after.
+Now let me explain the **intelligent alert system**, because this is one of the key technical features.
 
-If a category exceeds its limit, the bar turns red and shows a negative remaining amount.
+Every time a transaction is saved, the Flask backend checks whether the new expense pushes any budget category above **90%** of its limit, or the overall budget above **80%**. If either threshold is crossed, the server includes an alert flag in the API response. The Flutter app reads this flag and calls the **NotificationService**, which fires a push notification to the device — even if the app is running in the background.
 
-The budget always corresponds to the current calendar month and resets automatically on the first of every month."
+This is important — the user is warned **before** they overspend, not after. Most banking apps only show you your balance after you have already spent the money. SmartFinance warns you when you are at 90%, so you still have time to adjust.
 
----
+*(Point to the Food category bar.)* You can see Food is currently at 90.6% — a warning has already been triggered for this category. The progress bar changes colour to signal the warning state.
 
-### 2E — Financial Goals
-#### (~2 minutes)
+If a category fully exceeds its limit, the bar turns **red** and the remaining amount shows as a negative number — making the overspend visually obvious.
 
-"The **Goals** feature lets users set savings targets with deadlines.
-
-*(Navigate to Goals.)*
-
-The summary card at the top shows active goals, completed goals, and overall progress percentage.
-
-Each goal card shows the name, target, amount saved, a progress bar, and a **deadline countdown**. When fewer than seven days remain, the countdown turns **orange** as an urgency warning.
-
-Tapping Contribute opens a dialog. If I enter more than the remaining amount — *(type an amount that exceeds remaining)* — a real-time warning appears: 'Exceeds remaining by RM X.XX — the goal will be marked as completed.' The user is fully informed before confirming.
-
-Goals can be filtered as All, Active, or Completed."
+The budget automatically resets on the **first of every month** — the system uses the current calendar month to scope all budget calculations, so there is no manual reset required."
 
 ---
 
-### 2F — Investment Portfolio
-#### (~2 minutes)
+### 2F — Investment Portfolio ⭐ MAIN FEATURE
+#### (~3 minutes)
 
-"The **Portfolio** screen tracks all investments in one place.
+"The **Portfolio** screen tracks all the user's investments in one place.
 
 *(Navigate to Portfolio.)*
 
-The summary card shows total portfolio value, total amount invested, and overall profit or loss with a percentage return.
+At the top is the **Portfolio Summary card** — it shows the total current value of all investments, the total amount originally invested, and the overall profit or loss in both ringgit and percentage. This calculation is done entirely on the Flask backend — the server queries all investments from the database, computes the sum of (current price × quantity) for current value and (purchase price × quantity) for amount invested, then returns the pre-calculated numbers to the app. The frontend just displays them.
 
-Below that is the **Asset Breakdown** showing the distribution across investment types. SmartFinance supports **ten asset classes**: Stocks, Cryptocurrency, Bonds, Mutual Funds, ETFs, Real Estate, Commodities, Fixed Deposits, Unit Trusts, and Other — covering all major investment types available to Malaysian investors.
+The formula for each individual holding is straightforward:
+- **Profit or loss in RM** = (current price − purchase price) × quantity
+- **Percentage return** = ((current price − purchase price) / purchase price) × 100
 
-Each investment card shows purchase price, current price, and profit or loss. Users can update the current market price at any time — the P&L recalculates immediately.
+Below the summary is the **Asset Breakdown** — a visual breakdown by investment type. SmartFinance supports **ten asset classes**: Stocks, Cryptocurrency, Bonds, Mutual Funds, ETFs, Real Estate, Commodities, Fixed Deposits, Unit Trusts, and Other. This covers all major investment types available to Malaysian retail investors.
 
-The **Top Performers** section automatically surfaces the best-performing investments.
+Each investment card shows the asset name, type, purchase price, current price, and the profit or loss — green for gain, red for loss.
 
-The filter button lets users view one asset class at a time. When a filter is active, a banner appears showing what is filtered with a Clear button. The filter icon turns yellow to signal that results are not showing everything."
+Users can **update the current market price** at any time. *(Tap on an investment → Update Price → change the value → confirm.)* The profit and loss recalculate immediately — the frontend sends a PUT request to update the current price in the database, then the server returns the updated P&L figures.
+
+The **Top Performers** section at the bottom automatically surfaces the best-performing investments by percentage return.
+
+The **filter button** lets users view one asset class at a time. When a filter is active, a banner appears at the top of the screen saying what is being filtered, with a Clear button. The filter icon also turns yellow to visually signal that the list is not showing everything."
 
 ---
 
 ### 2G — Financial Insights Engine
-#### (~3 minutes)
+#### (~2.5 minutes)
 
-"This is the most distinctive feature of SmartFinance. *(Navigate to Financial Insights.)*
+"This is the most distinctive feature of SmartFinance, and the one that separates it from a basic tracker.
 
-The **Financial Insights Engine** analyses the user's transaction data for the current calendar month and produces a **Financial Health Score from 0 to 100**. Green means Excellent — 80 and above. Teal means Good — 60 to 79. Orange means Fair — 40 to 59. Red means Needs Work — below 40.
+*(Navigate to Financial Insights.)*
+
+The **Financial Insights Engine** runs entirely on the Flask backend. When the app opens this screen, it calls `/api/insights/user/<id>`. Flask queries the Transactions, Budgets, and Goals tables, runs the algorithm, and returns a score and a list of insight messages — all generated dynamically from the user's actual data.
+
+The result is a **Financial Health Score from 0 to 100**. The colour and label change based on the score — green for Excellent (80 and above), teal for Good (60–79), orange for Fair (40–59), and red for Needs Work (below 40).
 
 The score comes from **four independent pillars**, each worth up to 25 points.
 
-**Pillar one — Savings Rate.** Savings rate is calculated as income minus expenses divided by income. A rate of 20% or above earns the full 25 points. Below 20%, the score scales proportionally. If no income is recorded this month, the pillar returns a neutral 12.5 points.
+**Savings Rate** — income minus expenses divided by income. 20% or above earns full marks. This 20% threshold is based on the well-known 50/30/20 financial rule.
 
-**Pillar two — Budget Adherence.** Staying within the budget earns 25 points. Going over budget reduces the score on a sliding scale — at 50% over budget, this pillar reaches zero. No budget set means a neutral 12.5 points.
+**Budget Adherence** — if spending is within budget, full 25 points. Going over budget reduces the score on a sliding scale — at 50% over budget, this pillar reaches zero.
 
-**Pillar three — Spending Consistency.** This compares this month's total spending against last month's. If the increase is within 10%, the user gets full marks. For each percentage above that tolerance, points are deducted. If there is no previous month data, a neutral 12.5 is returned.
+**Spending Consistency** — compares this month's total spending to last month's. An increase of 10% or less earns full marks. Each additional percentage above 10% deducts points.
 
-**Pillar four — Goal Progress.** This is the number of completed goals divided by total goals, multiplied by 25. If no goals exist, a neutral 12.5 is returned.
+**Goal Progress** — the number of completed goals divided by total goals, multiplied by 25.
 
-The four pillars are summed and clamped between 0 and 100 to give the final score.
+If any pillar has no data — for example, no income recorded or no budget set — it returns a **neutral 12.5 points** instead of zero. This prevents the score from being misleadingly low just because the user is new.
 
-Below the score are **personalised insight cards** generated dynamically by the backend — for example: 'You are saving 28.5% of your income this month — above the 20% target' or 'Your spending increased 35% compared to last month — review your recent expenses.' Nothing is hardcoded — every message uses the user's actual numbers."
+Below the score are **personalised insight cards** — for example: 'You are saving 47% of your income — well above the 20% target.' Every message is generated using the user's actual numbers from the database. Nothing is hardcoded."
 
 ---
 
-### 2H — Gamification
-#### (~2 minutes)
+### [OPTIONAL] 2E — Financial Goals + 2H Gamification
+#### (~2 minutes — present if time allows, skip if running short)
 
-"The **gamification system** addresses the biggest real-world problem with finance apps — users stop using them after a few days.
+"The **Goals** feature lets users set savings targets with deadlines. Each goal shows a progress bar, the amount saved versus the target, and a countdown to the deadline — which turns orange when fewer than seven days remain to create urgency.
 
-*(Navigate to the gamification section or achievements screen.)*
+Contributing to a goal opens a dialog. If the user enters more than the remaining amount, a real-time warning appears immediately showing the exact excess — for example: 'Exceeds remaining by RM 300.00 — goal will be marked as completed.' This prevents accidental over-contribution.
 
-Every transaction logged earns the user **experience points** and extends their **daily streak** — a count of consecutive days with at least one transaction recorded. Break the streak and it resets to zero.
+The **gamification system** exists to solve the biggest real-world problem with finance apps — users stop using them. Every transaction logged earns experience points and extends the user's daily streak. Break the streak and it resets to zero. Achievement badges are unlocked for milestones — first transaction, 7-day streak, completing a goal. The level system uses exponential XP progression, so early levels are easy to keep users engaged, while higher levels become harder to maintain long-term motivation.
 
-**Achievement badges** are unlocked for milestones — first transaction, 7-day streak, completing a goal, and more. When a new badge is unlocked, a push notification fires and the badge appears on the achievements screen.
-
-The **level system** uses exponential progression — Level 2 requires 100 XP, each subsequent level requires 1.5 times more XP than the previous one, so the higher levels become meaningfully harder to reach.
-
-There is also a **leaderboard** ranking users by total XP, with a privacy option to opt out.
-
-The reason this works is behavioural — the streak mechanic creates a loss-aversion effect. Users do not want to break their streak, so they open the app even on days they would normally skip. Over time this becomes an automatic habit."
+There is also a leaderboard ranking users by total XP — with a privacy option to opt out entirely."
 
 ---
 
 ## SECTION 3 — Technical Explanation
 ### (~4 minutes)
 
-"Let me explain the technical structure of the system.
+"Let me now explain the technical structure of the system more clearly.
 
-**Architecture.** SmartFinance follows a client-server architecture. Flutter is the client handling all UI and interaction. Flask is the server handling all business logic and data operations. They communicate through a RESTful API over HTTP using JSON.
+**Architecture.**
 
-**Backend structure.** The Flask backend is organised into **12 route blueprints** — one per feature area: authentication, transactions, budgets, goals, investments, recurring transactions, gamification, reports, settings, security, two-factor authentication, and financial insights. Each blueprint has its own URL prefix such as `/api/transactions` or `/api/budgets`.
+SmartFinance follows a **three-tier client-server architecture**. The first tier is the Flutter mobile app — this handles everything the user sees and touches: screens, forms, navigation, and charts. The Flutter app contains no business logic — it only sends requests and displays responses. The second tier is the Flask REST API — this is where all business logic lives: calculating the financial health score, checking budget thresholds, validating inputs, and deciding what data to return. The third tier is MySQL — the persistent data store. Flask communicates with MySQL through SQLAlchemy.
 
-**Database.** MySQL contains **14 tables**: Users, Transactions, Budgets, BudgetCategories, Goals, Investments, RecurringTransactions, Achievements, UserAchievements, HabitStreaks, PasswordResets, EmailVerifications, Sessions, and UserSettings. Relationships between tables use foreign keys to maintain data integrity.
+When the user does anything in the app — saves a transaction, loads the dashboard, contributes to a goal — Flutter packages the action as an **HTTP request with a JSON body**, sends it to Flask, Flask processes it and queries MySQL, then returns a **JSON response** to Flutter, which updates the screen.
 
-**Security.** Passwords are hashed with bcrypt before being saved. All protected endpoints require a valid JWT token. The JWT uses the HS256 algorithm — HMAC with SHA-256 — and the secret key is stored in the server environment, not the source code. Access tokens expire after one hour; refresh tokens last 30 days.
+**Why this separation matters.** Because all logic is in Flask, the database is never directly accessible from the mobile app. The app cannot query or modify data except through my defined API endpoints — each of which has its own validation and authentication checks. This is a standard security practice called the API gateway pattern.
 
-**Notifications.** The app uses `flutter_local_notifications`, initialised at startup with Android 13 runtime permission. Budget alerts, achievement unlocks, and bill reminders all go through one centralised notification service."
+**Backend Organisation.**
+
+The Flask backend is divided into **12 route blueprints** — one per feature area. Each blueprint handles a specific URL prefix. For example, `/api/transactions` handles everything related to transactions, `/api/budgets` handles budgets, `/api/insights` handles the financial health score. This modular design means each feature is self-contained — I can modify the insights algorithm without touching the transactions code.
+
+**Database Design.**
+
+MySQL contains **14 tables**. The core tables are Users, Transactions, Budgets, BudgetCategories, Goals, Investments, and RecurringTransactions. Supporting tables include Achievements, UserAchievements, HabitStreaks for gamification, and PasswordResets, EmailVerifications, UserSessions, and UserSettings for authentication and security.
+
+Tables are related through **foreign keys**. For example, every Transaction row has a UserId foreign key pointing to the Users table — this means a transaction always belongs to exactly one user, and if a user account is deleted, all their transactions are removed too.
+
+The database is normalised to **Third Normal Form** — no data is duplicated. Budget categories are stored in a separate BudgetCategories table rather than as columns in the Budgets table, which avoids repeating groups and keeps the schema clean.
+
+**Security Implementation.**
+
+Four layers of security are in place.
+
+One — **password hashing with bcrypt**. Passwords are never stored as plain text. bcrypt adds a unique random salt to each password before hashing, so even if two users have the same password, their stored hashes are completely different. This defeats pre-computed rainbow table attacks.
+
+Two — **JWT authentication**. Every protected API endpoint requires a valid JWT token in the request header. The token is signed with HMAC SHA-256 using a secret key stored in the server environment. If the token is missing, expired, or tampered with, the server rejects the request with a 401 error.
+
+Three — **SQL injection prevention via SQLAlchemy**. SQLAlchemy never builds SQL queries by concatenating user input strings. It uses parameterised queries — user input is always passed as a separate bound parameter, never embedded directly into the SQL. This makes injection structurally impossible.
+
+Four — **Two-Factor Authentication** as an optional second layer for users who want maximum security.
+
+**Notifications.**
+
+Push notifications are handled by `flutter_local_notifications` — a Flutter package initialised at app startup with the required Android 13 runtime permission. All notification logic is centralised in a single `NotificationService` class — budget alerts, achievement unlocks, and bill reminders all call the same service. This keeps notification behaviour consistent across the entire app."
 
 ---
 
 ## SECTION 4 — Test Cases
 ### (~3 minutes)
 
-"Let me walk through three prepared test cases.
+"Let me now walk through three prepared test cases to verify the system behaves correctly.
 
 ---
 
-**Test Case 1 — Budget Alert Notification**
+**Test Case 1 — Budget Warning When Category Approaches Limit**
 
-- **Input:** Add an expense that pushes a budget category above 90% of its limit.
-- **Expected:** Push notification fires with the category name and percentage, budget screen highlights the category.
-- **Actual:** *(Show or describe.)* Notification appears correctly. Budget card shows warning colour. **Test passes.**
+*Purpose:* Verify that the system visually alerts the user when a budget category is close to its limit.
+
+*Setup:* The Food budget is RM 800. I have RM 700 already spent — that is 87.5%.
+
+*Steps:*
+1. *(Navigate to Add Transaction.)*
+2. Select Expense, enter **RM 25**, category **Food and Dining**, today's date.
+3. Tap Save.
+4. *(Navigate to Budget screen.)*
+5. Observe the Food and Dining category bar.
+
+*Expected result:* Food spending is now RM 725 out of RM 800 — **90.6%**. The category bar changes colour to warning state. A push notification is also triggered in the background: 'Food and Dining has reached 90% of its limit.'
+
+*Actual result:* *(Show the budget screen — Food bar is now in warning colour at 90.6%.)* The budget screen reflects the updated spending immediately, and the colour change confirms the threshold logic is working. *(If notification appears in the notification shade, show it. If not, say:)* The notification service has fired — it may appear in the notification shade with a short delay depending on the device.
+
+**Test Case 1 passes** — budget threshold detection and visual alert are working correctly.
 
 ---
 
-**Test Case 2 — Financial Health Score Reflects Real Data**
+**Test Case 2 — Financial Health Score Calculated from Real Data**
 
-- **Input:** A user with income recorded, expenses below budget, and at least one active goal.
-- **Expected:** Savings Rate and Budget Adherence pillars score well — total score in Good or Excellent range.
-- **Actual:** *(Show Financial Insights screen.)* Score is in the expected range. Savings Rate bar is green. Budget bar is green. Score reflects actual behaviour, not hardcoded. **Test passes.**
+*Purpose:* Verify that the Financial Health Score reflects actual user data and is not hardcoded.
+
+*Setup:* The account has income of RM 3,000 recorded, total expenses of RM 1,725 — well within the RM 2,500 budget — and this month's spending is lower than last month's RM 1,700.
+
+*Steps:*
+1. *(Navigate to Financial Insights.)*
+2. Observe the score and each pillar bar.
+3. Read the personalised insight cards below.
+
+*Expected result:*
+- Savings Rate pillar: 25/25 (saving more than 20%)
+- Budget Adherence pillar: 25/25 (within budget)
+- Spending Consistency pillar: 25/25 (spending is stable)
+- Goal Progress pillar: approximately 12.5/25 (one completed, one active goal)
+- Total score: approximately 87 — **Excellent**
+
+*Actual result:* *(Show the Financial Insights screen.)* Score is in the Excellent range. Each pillar bar is visible with its individual score. The insight cards below display specific messages using my actual numbers — for example, showing my real savings percentage. This confirms the algorithm is running on live data, not returning a fixed value.
+
+**Test Case 2 passes** — Financial Health Score is dynamic and correctly reflects the account's financial behaviour.
 
 ---
 
-**Test Case 3 — Goal Over-Contribution Warning**
+**Test Case 3 — Real-Time Warning When Goal Contribution Exceeds Remaining**
 
-- **Input:** Goal with RM 200 remaining. User types RM 500 in the contribute dialog.
-- **Expected:** Real-time warning showing exact excess amount.
-- **Actual:** *(Open dialog, type 500.)* Warning appears immediately: 'Exceeds remaining by RM 300.00 — goal will be marked as completed.' **Test passes.**"
+*Purpose:* Verify that the app warns the user before they accidentally over-contribute to a completed goal.
+
+*Setup:* Vacation Fund goal — target RM 2,000, currently RM 1,800 saved. **RM 200 remaining.**
+
+*Steps:*
+1. *(Navigate to Goals → tap Contribute on Vacation Fund.)*
+2. The dialog opens. Remaining amount shows RM 200.00.
+3. Type **500** into the amount field.
+4. *(Do not tap Confirm — observe the dialog immediately.)*
+
+*Expected result:* As soon as RM 500 is typed, an orange warning appears below the input field: **'Exceeds remaining by RM 300.00 — goal will be marked as completed.'** This appears without needing to tap any button — it updates in real time as I type.
+
+*Actual result:* *(Type 500 slowly and show the warning appearing.)* Warning is visible immediately. The user is fully informed of the consequence before confirming. Tap Cancel to close — no changes are made.
+
+**Test Case 3 passes** — real-time over-contribution warning is working correctly."
 
 ---
 
 ## CLOSING
 ### (~1 minute)
 
-"To summarise — SmartFinance is a fully functional personal finance system with eight integrated modules: secure authentication, transaction tracking, budget management with alerts, savings goals, investment portfolio, financial insights, recurring transactions, and gamification. Every module connects to the others — a transaction affects the budget, which feeds the health score, which may trigger a notification.
+"To summarise — SmartFinance is a fully functional personal finance system with eight integrated modules: secure authentication, transaction tracking, budget management with intelligent alerts, savings goals, investment portfolio tracking, financial insights with a health score algorithm, recurring transactions, and gamification. Every module connects to the others — a transaction updates the budget, the budget feeds the health score, the health score triggers a notification, and the gamification system rewards consistent usage.
 
-The backend is live, the app is functional on Android, and all features have been tested end to end.
+All three tiers — Flutter, Flask, and MySQL — are working end to end. The backend processes real data, the algorithm generates dynamic results, and the app responds correctly in every tested scenario.
 
 Thank you for your time. I am happy to demonstrate any feature in more detail or answer any questions."
 
