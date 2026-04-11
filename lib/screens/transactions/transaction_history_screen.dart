@@ -64,7 +64,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   DateTime? _startDate;                                // Start of date range filter (null = no filter)
   DateTime? _endDate;                                  // End of date range filter
   double _minAmount = 0;                               // Minimum amount filter
-  double _maxAmount = 10000;                           // Maximum amount filter
+  double _maxAmount = 50000;                           // Maximum amount filter
   List<String> _selectedCategories = [];               // Category filter list (empty = all)
   bool _hasActiveFilters = false;                      // Whether any non-default filters are active
 
@@ -171,8 +171,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     }
 
     // Filter 3: Amount range
+    // When _maxAmount is at 50000 (the slider ceiling), treat it as "no upper limit"
     filtered = filtered.where((t) =>
-      t.amount >= _minAmount && t.amount <= _maxAmount
+      t.amount >= _minAmount && (_maxAmount >= 50000 || t.amount <= _maxAmount)
     ).toList();
 
     // Filter 4: Specific categories
@@ -207,7 +208,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         _startDate != null ||
         _endDate != null ||
         _minAmount > 0 ||
-        _maxAmount < 10000 ||
+        _maxAmount < 50000 ||
         _selectedCategories.isNotEmpty ||
         _sortBy != 'date_desc';
 
@@ -226,7 +227,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       _startDate = null;                           // Remove date range
       _endDate = null;
       _minAmount = 0;                              // Reset amount range
-      _maxAmount = 10000;
+      _maxAmount = 50000;
       _selectedCategories.clear();                 // Clear category selections
       _sortBy = 'date_desc';                       // Reset to default sort
       _applyFiltersAndSort();
@@ -887,8 +888,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         ),
                         const SizedBox(height: 12),
                         // Display current range values
+                        // Show "50,000+" when slider is at max to indicate no upper cap
                         Text(
-                          'RM ${_minAmount.toStringAsFixed(0)} - RM ${_maxAmount.toStringAsFixed(0)}',
+                          'RM ${_minAmount.toStringAsFixed(0)} - ${_maxAmount >= 50000 ? "RM 50,000+" : "RM ${_maxAmount.toStringAsFixed(0)}"}',
                           style: TextStyle(
                             color: AppColors.primary,
                             fontWeight: FontWeight.bold,
@@ -898,11 +900,11 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         RangeSlider(
                           values: RangeValues(_minAmount, _maxAmount),
                           min: 0,
-                          max: 10000,
-                          divisions: 100,              // 100-unit increments
+                          max: 50000,
+                          divisions: 100,              // 500-unit increments
                           labels: RangeLabels(
                             'RM ${_minAmount.toStringAsFixed(0)}',
-                            'RM ${_maxAmount.toStringAsFixed(0)}',
+                            _maxAmount >= 50000 ? 'RM 50,000+' : 'RM ${_maxAmount.toStringAsFixed(0)}',
                           ),
                           onChanged: (values) {
                             setModalState(() {
@@ -962,7 +964,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                               _startDate = null;
                               _endDate = null;
                               _minAmount = 0;
-                              _maxAmount = 10000;
+                              _maxAmount = 50000;
                               _selectedCategories.clear();
                             });
                           },

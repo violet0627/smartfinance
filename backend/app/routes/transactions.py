@@ -91,7 +91,7 @@ def create_transaction():
 
     except Exception as e:
         db.session.rollback()   # Undo any partial database changes
-        return jsonify({'error': f'Failed to create transaction: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to create transaction'}), 500
 
 
 # ==============================================================================
@@ -155,7 +155,7 @@ def get_user_transactions(user_id):
         }), 200
 
     except Exception as e:
-        return jsonify({'error': f'Failed to fetch transactions: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to fetch transactions'}), 500
 
 
 # ==============================================================================
@@ -175,7 +175,7 @@ def get_transaction(transaction_id):
         return jsonify({'transaction': transaction.to_dict()}), 200
 
     except Exception as e:
-        return jsonify({'error': f'Failed to fetch transaction: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to fetch transaction'}), 500
 
 
 # ==============================================================================
@@ -234,7 +234,7 @@ def update_transaction(transaction_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to update transaction: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to update transaction'}), 500
 
 
 # ==============================================================================
@@ -258,7 +258,7 @@ def delete_transaction(transaction_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to delete transaction: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to delete transaction'}), 500
 
 
 # ==============================================================================
@@ -315,4 +315,4 @@ def get_transaction_summary(user_id):
         }), 200
 
     except Exception as e:
-        return jsonify({'error': f'Failed to generate summary: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to generate summary'}), 500

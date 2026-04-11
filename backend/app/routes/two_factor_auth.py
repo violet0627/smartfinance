@@ -105,7 +105,7 @@ def setup_2fa():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Error setting up 2FA: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to set up 2FA'}), 500
 
 
 # ==============================================================================
@@ -155,7 +155,7 @@ def verify_2fa_setup():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Error verifying 2FA: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to verify 2FA setup'}), 500
 
 
 # ==============================================================================
@@ -206,7 +206,7 @@ def verify_2fa_code():
             }), 200
 
     except Exception as e:
-        return jsonify({'error': f'Error verifying code: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to verify 2FA code'}), 500
 
 
 # ==============================================================================
@@ -265,7 +265,7 @@ def verify_backup_code():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Error verifying backup code: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to verify backup code'}), 500
 
 
 # ==============================================================================
@@ -314,7 +314,7 @@ def disable_2fa():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Error disabling 2FA: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to disable 2FA'}), 500
 
 
 # ==============================================================================
@@ -341,7 +341,7 @@ def get_2fa_status(user_id):
         }), 200
 
     except Exception as e:
-        return jsonify({'error': f'Error getting 2FA status: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to get 2FA status'}), 500
 
 
 # ==============================================================================
@@ -393,4 +393,4 @@ def regenerate_backup_codes():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Error regenerating backup codes: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to regenerate backup codes'}), 500

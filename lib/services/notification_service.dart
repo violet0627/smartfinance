@@ -489,8 +489,7 @@ class NotificationService {
     final body = '$typeEmoji RM ${amount.toStringAsFixed(2)} due on ${DateFormat('MMM dd, yyyy').format(nextExecution)}';
 
     try {
-      // Show notification (currently immediate for demo purposes)
-      // TODO: In production, use _notifications.zonedSchedule() for scheduled delivery
+      // Show the reminder notification immediately
       await _notifications.show(
         notificationId,
         title,

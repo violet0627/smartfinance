@@ -299,30 +299,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
         title: const Text('Recurring Transactions'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        actions: [
-          // Test notification button - sends a test push notification
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () async {
-              await NotificationService.sendTestNotification();
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Test notification sent!'),
-                  backgroundColor: AppColors.success,
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            tooltip: 'Test Notifications',
-          ),
-          // Refresh button to manually reload the list
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadRecurringTransactions,
-            tooltip: 'Refresh',
-          ),
-        ],
+        actions: const [],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

@@ -100,7 +100,7 @@ def create_budget():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to create budget: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to create budget'}), 500
 
 
 # ==============================================================================
@@ -120,7 +120,7 @@ def get_user_budgets(user_id):
             'count': len(budgets)
         }), 200
     except Exception as e:
-        return jsonify({'error': f'Failed to fetch budgets: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to fetch budgets'}), 500
 
 
 # ==============================================================================
@@ -151,7 +151,7 @@ def get_current_budget(user_id):
 
         return jsonify({'budget': budget.to_dict()}), 200
     except Exception as e:
-        return jsonify({'error': f'Failed to fetch current budget: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to fetch current budget'}), 500
 
 
 # ==============================================================================
@@ -172,7 +172,7 @@ def get_budget(budget_id):
 
         return jsonify({'budget': budget.to_dict()}), 200
     except Exception as e:
-        return jsonify({'error': f'Failed to fetch budget: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to fetch budget'}), 500
 
 
 # ==============================================================================
@@ -220,7 +220,7 @@ def update_budget(budget_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to update budget: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to update budget'}), 500
 
 
 # ==============================================================================
@@ -243,7 +243,7 @@ def delete_budget(budget_id):
         return jsonify({'message': 'Budget deleted successfully'}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to delete budget: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to delete budget'}), 500
 
 
 # ==============================================================================
@@ -269,7 +269,7 @@ def refresh_budget_spending(budget_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to refresh budget: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to refresh budget'}), 500
 
 
 # ==============================================================================

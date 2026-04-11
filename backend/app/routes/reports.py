@@ -27,7 +27,6 @@ from datetime import datetime, timedelta                    # For date calculati
 from sqlalchemy import func, extract                        # SQL functions
 import csv                                                  # For creating CSV files
 import io                                                   # For in-memory file operations
-import json                                                 # For JSON operations
 
 # --- Create the Blueprint ---
 reports_bp = Blueprint('reports', __name__)
@@ -208,7 +207,7 @@ def get_spending_report(user_id):
             'dailySpending': {k: float(v) for k, v in daily_spending.items()}  # Convert daily amounts
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch financial summary'}), 500
 
 
 # ==============================================================================
@@ -303,7 +302,7 @@ def get_budget_report(user_id):
             'budgets': budget_analysis
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch analytics data'}), 500
 
 
 # ==============================================================================
@@ -395,7 +394,7 @@ def get_category_analysis(user_id):
             ]
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch budget report'}), 500
 
 
 # ==============================================================================
@@ -461,7 +460,7 @@ def export_transactions_csv(user_id):
             download_name=filename               # Suggested filename for the download
         )
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to export transactions'}), 500
 
 
 # ==============================================================================
@@ -530,4 +529,4 @@ def export_spending_report_csv(user_id):
             download_name=filename
         )
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to generate monthly report'}), 500

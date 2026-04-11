@@ -389,4 +389,4 @@ def get_financial_insights(user_id):
 
     except Exception as e:
         # Return a structured error — never let unhandled exceptions reach the client
-        return jsonify({'error': f'Failed to generate insights: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to generate insights'}), 500

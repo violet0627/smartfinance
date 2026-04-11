@@ -86,7 +86,7 @@ class ReceiptScannerService {
       );
       return image;
     } catch (e) {
-      print('Error capturing receipt: $e');
+      debugPrint('Error capturing receipt: $e');
       return null;
     }
   }
@@ -102,7 +102,7 @@ class ReceiptScannerService {
       );
       return image;
     } catch (e) {
-      print('Error picking receipt: $e');
+      debugPrint('Error picking receipt: $e');
       return null;
     }
   }
@@ -128,13 +128,13 @@ class ReceiptScannerService {
 
       // Get the full text as a single string
       String rawText = recognizedText.text;
-      print('Extracted text: $rawText');
+      debugPrint('Receipt OCR extracted ${rawText.length} characters');
 
       // Parse the raw text into structured receipt data
       final receiptData = _parseReceiptText(rawText);
       return receiptData;
     } catch (e) {
-      print('Error scanning receipt: $e');
+      debugPrint('Error scanning receipt: $e');
       return null;
     }
   }

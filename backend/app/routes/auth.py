@@ -188,7 +188,7 @@ def register():
     except Exception as e:
         # If ANYTHING goes wrong, undo all database changes (rollback)
         db.session.rollback()
-        return jsonify({'error': f'Registration failed: {str(e)}'}), 500  # 500 = Server Error
+        return jsonify({'error': 'Registration failed'}), 500  # 500 = Server Error
 
 
 # ==============================================================================
@@ -236,7 +236,7 @@ def login():
         }), 200  # 200 = OK
 
     except Exception as e:
-        return jsonify({'error': f'Login failed: {str(e)}'}), 500
+        return jsonify({'error': 'Login failed'}), 500
 
 
 # ==============================================================================
@@ -258,7 +258,7 @@ def get_user(user_id):
         return jsonify({'user': user.to_dict()}), 200
 
     except Exception as e:
-        return jsonify({'error': f'Failed to fetch user: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to fetch user'}), 500
 
 
 # ==============================================================================
@@ -309,7 +309,7 @@ def refresh_token():
         }), 200
 
     except Exception as e:
-        return jsonify({'error': f'Token refresh failed: {str(e)}'}), 500
+        return jsonify({'error': 'Token refresh failed'}), 500
 
 
 # ==============================================================================
@@ -354,16 +354,16 @@ def forgot_password():
         db.session.add(password_reset)
         db.session.commit()
 
-        # TODO: In production, send email with reset link
-        # For now, return the token in the response (ONLY FOR DEVELOPMENT)
+        # Send the reset token to the user's email
+        send_password_reset_email(user.Email, user.Name, reset_token)
+
         return jsonify({
-            'message': 'If the email exists, a password reset link has been sent',
-            'resetToken': reset_token  # Remove this in production!
+            'message': 'If the email exists, a password reset link has been sent'
         }), 200
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Password reset request failed: {str(e)}'}), 500
+        return jsonify({'error': 'Password reset request failed'}), 500
 
 
 # ==============================================================================
@@ -413,7 +413,7 @@ def reset_password():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Password reset failed: {str(e)}'}), 500
+        return jsonify({'error': 'Password reset failed'}), 500
 
 
 # ==============================================================================
@@ -449,7 +449,7 @@ def verify_reset_token():
         }), 200
 
     except Exception as e:
-        return jsonify({'error': f'Token verification failed: {str(e)}'}), 500
+        return jsonify({'error': 'Token verification failed'}), 500
 
 
 # ==============================================================================
@@ -498,7 +498,7 @@ def verify_email():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Email verification failed: {str(e)}'}), 500
+        return jsonify({'error': 'Email verification failed'}), 500
 
 
 # ==============================================================================
@@ -557,7 +557,7 @@ def resend_verification():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to resend verification email: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to resend verification email'}), 500
 
 
 # ==============================================================================
@@ -581,4 +581,4 @@ def check_verification_status(user_id):
         }), 200
 
     except Exception as e:
-        return jsonify({'error': f'Failed to check verification status: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to check verification status'}), 500

@@ -18,7 +18,6 @@ from flask import Blueprint, request, jsonify      # Blueprint for grouping, req
 from app import db                                  # Database instance
 from app.models.investment import Investment        # Investment model (database table)
 from datetime import datetime                       # For timestamps
-from sqlalchemy import func                         # SQL aggregate functions
 
 # --- Create the Blueprint ---
 investments_bp = Blueprint('investments', __name__)
@@ -39,8 +38,24 @@ def create_investment():
         # --- Step 1: Validate required fields ---
         required_fields = ['assetName', 'assetsType', 'quantity', 'purchasePrice', 'purchaseDate', 'userId']
         for field in required_fields:
-            if field not in data:
+            if field not in data or data[field] is None:
                 return jsonify({'error': f'{field} is required'}), 400
+
+        # --- Validate quantity is a positive number ---
+        try:
+            quantity = float(data['quantity'])
+            if quantity <= 0:
+                return jsonify({'error': 'quantity must be greater than 0'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid quantity format'}), 400
+
+        # --- Validate purchasePrice is a positive number ---
+        try:
+            purchase_price = float(data['purchasePrice'])
+            if purchase_price <= 0:
+                return jsonify({'error': 'purchasePrice must be greater than 0'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid purchasePrice format'}), 400
 
         # --- Step 2: Parse the purchase date ---
         try:
@@ -53,10 +68,10 @@ def create_investment():
             AssetName=data['assetName'],                     # e.g., "Maybank", "Bitcoin"
             AssetsType=data['assetsType'],                   # e.g., "stocks", "crypto", "mutual_funds"
             StockSymbol=data.get('stockSymbol'),             # Optional stock ticker (e.g., "MAYBANK")
-            Quantity=data['quantity'],                        # How many units (e.g., 100 shares)
-            PurchasePrice=data['purchasePrice'],             # Price per unit when bought
+            Quantity=quantity,                               # Validated positive number
+            PurchasePrice=purchase_price,                    # Validated positive number
             PurchaseDate=purchase_date,                      # When the purchase was made
-            CurrentPrice=data.get('currentPrice', data['purchasePrice']),  # Default to purchase price if not provided
+            CurrentPrice=data.get('currentPrice', purchase_price),  # Default to purchase price if not provided
             Notes=data.get('notes'),                         # Optional notes
             UserId=data['userId']                            # Which user owns this investment
         )
@@ -72,7 +87,7 @@ def create_investment():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to create investment'}), 500
 
 
 # ==============================================================================
@@ -102,7 +117,7 @@ def get_user_investments(user_id):
         }), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch investments'}), 500
 
 
 # ==============================================================================
@@ -122,7 +137,7 @@ def get_investment(investment_id):
         return jsonify({'investment': investment.to_dict()}), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch investment'}), 500
 
 
 # ==============================================================================
@@ -162,7 +177,7 @@ def update_investment(investment_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to update investment'}), 500
 
 
 # ==============================================================================
@@ -186,7 +201,7 @@ def delete_investment(investment_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to delete investment'}), 500
 
 
 # ==============================================================================
@@ -294,7 +309,7 @@ def get_portfolio_summary(user_id):
         }), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch portfolio summary'}), 500
 
 
 # ==============================================================================
@@ -337,4 +352,4 @@ def update_investment_price(investment_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to update investment price'}), 500

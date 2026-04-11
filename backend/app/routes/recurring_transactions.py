@@ -18,7 +18,7 @@ from flask import Blueprint, request, jsonify              # Blueprint for group
 from app import db                                          # Database instance
 from app.models.recurring_transaction import RecurringTransaction  # RecurringTransaction model
 from app.models.transaction import Transaction              # Transaction model (to create actual transactions)
-from datetime import datetime, timedelta                    # For date operations
+from datetime import datetime                               # For date operations
 
 # --- Create the Blueprint ---
 recurring_bp = Blueprint('recurring', __name__)
@@ -38,22 +38,53 @@ def create_recurring_transaction(user_id):
     try:
         data = request.get_json()
 
+        # --- Validate required fields before any parsing ---
+        required_fields = ['name', 'transactionType', 'category', 'amount', 'frequency', 'startDate']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'{field} is required'}), 400
+
+        # --- Validate transaction type ---
+        if data['transactionType'] not in ['income', 'expense']:
+            return jsonify({'error': 'transactionType must be "income" or "expense"'}), 400
+
+        # --- Validate amount ---
+        try:
+            amount = float(data['amount'])
+            if amount <= 0:
+                return jsonify({'error': 'Amount must be greater than 0'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid amount format'}), 400
+
         # --- Parse the start date ---
-        start_date = datetime.strptime(data.get('startDate'), '%Y-%m-%d').date()
+        try:
+            start_date = datetime.strptime(data['startDate'], '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Invalid startDate format. Use YYYY-MM-DD'}), 400
+
         next_execution = start_date   # First execution happens on the start date
+
+        # --- Parse optional end date ---
+        end_date = None
+        if data.get('endDate'):
+            try:
+                end_date = datetime.strptime(data['endDate'], '%Y-%m-%d').date()
+                if end_date <= start_date:
+                    return jsonify({'error': 'endDate must be after startDate'}), 400
+            except ValueError:
+                return jsonify({'error': 'Invalid endDate format. Use YYYY-MM-DD'}), 400
 
         # --- Create the recurring transaction template ---
         recurring = RecurringTransaction(
             UserId=user_id,
-            Name=data.get('name'),                           # e.g., "Netflix Subscription"
-            TransactionType=data.get('transactionType'),     # "income" or "expense"
-            Category=data.get('category'),                   # e.g., "Entertainment"
-            Amount=data.get('amount'),                       # Amount per occurrence (e.g., 45.00)
+            Name=data['name'],                               # e.g., "Netflix Subscription"
+            TransactionType=data['transactionType'],         # "income" or "expense"
+            Category=data['category'],                       # e.g., "Entertainment"
+            Amount=amount,                                   # Amount per occurrence (e.g., 45.00)
             Description=data.get('description'),             # Optional description
-            Frequency=data.get('frequency'),                 # "daily", "weekly", "monthly", or "yearly"
+            Frequency=data['frequency'],                     # "daily", "weekly", "monthly", or "yearly"
             StartDate=start_date,                            # When the schedule starts
-            EndDate=datetime.strptime(data.get('endDate'), '%Y-%m-%d').date() if data.get('endDate') else None,
-                # Optional end date - None means it runs forever
+            EndDate=end_date,                                # Optional end date - None means runs forever
             NextExecution=next_execution,                    # When the next transaction should be created
             IsActive=True                                    # Active by default
         )
@@ -67,7 +98,7 @@ def create_recurring_transaction(user_id):
         }), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to create recurring transaction: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to create recurring transaction'}), 500
 
 
 # ==================== READ ====================
@@ -100,7 +131,7 @@ def get_recurring_transactions(user_id):
             'total': len(recurring)
         }), 200
     except Exception as e:
-        return jsonify({'error': f'Failed to fetch recurring transactions: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to fetch recurring transactions'}), 500
 
 
 # ==============================================================================
@@ -119,7 +150,7 @@ def get_recurring_transaction(recurring_id):
 
         return jsonify(recurring.to_dict()), 200
     except Exception as e:
-        return jsonify({'error': f'Failed to fetch recurring transaction: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to fetch recurring transaction'}), 500
 
 
 # ==================== UPDATE ====================
@@ -169,7 +200,7 @@ def update_recurring_transaction(recurring_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to update recurring transaction: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to update recurring transaction'}), 500
 
 
 # ==================== DELETE ====================
@@ -201,7 +232,7 @@ def delete_recurring_transaction(recurring_id):
         return jsonify({'message': 'Recurring transaction deleted successfully'}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to delete recurring transaction: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to delete recurring transaction'}), 500
 
 
 # ==================== EXECUTION ====================
@@ -264,7 +295,7 @@ def execute_recurring_transaction(recurring_id):
         }), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to execute recurring transaction: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to execute recurring transaction'}), 500
 
 
 # ==============================================================================
@@ -325,7 +356,7 @@ def execute_due_recurring_transactions(user_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to execute recurring transactions: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to execute recurring transactions'}), 500
 
 
 # ==================== TOGGLE ====================
@@ -368,4 +399,4 @@ def toggle_recurring_transaction(recurring_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to toggle recurring transaction: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to toggle recurring transaction'}), 500

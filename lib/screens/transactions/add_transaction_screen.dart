@@ -33,6 +33,7 @@ import '../../utils/categories.dart';                        // For TransactionC
 import '../../utils/colors.dart';                            // For AppColors
 import '../../utils/app_gradients.dart';                     // For gradient button styles
 import '../../widgets/animated_button.dart';                 // For AnimatedButton
+import '../../services/receipt_scanner_service.dart';        // For scanning receipts with ML Kit OCR
 
 // ==============================================================================
 // AddTransactionScreen - StatefulWidget for Transaction Form
@@ -296,6 +297,183 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   // ==============================================================================
+  // _scanReceipt - Open Camera or Gallery and Run OCR on Receipt
+  // ==============================================================================
+  // Shows a dialog to choose camera or gallery, captures the image, runs ML Kit
+  // OCR, then pre-fills the form with extracted data (amount, date, description).
+  // ==============================================================================
+  Future<void> _scanReceipt() async {
+    // Step 1: Ask user to choose camera or gallery
+    final useCamera = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Scan Receipt'),
+        content: const Text('Choose how to capture your receipt:'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => Navigator.pop(context, false),
+            icon: const Icon(Icons.photo_library_outlined),
+            label: const Text('Gallery'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.camera_alt_outlined),
+            label: const Text('Camera'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (useCamera == null || !mounted) return;
+
+    // Step 2: Capture the image
+    final image = useCamera
+        ? await ReceiptScannerService.captureReceipt()
+        : await ReceiptScannerService.pickReceiptFromGallery();
+
+    if (image == null || !mounted) return;
+
+    // Step 3: Run OCR — show spinner while processing
+    setState(() => _isLoading = true);
+    final receiptData = await ReceiptScannerService.scanReceipt(image);
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    // Step 4: Handle failure
+    if (receiptData == null || receiptData.rawText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not read the receipt. Try a clearer photo.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
+    // Step 5: Show review dialog with extracted data
+    _showReceiptReviewDialog(receiptData);
+  }
+
+  // ==============================================================================
+  // _showReceiptReviewDialog - Preview Extracted Receipt Data Before Applying
+  // ==============================================================================
+  // Shows the user what the OCR found and lets them confirm before auto-filling
+  // the form. This prevents silently overwriting data with wrong OCR results.
+  // ==============================================================================
+  void _showReceiptReviewDialog(ReceiptData data) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.document_scanner_outlined, size: 20),
+            SizedBox(width: 8),
+            Text('Receipt Scanned'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'The following details were found. Tap Apply to fill the form.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            if (data.amount != null)
+              _receiptDetailRow(Icons.attach_money, 'Amount', 'RM ${data.amount!.toStringAsFixed(2)}'),
+            if (data.date != null)
+              _receiptDetailRow(Icons.calendar_today, 'Date', DateFormat('MMM dd, yyyy').format(data.date!)),
+            if (data.merchantName != null)
+              _receiptDetailRow(Icons.store_outlined, 'Merchant', data.merchantName!),
+            if (data.category != null)
+              _receiptDetailRow(Icons.category_outlined, 'Category', data.category!),
+            if (data.amount == null && data.date == null && data.merchantName == null)
+              const Text(
+                'No structured data could be extracted. The form was not changed.',
+                style: TextStyle(color: AppColors.warning),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _applyReceiptData(data);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // _receiptDetailRow creates one labelled row inside the receipt review dialog
+  Widget _receiptDetailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
+        ],
+      ),
+    );
+  }
+
+  // _applyReceiptData fills the form fields with the confirmed receipt data
+  void _applyReceiptData(ReceiptData data) {
+    setState(() {
+      // Fill amount if found
+      if (data.amount != null) {
+        _amountController.text = data.amount!.toStringAsFixed(2);
+      }
+      // Fill date if found
+      if (data.date != null) {
+        _selectedDate = data.date!;
+      }
+      // Fill description with merchant name if found
+      if (data.merchantName != null) {
+        _descriptionController.text = data.merchantName!;
+      }
+      // Try to match the detected category to our expense categories
+      if (data.category != null) {
+        final expenseCategories = TransactionCategories.getCategories('expense');
+        final match = expenseCategories.firstWhere(
+          (c) => c.toLowerCase().contains(data.category!.toLowerCase()) ||
+                 data.category!.toLowerCase().contains(c.toLowerCase()),
+          orElse: () => '',
+        );
+        if (match.isNotEmpty) {
+          _transactionType = 'expense'; // Receipts are always expenses
+          _selectedCategory = match;
+        }
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Receipt data applied to form'),
+        backgroundColor: AppColors.success,
+      ),
+    );
+  }
+
+  // ==============================================================================
   // build - Render the Add/Edit Transaction Form UI
   // ==============================================================================
   @override
@@ -328,8 +506,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         title: Text(widget.transaction != null ? 'Edit Transaction' : 'Add Transaction'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        // No action buttons needed in add mode (receipt scanner removed)
-        actions: null,
+        // Show scan receipt button only in add mode (not when editing an existing transaction)
+        actions: widget.transaction == null
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.document_scanner_outlined),
+                  onPressed: _isLoading ? null : _scanReceipt,
+                  tooltip: 'Scan Receipt',
+                ),
+              ]
+            : null,
       ),
       body: SafeArea(
         child: SingleChildScrollView(

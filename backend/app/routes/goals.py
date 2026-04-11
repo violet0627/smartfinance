@@ -54,7 +54,7 @@ def get_user_goals(user_id):
             'count': len(goals)
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch goals'}), 500
 
 
 # ==============================================================================
@@ -69,8 +69,20 @@ def create_goal(user_id):
         data = request.get_json()
 
         # --- Step 1: Validate required fields ---
-        if not data.get('goalName') or not data.get('targetAmount') or not data.get('deadline'):
-            return jsonify({'error': 'Missing required fields'}), 400
+        if not data.get('goalName') or not str(data.get('goalName', '')).strip():
+            return jsonify({'error': 'goalName is required'}), 400
+        if not data.get('targetAmount'):
+            return jsonify({'error': 'targetAmount is required'}), 400
+        if not data.get('deadline'):
+            return jsonify({'error': 'deadline is required'}), 400
+
+        # --- Validate targetAmount is a positive number ---
+        try:
+            target_amount = float(data['targetAmount'])
+            if target_amount <= 0:
+                return jsonify({'error': 'targetAmount must be greater than 0'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid targetAmount format'}), 400
 
         # --- Step 2: Parse the deadline date ---
         try:
@@ -102,7 +114,7 @@ def create_goal(user_id):
         }), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to create goal'}), 500
 
 
 # ==============================================================================
@@ -121,7 +133,7 @@ def get_goal(goal_id):
 
         return jsonify({'goal': goal.to_dict()}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch goal'}), 500
 
 
 # ==============================================================================
@@ -172,7 +184,7 @@ def update_goal(goal_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to update goal'}), 500
 
 
 # ==============================================================================
@@ -195,7 +207,7 @@ def delete_goal(goal_id):
         return jsonify({'message': 'Goal deleted successfully'}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to delete goal'}), 500
 
 
 # ==============================================================================
@@ -244,7 +256,7 @@ def contribute_to_goal(goal_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to process contribution'}), 500
 
 
 # ==============================================================================
@@ -291,7 +303,7 @@ def get_goals_summary(user_id):
             'closestDeadline': closest_goal.to_dict() if closest_goal else None # Nearest deadline goal
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch goals summary'}), 500
 
 
 # ==============================================================================

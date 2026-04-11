@@ -82,7 +82,7 @@ def get_all_achievements():
             'count': len(achievements)
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch user stats'}), 500
 
 
 # ==============================================================================
@@ -132,7 +132,7 @@ def get_user_achievements(user_id):
             'count': len(result)
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch achievements'}), 500
 
 
 # ==============================================================================
@@ -199,7 +199,7 @@ def get_user_stats(user_id):
             'currentStreaks': current_streaks                   # Current active streaks
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch leaderboard'}), 500
 
 
 # ==============================================================================
@@ -321,7 +321,7 @@ def check_and_unlock_achievements(user_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to update streak'}), 500
 
 
 # ==============================================================================
@@ -340,7 +340,7 @@ def get_user_streaks(user_id):
             'count': len(streaks)
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to add XP'}), 500
 
 
 # ==============================================================================
@@ -412,7 +412,7 @@ def update_streak(user_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to check achievements'}), 500
 
 
 # ==============================================================================
@@ -465,4 +465,4 @@ def get_leaderboard():
             'count': len(leaderboard)
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to reset daily streak'}), 500

@@ -47,7 +47,7 @@ def get_user_settings(user_id):
             'settings': settings.to_dict()
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch settings'}), 500
 
 
 # ==============================================================================
@@ -118,7 +118,7 @@ def update_user_settings(user_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to update settings'}), 500
 
 
 # ==============================================================================
@@ -146,7 +146,7 @@ def get_user_profile(user_id):
             }
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch profile'}), 500
 
 
 # ==============================================================================
@@ -193,7 +193,7 @@ def update_user_profile(user_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to update profile'}), 500
 
 
 # ==============================================================================
@@ -231,7 +231,7 @@ def change_password(user_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to change password'}), 500
 
 
 # Currency, theme, and language endpoint removed.
