@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844" font-family="Arial, sans-serif">
+  <!-- Phone background -->
+  <rect width="390" height="844" rx="40" ry="40" fill="#F5F5F5"/>
+
+  <!-- Status bar -->
+  <rect width="390" height="44" fill="#6C63FF"/>
+  <text x="20" y="28" font-size="12" fill="white" font-weight="bold">9:41</text>
+  <text x="340" y="28" font-size="11" fill="white">●●● 📶 🔋</text>
+
+  <!-- App bar -->
+  <rect x="0" y="44" width="390" height="56" fill="#6C63FF"/>
+  <text x="195" y="78" font-size="18" fill="white" font-weight="bold" text-anchor="middle">Investment Portfolio</text>
+
+  <!-- Portfolio summary card -->
+  <rect x="16" y="116" width="358" height="110" rx="16" fill="#6C63FF"/>
+  <!-- Total invested -->
+  <text x="195" y="142" font-size="12" fill="rgba(255,255,255,0.8)" text-anchor="middle">Total Portfolio Value</text>
+  <text x="195" y="170" font-size="28" fill="white" text-anchor="middle" font-weight="bold">RM 28,540.00</text>
+  <!-- Stats row -->
+  <text x="80" y="196" font-size="11" fill="rgba(255,255,255,0.7)" text-anchor="middle">Invested</text>
+  <text x="80" y="212" font-size="13" fill="white" text-anchor="middle" font-weight="bold">RM 25,000</text>
+  <line x1="160" y1="196" x2="160" y2="216" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+  <text x="230" y="196" font-size="11" fill="rgba(255,255,255,0.7)" text-anchor="middle">Gain/Loss</text>
+  <text x="230" y="212" font-size="13" fill="#A5F3C8" text-anchor="middle" font-weight="bold">+RM 3,540 (+14.16%)</text>
+
+  <!-- Holdings header -->
+  <text x="16" y="250" font-size="14" fill="#212121" font-weight="bold">Holdings (4)</text>
+
+  <!-- Holding 1: Stocks -->
+  <rect x="16" y="260" width="358" height="76" rx="12" fill="white"/>
+  <rect x="30" y="278" width="36" height="36" rx="8" fill="#E3F2FD"/>
+  <text x="48" y="301" font-size="22" text-anchor="middle">📈</text>
+  <text x="80" y="279" font-size="14" fill="#212121" font-weight="bold">Apple Inc.</text>
+  <text x="80" y="297" font-size="12" fill="#757575">Stocks  •  AAPL</text>
+  <text x="80" y="313" font-size="11" fill="#BDBDBD">10 units @ RM 785.00</text>
+  <text x="360" y="279" font-size="14" fill="#212121" text-anchor="end" font-weight="bold">RM 8,250</text>
+  <text x="360" y="297" font-size="12" fill="#10B981" text-anchor="end" font-weight="bold">+RM 600 (↑7.85%)</text>
+  <rect x="316" y="307" width="44" height="18" rx="4" fill="#E8F5E9"/>
+  <text x="338" y="320" font-size="10" fill="#10B981" text-anchor="middle">PROFIT</text>
+
+  <!-- Holding 2: Crypto -->
+  <rect x="16" y="344" width="358" height="76" rx="12" fill="white"/>
+  <rect x="30" y="362" width="36" height="36" rx="8" fill="#FFF8E1"/>
+  <text x="48" y="385" font-size="22" text-anchor="middle">₿</text>
+  <text x="80" y="363" font-size="14" fill="#212121" font-weight="bold">Bitcoin</text>
+  <text x="80" y="381" font-size="12" fill="#757575">Cryptocurrency  •  BTC</text>
+  <text x="80" y="397" font-size="11" fill="#BDBDBD">0.15 units @ RM 52,000</text>
+  <text x="360" y="363" font-size="14" fill="#212121" text-anchor="end" font-weight="bold">RM 12,450</text>
+  <text x="360" y="381" font-size="12" fill="#10B981" text-anchor="end" font-weight="bold">+RM 2,550 (↑25.8%)</text>
+  <rect x="316" y="391" width="44" height="18" rx="4" fill="#E8F5E9"/>
+  <text x="338" y="404" font-size="10" fill="#10B981" text-anchor="middle">PROFIT</text>
+
+  <!-- Holding 3: ETF -->
+  <rect x="16" y="428" width="358" height="76" rx="12" fill="white"/>
+  <rect x="30" y="446" width="36" height="36" rx="8" fill="#E8F5E9"/>
+  <text x="48" y="469" font-size="22" text-anchor="middle">📊</text>
+  <text x="80" y="447" font-size="14" fill="#212121" font-weight="bold">KLCI ETF</text>
+  <text x="80" y="465" font-size="12" fill="#757575">ETF  •  KLCI</text>
+  <text x="80" y="481" font-size="11" fill="#BDBDBD">50 units @ RM 148.00</text>
+  <text x="360" y="447" font-size="14" fill="#212121" text-anchor="end" font-weight="bold">RM 5,840</text>
+  <text x="360" y="465" font-size="12" fill="#EF4444" text-anchor="end" font-weight="bold">-RM 160 (↓2.67%)</text>
+  <rect x="324" y="475" width="36" height="18" rx="4" fill="#FEE2E2"/>
+  <text x="342" y="488" font-size="10" fill="#EF4444" text-anchor="middle">LOSS</text>
+
+  <!-- Holding 4: Fixed Deposit -->
+  <rect x="16" y="512" width="358" height="76" rx="12" fill="white"/>
+  <rect x="30" y="530" width="36" height="36" rx="8" fill="#F3E5F5"/>
+  <text x="48" y="553" font-size="22" text-anchor="middle">🏦</text>
+  <text x="80" y="531" font-size="14" fill="#212121" font-weight="bold">Maybank FD</text>
+  <text x="80" y="549" font-size="12" fill="#757575">Fixed Deposit</text>
+  <text x="80" y="565" font-size="11" fill="#BDBDBD">1 unit @ RM 2,000.00</text>
+  <text x="360" y="531" font-size="14" fill="#212121" text-anchor="end" font-weight="bold">RM 2,000</text>
+  <text x="360" y="549" font-size="12" fill="#10B981" text-anchor="end" font-weight="bold">+RM 550 (↑27.5%)</text>
+  <rect x="316" y="559" width="44" height="18" rx="4" fill="#E8F5E9"/>
+  <text x="338" y="572" font-size="10" fill="#10B981" text-anchor="middle">PROFIT</text>
+
+  <!-- FAB -->
+  <circle cx="345" cy="660" r="28" fill="#6C63FF"/>
+  <text x="345" y="667" font-size="22" fill="white" text-anchor="middle">+</text>
+
+  <!-- Bottom nav bar -->
+  <rect x="0" y="762" width="390" height="70" fill="white" stroke="#F0F0F0" stroke-width="1"/>
+  <text x="40" y="800" font-size="20" text-anchor="middle">🏠</text>
+  <text x="110" y="800" font-size="20" text-anchor="middle">📊</text>
+  <text x="195" y="800" font-size="20" text-anchor="middle">📋</text>
+  <text x="280" y="800" font-size="20" text-anchor="middle">🎯</text>
+  <text x="350" y="800" font-size="20" text-anchor="middle">⚙️</text>
+
+  <!-- Figure caption -->
+  <text x="195" y="838" font-size="11" fill="#9E9E9E" text-anchor="middle">Figure 4.2.2.8 Investment Portfolio Screen</text>
+</svg>

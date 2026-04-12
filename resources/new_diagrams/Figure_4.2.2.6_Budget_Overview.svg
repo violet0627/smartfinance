@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844" font-family="Arial, sans-serif">
+  <!-- Phone background -->
+  <rect width="390" height="844" rx="40" ry="40" fill="#F5F5F5"/>
+
+  <!-- Status bar -->
+  <rect width="390" height="44" fill="#6C63FF"/>
+  <text x="20" y="28" font-size="12" fill="white" font-weight="bold">9:41</text>
+  <text x="340" y="28" font-size="11" fill="white">●●● 📶 🔋</text>
+
+  <!-- App bar -->
+  <rect x="0" y="44" width="390" height="56" fill="#6C63FF"/>
+  <text x="195" y="78" font-size="18" fill="white" font-weight="bold" text-anchor="middle">My Budget</text>
+
+  <!-- Month selector -->
+  <rect x="16" y="116" width="358" height="44" rx="12" fill="white"/>
+  <text x="36" y="144" font-size="20" fill="#6C63FF">‹</text>
+  <text x="195" y="144" font-size="15" fill="#212121" text-anchor="middle" font-weight="bold">April 2026</text>
+  <text x="358" y="144" font-size="20" fill="#6C63FF" text-anchor="end">›</text>
+
+  <!-- Summary card -->
+  <rect x="16" y="172" width="358" height="90" rx="16" fill="#6C63FF"/>
+  <text x="195" y="200" font-size="13" fill="rgba(255,255,255,0.8)" text-anchor="middle">Total Budget</text>
+  <text x="195" y="226" font-size="26" fill="white" text-anchor="middle" font-weight="bold">RM 3,000.00</text>
+  <!-- Mini stats -->
+  <text x="90" y="250" font-size="11" fill="rgba(255,255,255,0.7)" text-anchor="middle">Spent</text>
+  <text x="90" y="264" font-size="13" fill="white" text-anchor="middle" font-weight="bold">RM 1,320.00</text>
+  <line x1="195" y1="248" x2="195" y2="268" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+  <text x="300" y="250" font-size="11" fill="rgba(255,255,255,0.7)" text-anchor="middle">Remaining</text>
+  <text x="300" y="264" font-size="13" fill="white" text-anchor="middle" font-weight="bold">RM 1,680.00</text>
+
+  <!-- Overall progress bar -->
+  <rect x="16" y="276" width="358" height="16" rx="8" fill="white"/>
+  <rect x="16" y="276" width="158" height="16" rx="8" fill="#10B981"/>
+  <text x="375" y="290" font-size="11" fill="#757575" text-anchor="end">44%</text>
+
+  <!-- Category budget rows -->
+  <!-- Food row -->
+  <rect x="16" y="308" width="358" height="68" rx="12" fill="white"/>
+  <circle cx="48" cy="342" r="18" fill="#FFF3E0"/>
+  <text x="48" y="349" font-size="16" text-anchor="middle">🍔</text>
+  <text x="76" y="332" font-size="14" fill="#212121" font-weight="bold">Food &amp; Dining</text>
+  <text x="76" y="350" font-size="11" fill="#757575">RM 480 of RM 800</text>
+  <rect x="76" y="358" width="278" height="8" rx="4" fill="#F5F5F5"/>
+  <rect x="76" y="358" width="167" height="8" rx="4" fill="#10B981"/>
+  <text x="354" y="336" font-size="12" fill="#10B981" text-anchor="end" font-weight="bold">60%</text>
+
+  <!-- Transport row -->
+  <rect x="16" y="384" width="358" height="68" rx="12" fill="white"/>
+  <circle cx="48" cy="418" r="18" fill="#E3F2FD"/>
+  <text x="48" y="425" font-size="16" text-anchor="middle">🚗</text>
+  <text x="76" y="408" font-size="14" fill="#212121" font-weight="bold">Transport</text>
+  <text x="76" y="426" font-size="11" fill="#757575">RM 280 of RM 400</text>
+  <rect x="76" y="434" width="278" height="8" rx="4" fill="#F5F5F5"/>
+  <rect x="76" y="434" width="194" height="8" rx="4" fill="#F59E0B"/>
+  <text x="354" y="412" font-size="12" fill="#F59E0B" text-anchor="end" font-weight="bold">70%</text>
+
+  <!-- Bills row -->
+  <rect x="16" y="460" width="358" height="68" rx="12" fill="white"/>
+  <circle cx="48" cy="494" r="18" fill="#E8F5E9"/>
+  <text x="48" y="501" font-size="16" text-anchor="middle">💡</text>
+  <text x="76" y="484" font-size="14" fill="#212121" font-weight="bold">Bills &amp; Utilities</text>
+  <text x="76" y="502" font-size="11" fill="#757575">RM 560 of RM 600</text>
+  <rect x="76" y="510" width="278" height="8" rx="4" fill="#F5F5F5"/>
+  <rect x="76" y="510" width="259" height="8" rx="4" fill="#EF4444"/>
+  <text x="354" y="488" font-size="12" fill="#EF4444" text-anchor="end" font-weight="bold">93%</text>
+
+  <!-- Entertainment row -->
+  <rect x="16" y="536" width="358" height="68" rx="12" fill="white"/>
+  <circle cx="48" cy="570" r="18" fill="#FCE4EC"/>
+  <text x="48" y="577" font-size="16" text-anchor="middle">🎮</text>
+  <text x="76" y="560" font-size="14" fill="#212121" font-weight="bold">Entertainment</text>
+  <text x="76" y="578" font-size="11" fill="#757575">RM 0 of RM 300</text>
+  <rect x="76" y="586" width="278" height="8" rx="4" fill="#F5F5F5"/>
+  <text x="354" y="564" font-size="12" fill="#757575" text-anchor="end" font-weight="bold">0%</text>
+
+  <!-- Shopping row -->
+  <rect x="16" y="612" width="358" height="68" rx="12" fill="white"/>
+  <circle cx="48" cy="646" r="18" fill="#F3E5F5"/>
+  <text x="48" y="653" font-size="16" text-anchor="middle">🛍️</text>
+  <text x="76" y="636" font-size="14" fill="#212121" font-weight="bold">Shopping</text>
+  <text x="76" y="654" font-size="11" fill="#757575">RM 0 of RM 500</text>
+  <rect x="76" y="662" width="278" height="8" rx="4" fill="#F5F5F5"/>
+  <text x="354" y="640" font-size="12" fill="#757575" text-anchor="end" font-weight="bold">0%</text>
+
+  <!-- FAB -->
+  <circle cx="345" cy="720" r="28" fill="#6C63FF" filter="url(#shadow)"/>
+  <text x="345" y="727" font-size="22" fill="white" text-anchor="middle">+</text>
+
+  <!-- Bottom nav bar -->
+  <rect x="0" y="762" width="390" height="70" fill="white" stroke="#F0F0F0" stroke-width="1"/>
+  <text x="40" y="800" font-size="20" text-anchor="middle">🏠</text>
+  <text x="110" y="800" font-size="20" text-anchor="middle">📊</text>
+  <text x="195" y="800" font-size="20" text-anchor="middle">📋</text>
+  <text x="280" y="800" font-size="20" text-anchor="middle">🎯</text>
+  <text x="350" y="800" font-size="20" text-anchor="middle">⚙️</text>
+
+  <!-- Figure caption -->
+  <text x="195" y="838" font-size="11" fill="#9E9E9E" text-anchor="middle">Figure 4.2.2.6 Budget Overview</text>
+</svg>

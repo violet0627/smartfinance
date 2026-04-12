@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Figure 4.5.1.1 — Login Authentication Workflow</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 30px; background: white; }
+    h2 { color: #6C63FF; font-size: 16px; margin-bottom: 16px; text-align: center; }
+    .mermaid { max-width: 100%; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h2>Figure 4.5.1.1 — Login Authentication Workflow</h2>
+  <div class="mermaid">
+flowchart TD
+    START([Start: User Taps Sign In]) --> FORM[Display Login Form]
+    FORM --> INPUT[User Enters Email + Password]
+    INPUT --> VALIDATE[Client-Side Validation]
+    VALIDATE --> VALID{All Fields Valid?}
+    VALID -- No --> ERR1[Display Validation Error]
+    ERR1 --> FORM
+    VALID -- Yes --> POST[Send POST Request to /auth/login]
+    POST --> FIND[Backend Finds User by Email]
+    FIND --> FOUND{User Found?}
+    FOUND -- No --> ERR2[Return 401 Unauthorized]
+    ERR2 --> CRED[Display Invalid Credentials]
+    CRED --> FORM
+    FOUND -- Yes --> VERIFY[Verify bcrypt Password Hash]
+    VERIFY --> PASS{Password Correct?}
+    PASS -- No --> ERR2
+    PASS -- Yes --> TFA{2FA Enabled\nfor This User?}
+
+    TFA -- No --> JWT[Generate JWT Access Token]
+    JWT --> RETURN1[Return Token + User Profile]
+    RETURN1 --> STORE1[Store Token in SecureStorage]
+    STORE1 --> DASH([Navigate to Dashboard])
+
+    TFA -- Yes --> TEMP[Return requires_2fa: true\n+ Temporary Token]
+    TEMP --> SCREEN2FA[Display TOTP Code\nEntry Screen]
+    SCREEN2FA --> CODE[User Enters 6-Digit Code\nfrom Authenticator App]
+    CODE --> POST2FA[Send POST to /auth/verify-2fa\nwith temp token + code]
+    POST2FA --> CHECKCODE[Backend Validates TOTP Code\nusing pyotp + secret]
+    CHECKCODE --> CODEOK{Code Valid?}
+    CODEOK -- No --> ERR3[Display Invalid Code Error]
+    ERR3 --> SCREEN2FA
+    CODEOK -- Yes --> JWT
+
+    style TFA fill:#FFF3CD,stroke:#F59E0B
+    style SCREEN2FA fill:#E8F4FD,stroke:#3B82F6
+    style CODE fill:#E8F4FD,stroke:#3B82F6
+    style POST2FA fill:#E8F4FD,stroke:#3B82F6
+    style CHECKCODE fill:#E8F4FD,stroke:#3B82F6
+    style CODEOK fill:#FFF3CD,stroke:#F59E0B
+    style ERR3 fill:#FEE2E2,stroke:#EF4444
+    style TEMP fill:#E8F4FD,stroke:#3B82F6
+  </div>
+  <script>mermaid.initialize({startOnLoad: true, theme: 'default'});</script>
+</body>
+</html>

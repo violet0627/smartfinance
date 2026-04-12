@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Figure 4.5.3.1 — Budget Setup Process</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 30px; background: white; }
+    h2 { color: #6C63FF; font-size: 16px; margin-bottom: 16px; text-align: center; }
+    .mermaid { max-width: 100%; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h2>Figure 4.5.3.1 — Budget Setup Process</h2>
+  <div class="mermaid">
+flowchart TD
+    START([Start: User Taps Create Budget]) --> FORM[Display Budget Setup Form]
+    FORM --> MONTH[User Selects Month/Year\nDefault: Current Month]
+    MONTH --> TOTAL[User Enters Total\nBudget Amount]
+    TOTAL --> CATS[Display Predefined\nCategory List]
+    CATS --> ALLOC[User Allocates Amount\nto Each Category]
+    ALLOC --> REMAIN[Real-Time: Calculate\nRemaining Unallocated Amount]
+    REMAIN --> CHECK{Total Allocations\nwithin Total Budget?}
+    CHECK -- No --> ERR[Display Error and\nPrevent Save]
+    ERR --> FORM
+    CHECK -- Yes --> POST[Send POST Request to /budgets]
+    POST --> BVAL[Backend Validates Data]
+    BVAL --> BVALID{Valid?}
+    BVALID -- No --> BERR[Return 400 Error]
+    BERR --> ERRDISP[Display Error Message]
+    ERRDISP --> FORM
+    BVALID -- Yes --> RECORD[Create Budget Record]
+    RECORD --> CATROWS[Create BudgetCategory\nRecords for Each Category]
+    CATROWS --> INIT[Initialize SpentAmount = 0.00\nfor All Categories]
+    INIT --> RESP[Return Success Response]
+    RESP --> OVERVIEW[Display Budget Overview\nwith Progress Bars at 0%]
+    OVERVIEW --> DONE([End])
+  </div>
+  <script>mermaid.initialize({startOnLoad: true, theme: 'default'});</script>
+</body>
+</html>
