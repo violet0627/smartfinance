@@ -1,16 +1,42 @@
-// recurring_transactions_screen.dart
-// This screen shows all recurring transactions (like monthly rent, weekly salary, etc.).
-// Each recurring item shows name, category, frequency, amount, next execution date, and status.
-// Users can: execute a transaction now, pause/resume it, delete it, and view full details.
+// ==============================================================================
+// recurring_transactions_screen.dart - Recurring Transactions Management Screen
+// ==============================================================================
+// Shows all automated recurring transactions the user has set up — things like
+// monthly rent, weekly salary, or annual insurance premiums.
+//
+// Each recurring item card shows:
+//   - Name and category icon
+//   - Amount and frequency (e.g., "RM 1,200 / monthly")
+//   - Next execution date and active/paused status badge
+//
+// User actions on each item:
+//   - Execute Now: immediately creates a one-off transaction for this item
+//   - Pause / Resume: toggles the isActive flag — paused items are skipped by the backend
+//   - Delete: shows a confirmation dialog then removes the recurring record
+//
+// Notification scheduling:
+//   - After loading, NotificationService.scheduleRecurringTransactionReminders()
+//     registers local push notifications for upcoming recurring items
+//     (e.g., "Rent due in 3 days — RM 1,200")
+//
+// FAB navigates to AddRecurringTransactionScreen; on return, the list refreshes.
+// ==============================================================================
 
-import 'package:flutter/material.dart'; // Flutter UI toolkit
-import 'package:intl/intl.dart'; // Date formatting
-import '../../services/api_service.dart'; // Backend API calls
-import '../../services/notification_service.dart'; // Scheduling reminders for upcoming transactions
-import '../../utils/colors.dart'; // AppColors constants
-import 'add_recurring_transaction_screen.dart'; // Screen for adding new recurring transactions
+import 'package:flutter/material.dart';                       // Flutter UI toolkit
+import 'package:intl/intl.dart';                              // Date formatting
+import '../../services/api_service.dart';                     // Backend API calls
+import '../../services/notification_service.dart';            // Scheduling reminders for upcoming transactions
+import '../../utils/colors.dart';                             // AppColors constants
+import 'add_recurring_transaction_screen.dart';               // Screen for adding new recurring transactions
 
-// RecurringTransactionsScreen is a StatefulWidget because data loads and updates dynamically
+// ==============================================================================
+// RecurringTransactionsScreen — StatefulWidget
+// ==============================================================================
+// StatefulWidget because it manages:
+//   - _recurringList: the list of recurring transaction maps loaded from the API
+//   - _isLoading: controls the loading spinner
+//   - _error: non-empty string if the fetch failed (shown as an error message)
+// ==============================================================================
 class RecurringTransactionsScreen extends StatefulWidget {
   const RecurringTransactionsScreen({super.key});
 
@@ -25,13 +51,22 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
   bool _isLoading = true; // True while fetching data
   String _error = '';     // Error message; empty = no error
 
+  // ==============================================================================
+  // initState - Called Once When the Widget Is First Inserted into the Tree
+  // ==============================================================================
   @override
   void initState() {
-    super.initState();
-    _loadRecurringTransactions(); // Load data when screen opens
+    super.initState();                    // Always call super first
+    _loadRecurringTransactions();         // Fetch recurring transactions on screen open
   }
 
-  // _loadRecurringTransactions fetches all recurring transactions for the current user
+  // ==============================================================================
+  // _loadRecurringTransactions - Fetch All Recurring Transactions from the API
+  // ==============================================================================
+  // Resets error state, calls ApiService.getRecurringTransactions(), converts
+  // the result to a typed list, then schedules local notification reminders.
+  // On failure, stores the error message in _error so the UI can display it.
+  // ==============================================================================
   Future<void> _loadRecurringTransactions() async {
     setState(() {
       _isLoading = true;
