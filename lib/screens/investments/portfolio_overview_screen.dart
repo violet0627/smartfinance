@@ -1,18 +1,42 @@
-// portfolio_overview_screen.dart
-// This screen shows the user's investment portfolio: total value, profit/loss,
-// asset type breakdown, top performers, and a list of all individual investments.
-// Users can filter by asset type, add new investments, update prices, and delete investments.
-// Swiping left on an investment card deletes it (with confirmation dialog).
+// ==============================================================================
+// portfolio_overview_screen.dart - Investment Portfolio Overview Screen
+// ==============================================================================
+// Shows the user's full investment portfolio:
+//   - Portfolio Summary card: total current value, amount invested, profit/loss,
+//     overall percentage return
+//   - Asset Breakdown: per-type totals (e.g., Stocks 45%, Crypto 20%, ...)
+//   - Top Performers: individual investments with the highest % gain
+//   - All Investments: swipeable cards showing each investment with current price,
+//     P&L, days held, and a "tap to update price" hint
+//
+// App bar has a filter menu to view one asset type at a time.
+// When a filter is active, a banner below the app bar shows what's being filtered
+// with a "Clear" button.
+//
+// Key interactions:
+//   - Tap investment card → _showUpdatePriceDialog (StatefulBuilder for inline errors)
+//   - Swipe left → confirmDismiss dialog → _deleteInvestment
+//   - FAB → AddInvestmentScreen → refresh portfolio on return
+//   - Pull-to-refresh → _loadPortfolio
+// ==============================================================================
 
-import 'package:flutter/material.dart'; // Flutter UI toolkit
-import 'package:intl/intl.dart'; // DateFormat for date formatting
-import '../../models/investment_model.dart'; // InvestmentModel, PortfolioSummary, InvestmentPerformance
-import '../../services/api_service.dart'; // Backend API calls
-import '../../utils/colors.dart'; // AppColors constants
-import '../../utils/investment_types.dart'; // InvestmentTypes utility (icons, colors, performance icons)
-import 'add_investment_screen.dart'; // Screen for adding new investments
+import 'package:flutter/material.dart';                   // Flutter UI toolkit
+import 'package:intl/intl.dart';                          // DateFormat for date formatting
+import '../../models/investment_model.dart';               // InvestmentModel, PortfolioSummary, InvestmentPerformance
+import '../../services/api_service.dart';                  // Backend API calls
+import '../../utils/colors.dart';                          // AppColors constants
+import '../../utils/investment_types.dart';                // InvestmentTypes utility (icons, colors, performance icons)
+import 'add_investment_screen.dart';                       // Screen for adding new investments
 
-// PortfolioOverviewScreen shows all investment data for the current user
+// ==============================================================================
+// PortfolioOverviewScreen — StatefulWidget
+// ==============================================================================
+// StatefulWidget because it manages:
+//   - _investments: typed list of InvestmentModel objects loaded from the API
+//   - _portfolio: PortfolioSummary model (total value, P&L, breakdowns)
+//   - _isLoading: controls the loading spinner
+//   - _filterType: null = all types; set to e.g. "Stocks" when a filter is active
+// ==============================================================================
 class PortfolioOverviewScreen extends StatefulWidget {
   const PortfolioOverviewScreen({super.key});
 
@@ -26,13 +50,26 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
   bool _isLoading = true;                  // True while fetching data
   String? _filterType;                     // null = all types; otherwise e.g. "Stocks"
 
+  // ==============================================================================
+  // initState - Called Once When the Widget Is First Inserted into the Tree
+  // ==============================================================================
   @override
   void initState() {
-    super.initState();
-    _loadPortfolio(); // Load data when screen opens
+    super.initState();     // Always call super first
+    _loadPortfolio();      // Fetch portfolio data immediately on screen open
   }
 
-  // _loadPortfolio fetches portfolio summary and individual investments
+  // ==============================================================================
+  // _loadPortfolio - Fetch Portfolio Summary and Individual Investments
+  // ==============================================================================
+  // Two nested try/catch blocks are intentional:
+  //   - The inner try/catch for portfolio summary means a summary failure does NOT
+  //     prevent investments from loading — the user still sees their investment cards.
+  //   - The inner try/catch for investments is the same: isolated from the summary call.
+  //   - The outer try/catch catches any unexpected error (e.g., userId fetch fails).
+  //   - The 'finally' block always stops the spinner regardless of what happened.
+  // _filterType is passed to getUserInvestments — null means return all types.
+  // ==============================================================================
   // Both calls are made sequentially with separate try/catch so one failure doesn't stop the other
   Future<void> _loadPortfolio() async {
     setState(() => _isLoading = true);
@@ -190,6 +227,20 @@ class _PortfolioOverviewScreenState extends State<PortfolioOverviewScreen> {
     );
   }
 
+  // ==============================================================================
+  // build - Assemble the Portfolio Overview Screen
+  // ==============================================================================
+  // Three body states:
+  //   1. _isLoading == true                      → centered spinner
+  //   2. _portfolio is null OR portfolio isEmpty → _buildEmptyState() with add CTA
+  //   3. Portfolio loaded                        → Column:
+  //        - Optional filter banner (if _filterType != null)
+  //        - Expanded RefreshIndicator > scrollable column of cards
+  //
+  // 'Expanded' is required around the scrollable section because the outer Column
+  // cannot have unbounded height — Expanded tells it "fill whatever space is left
+  // after the filter banner".
+  // ==============================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -1,15 +1,38 @@
-// profile_edit_screen.dart
-// This screen lets users update their profile information: name, email, and phone number.
-// It loads the current profile from the server, shows a form, validates input, then saves changes.
+// ==============================================================================
+// profile_edit_screen.dart - User Profile Edit Screen
+// ==============================================================================
+// Lets users update their display name, email address, and phone number.
+// Also supports changing their profile photo from the device camera or gallery.
+//
+// Flow:
+// 1. Screen opens → _loadProfile() fetches current name/email/phone from API
+//    and pre-fills the form fields
+// 2. User edits any field(s) and optionally picks a new profile photo
+// 3. Tapping Save → form validates → API call updates the profile
+// 4. On success → updates SharedPreferences cache → pops back to SettingsScreen
+//
+// Profile photo handling:
+// - Tapping the avatar circle shows a bottom sheet with Camera / Gallery options
+// - ImagePicker returns a File, which is sent to the API as a multipart upload
+// - Until the API call completes, the local File is shown optimistically
+// ==============================================================================
 
-import 'dart:io';                        // For File class — reads image from device storage
-import 'package:flutter/material.dart'; // Flutter UI toolkit - provides all widgets
-import 'package:image_picker/image_picker.dart'; // Camera / gallery image picker
+import 'dart:io';                                             // For File class — reads image from device storage
+import 'package:flutter/material.dart';                      // Flutter UI toolkit - provides all widgets
+import 'package:image_picker/image_picker.dart';             // Camera / gallery image picker
 import 'package:shared_preferences/shared_preferences.dart'; // Local storage for saving small data on device
-import '../../services/api_service.dart'; // Our custom API service for backend calls
-import '../../utils/colors.dart'; // Our custom color constants (AppColors.primary, etc.)
+import '../../services/api_service.dart';                    // Our custom API service for backend calls
+import '../../utils/colors.dart';                            // Our custom color constants (AppColors.primary, etc.)
 
-// ProfileEditScreen is a StatefulWidget because form data and loading state change over time
+// ==============================================================================
+// ProfileEditScreen — StatefulWidget
+// ==============================================================================
+// StatefulWidget because it manages:
+//   - _formKey: validates all form fields together
+//   - Text controllers: hold name, email, phone values from the loaded profile
+//   - _isLoading: shows spinner while fetching or saving profile
+//   - _selectedImage: the new profile photo chosen by the user (null if unchanged)
+// ==============================================================================
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key}); // super.key passes the key to the parent class
 

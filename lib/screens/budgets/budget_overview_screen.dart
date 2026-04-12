@@ -1,19 +1,38 @@
-// budget_overview_screen.dart
-// This screen shows the current month's budget: total spent vs budget, days remaining,
-// per-category breakdowns with progress bars, and alert cards for over-budget categories.
-// Users can edit or delete the budget from the app bar menu, or create a new one.
+// ==============================================================================
+// budget_overview_screen.dart - Monthly Budget Overview Screen
+// ==============================================================================
+// This screen shows the user's current month budget at a glance:
+//   - Large gradient summary card: total spent, remaining amount, progress bar
+//   - BudgetAlertCard: warnings for categories that are close to or over their limit
+//   - Category Breakdown: one card per expense category with progress bar and colours
+//
+// App bar has a 3-dot menu (Edit / Delete) and a "+" button to replace with a new budget.
+// If no budget is set for the month, _buildNoBudgetState() is shown instead.
+//
+// Budget status colours:
+//   Green  — under 80% used
+//   Orange — 80–99% used (warning)
+//   Red    — 100%+ used (over budget)
+// ==============================================================================
 
-import 'package:flutter/material.dart'; // Flutter UI toolkit
-import 'package:intl/intl.dart'; // DateFormat for formatting month/year strings
-import '../../models/budget_model.dart'; // BudgetModel and BudgetCategoryModel data classes
-import '../../services/api_service.dart'; // Backend API calls
-import '../../services/notification_service.dart'; // Push notifications for budget alerts
-import '../../utils/categories.dart'; // TransactionCategories for category icons/colors
-import '../../utils/colors.dart'; // AppColors constants
-import '../../widgets/budget_alert_card.dart'; // Widget that shows budget warning alerts
-import 'create_budget_screen.dart'; // Screen for creating/editing budgets
+import 'package:flutter/material.dart';                   // Flutter UI toolkit
+import 'package:intl/intl.dart';                          // DateFormat for formatting month/year strings
+import '../../models/budget_model.dart';                  // BudgetModel and BudgetCategoryModel data classes
+import '../../services/api_service.dart';                 // Backend API calls
+import '../../services/notification_service.dart';        // Push notifications for budget alerts
+import '../../utils/categories.dart';                     // TransactionCategories for category icons/colors
+import '../../utils/colors.dart';                         // AppColors constants
+import '../../widgets/budget_alert_card.dart';            // Widget that shows budget warning alerts
+import 'create_budget_screen.dart';                       // Screen for creating/editing budgets
 
-// BudgetOverviewScreen shows the current budget status
+// ==============================================================================
+// BudgetOverviewScreen — StatefulWidget
+// ==============================================================================
+// StatefulWidget because it manages:
+//   - _currentBudget: the BudgetModel loaded from the API (null until fetched)
+//   - _isLoading: controls the loading spinner
+//   - _hasBudget: distinguishes "no budget set" from "loading"
+// ==============================================================================
 class BudgetOverviewScreen extends StatefulWidget {
   const BudgetOverviewScreen({super.key});
 
@@ -26,13 +45,22 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
   bool _isLoading = true;      // True while fetching budget data
   bool _hasBudget = false;     // False means no budget exists for this month
 
+  // ==============================================================================
+  // initState - Called Once When the Widget Is First Inserted into the Tree
+  // ==============================================================================
   @override
   void initState() {
-    super.initState();
-    _loadCurrentBudget(); // Load budget when screen opens
+    super.initState();         // Always call super first — sets up Flutter internals
+    _loadCurrentBudget();      // Fetch this month's budget immediately on screen open
   }
 
-  // _loadCurrentBudget fetches the current month's budget from the backend
+  // ==============================================================================
+  // _loadCurrentBudget - Fetch the Current Month's Budget from the Backend
+  // ==============================================================================
+  // Sets _isLoading = true (shows spinner), calls ApiService.getCurrentBudget(),
+  // converts the JSON result to a BudgetModel, then checks for budget alerts.
+  // The 'finally' block always runs (success or failure) to hide the spinner.
+  // ==============================================================================
   Future<void> _loadCurrentBudget() async {
     setState(() => _isLoading = true);
 
@@ -149,6 +177,16 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
     }
   }
 
+  // ==============================================================================
+  // build - Assemble the Budget Overview Screen
+  // ==============================================================================
+  // Three possible states:
+  //   1. _isLoading == true       → show centered spinner
+  //   2. !_hasBudget              → show _buildNoBudgetState() (empty state with CTA)
+  //   3. Budget loaded            → show RefreshIndicator > scrollable column of cards
+  //
+  // App bar shows Edit/Delete menu and "+" button only when a budget exists.
+  // ==============================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(

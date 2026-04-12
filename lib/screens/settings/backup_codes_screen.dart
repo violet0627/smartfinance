@@ -1,14 +1,38 @@
-// backup_codes_screen.dart
-// This screen displays the one-time backup codes generated after enabling 2FA.
-// Users must save these codes (copy, download, or print) before leaving the screen.
-// It uses WillPopScope to intercept the back button and warn if codes haven't been saved.
+// ==============================================================================
+// backup_codes_screen.dart - 2FA Backup Codes Display Screen
+// ==============================================================================
+// Shows the one-time backup codes generated during 2FA setup (or regeneration).
+// These codes let the user log in if they ever lose access to their authenticator app.
+//
+// IMPORTANT: Each code can only be used ONCE — once used, it's deleted on the backend.
+//            The user MUST save these codes before leaving this screen.
+//
+// Save options provided:
+//   - Copy All: copies all 8 codes to the clipboard as a newline-separated string
+//   - Share: opens the system share sheet so the user can save via notes, email, etc.
+//
+// Back-button safety:
+//   - WillPopScope intercepts the hardware back button
+//   - If the user hasn't checked the acknowledgement checkbox, a warning dialog is shown
+//   - The "Done" button is disabled until the checkbox is ticked
+//
+// Parameters:
+//   - backupCodes: List<dynamic> — the codes returned by the API (shown as strings)
+//   - isRegeneration: bool — changes the title/description wording
+//                            (true = "New Backup Codes", false = "Save Your Backup Codes")
+// ==============================================================================
 
-import 'package:flutter/material.dart'; // Flutter UI toolkit
-import 'package:flutter/services.dart'; // Provides Clipboard for copy-to-clipboard functionality
+import 'package:flutter/material.dart';     // Flutter UI toolkit
+import 'package:flutter/services.dart';     // Provides Clipboard for copy-to-clipboard functionality
 import 'package:share_plus/share_plus.dart'; // Allows sharing text/files via system share sheet
-import '../../utils/colors.dart'; // AppColors constants
+import '../../utils/colors.dart';           // AppColors constants
 
-// BackupCodesScreen receives the backup codes as a parameter from the 2FA setup flow
+// ==============================================================================
+// BackupCodesScreen — StatefulWidget
+// ==============================================================================
+// StatefulWidget because it manages _acknowledged (the checkbox state).
+// When _acknowledged becomes true, the Done button is enabled.
+// ==============================================================================
 class BackupCodesScreen extends StatefulWidget {
   final List<dynamic> backupCodes;   // The list of backup code strings from the API
   final bool isRegeneration;         // True if this is a regeneration (not the initial setup)

@@ -1,13 +1,44 @@
-// add_recurring_transaction_screen.dart
-// This screen lets users set up a new recurring transaction (e.g., monthly rent, weekly salary).
-// Users specify: type (income/expense), name, amount, category, frequency, start date, and optional end date.
+// ==============================================================================
+// add_recurring_transaction_screen.dart - Add Recurring Transaction Screen
+// ==============================================================================
+// Lets users set up an automated recurring transaction — a transaction that the
+// backend creates on a schedule (daily / weekly / monthly / yearly).
+//
+// Examples:
+//   - Monthly expense: "Rent" RM 1,200 on the 1st of every month
+//   - Weekly income: "Part-time salary" RM 400 every Friday
+//   - Yearly expense: "Car insurance" RM 800 every January
+//
+// Fields:
+//   - Transaction Type: Expense or Income (toggle buttons)
+//   - Name (required): e.g., "Monthly Rent"
+//   - Amount (required): in RM
+//   - Category: drop-down from TransactionCategories (filtered by type)
+//   - Frequency: Daily / Weekly / Monthly / Yearly
+//   - Start Date: date picker — when the first transaction should be created
+//   - End Date (optional): toggle + date picker — when recurring should stop
+//   - Description (optional): extra notes
+//
+// On save, calls ApiService.createRecurringTransaction() and pops back with
+// result == true so the recurring transactions list refreshes.
+// ==============================================================================
 
-import 'package:flutter/material.dart'; // Flutter UI toolkit
-import 'package:intl/intl.dart'; // Date formatting (e.g., "Mar 15, 2025")
+import 'package:flutter/material.dart';   // Flutter UI toolkit
+import 'package:intl/intl.dart';          // Date formatting (e.g., "Mar 15, 2025")
 import '../../services/api_service.dart'; // Backend API calls
-import '../../utils/colors.dart'; // AppColors constants
+import '../../utils/colors.dart';         // AppColors constants
 
-// AddRecurringTransactionScreen is a StatefulWidget because many fields change as the user types
+// ==============================================================================
+// AddRecurringTransactionScreen — StatefulWidget
+// ==============================================================================
+// StatefulWidget because many pieces of state change as the user fills the form:
+//   - _transactionType: 'expense' or 'income' — also drives the category list
+//   - _selectedCategory: changes when type changes (expense vs income categories differ)
+//   - _selectedFrequency: 'daily', 'weekly', 'monthly', or 'yearly'
+//   - _startDate / _endDate: chosen via date pickers
+//   - _hasEndDate: toggles the end date section on/off
+//   - _isSubmitting: true while the API call runs (disables Save button)
+// ==============================================================================
 class AddRecurringTransactionScreen extends StatefulWidget {
   const AddRecurringTransactionScreen({super.key});
 

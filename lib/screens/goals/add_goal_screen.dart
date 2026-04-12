@@ -1,14 +1,39 @@
-// add_goal_screen.dart
-// This screen handles both creating a new financial goal and editing an existing one.
-// If 'existingGoal' is passed in, the form is pre-filled for editing; otherwise it's blank for creating.
-// Users enter a name, description, target amount, deadline, category (chips), and priority (buttons).
+// ==============================================================================
+// add_goal_screen.dart - Add / Edit Financial Goal Screen
+// ==============================================================================
+// Dual-purpose form screen: used for both creating a new goal and editing an existing one.
+//
+// Create mode (existingGoal == null):
+//   - All fields are blank; the save button calls ApiService.createGoal()
+//
+// Edit mode (existingGoal != null):
+//   - Form is pre-filled from the existing goal's data
+//   - The save button calls ApiService.updateGoal()
+//   - The app bar title changes to "Edit Goal"
+//
+// Fields:
+//   - Goal Name (required)
+//   - Description (optional)
+//   - Target Amount in RM (required, number)
+//   - Deadline (date picker — must be in the future)
+//   - Category (chip selector: e.g., Emergency Fund, Travel, Education ...)
+//   - Priority (Low / Medium / High toggle buttons)
+//
+// On save success, Navigator.pop(context, true) returns 'true' to GoalsScreen
+// so it knows to refresh the goals list.
+// ==============================================================================
 
-import 'package:flutter/material.dart'; // Flutter UI toolkit
-import 'package:intl/intl.dart'; // Date formatting (e.g., "Mar 15, 2025")
+import 'package:flutter/material.dart';   // Flutter UI toolkit
+import 'package:intl/intl.dart';          // Date formatting (e.g., "Mar 15, 2025")
 import '../../services/api_service.dart'; // Backend API calls
-import '../../utils/colors.dart'; // AppColors constants
+import '../../utils/colors.dart';         // AppColors constants
 
-// AddGoalScreen is a StatefulWidget because form fields and selected values change over time
+// ==============================================================================
+// AddGoalScreen — StatefulWidget
+// ==============================================================================
+// StatefulWidget because it manages form text controllers, date selection,
+// category chip selection, priority selection, and the loading state.
+// ==============================================================================
 class AddGoalScreen extends StatefulWidget {
   // existingGoal is optional - if provided, the screen works in "edit" mode
   // Map<String, dynamic> is a dictionary type: keys are Strings, values can be anything

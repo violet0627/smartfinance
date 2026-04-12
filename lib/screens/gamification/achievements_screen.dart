@@ -1,14 +1,35 @@
-// achievements_screen.dart
-// This screen shows all achievements available in the app, both locked and unlocked.
-// Users can filter by difficulty (All/Easy/Medium/Hard/Expert).
-// Each achievement card shows a badge icon, description, XP reward, and progress bar.
+// ==============================================================================
+// achievements_screen.dart - Achievements & Leaderboard Screen
+// ==============================================================================
+// This screen has two tabs:
+//   Tab 1 — Achievements: shows all badges the user can earn, locked or unlocked.
+//            Each card shows a badge icon, description, XP reward, difficulty level,
+//            and a progress bar for locked achievements.
+//   Tab 2 — Leaderboard: shows top users ranked by total XP earned.
+//
+// Features:
+// - Difficulty filter chips (All / Easy / Medium / Hard / Expert)
+// - Pull-to-refresh on both tabs
+// - Gold / silver / bronze rank colours for top 3 leaderboard entries
+//
+// Usage: Navigated to from the dashboard Quick Actions grid.
+// ==============================================================================
 
-import 'package:flutter/material.dart'; // Flutter UI toolkit
-import '../../services/api_service.dart'; // Backend API calls
-import '../../models/gamification_model.dart'; // UserAchievement and Achievement data classes
-import '../../utils/colors.dart'; // AppColors constants
+import 'package:flutter/material.dart';          // For StatefulWidget, TabBar, LinearProgressIndicator, etc.
+import '../../services/api_service.dart';          // For getUserAchievements() and getLeaderboard() API calls
+import '../../models/gamification_model.dart';     // For UserAchievement and Achievement data classes
+import '../../utils/colors.dart';                  // For AppColors constants
 
-// AchievementsScreen is a StatefulWidget because data loads asynchronously and filter changes
+// ==============================================================================
+// AchievementsScreen - StatefulWidget
+// ==============================================================================
+// StatefulWidget because it manages:
+// - Achievement list loaded from the API (_achievements)
+// - Leaderboard data (_leaderboard)
+// - Loading and error states for both tabs
+// - The selected difficulty filter chip (_selectedDifficulty)
+// - A TabController for switching between the two tabs
+// ==============================================================================
 class AchievementsScreen extends StatefulWidget {
   const AchievementsScreen({super.key});
 
@@ -16,43 +37,84 @@ class AchievementsScreen extends StatefulWidget {
   State<AchievementsScreen> createState() => _AchievementsScreenState();
 }
 
-// _AchievementsScreenState uses SingleTickerProviderStateMixin so it can own a TabController
-// (which needs a TickerProvider for its animation).
+// ==============================================================================
+// "with SingleTickerProviderStateMixin" — What This Means
+// ==============================================================================
+// A "mixin" in Dart adds functionality to a class without inheritance.
+// SingleTickerProviderStateMixin adds a "ticker" — a signal that fires every
+// animation frame (60 times per second on most devices).
+//
+// TabController needs a ticker to animate the sliding tab indicator.
+// By using this mixin, the State class itself becomes the TickerProvider,
+// which is why we can pass `vsync: this` when creating the TabController.
+// (If this mixin were missing, creating TabController(vsync: this) would crash.)
+// ==============================================================================
 class _AchievementsScreenState extends State<AchievementsScreen>
     with SingleTickerProviderStateMixin {
-  List<UserAchievement> _achievements = []; // All achievements from the API
-  List<Map<String, dynamic>> _leaderboard = []; // Leaderboard entries from the API
-  bool _isLoading = true;     // True while fetching achievements
-  bool _leaderboardLoading = true; // True while fetching leaderboard
-  String _error = '';         // Holds error message; empty = no error
-  String _selectedDifficulty = 'all'; // Current difficulty filter
 
-  // TabController manages which tab is currently active (Achievements or Leaderboard)
+  List<UserAchievement> _achievements = [];        // All achievements fetched from the API
+  List<Map<String, dynamic>> _leaderboard = [];    // Leaderboard entries from the API
+  bool _isLoading = true;                          // True while fetching achievements
+  bool _leaderboardLoading = true;                 // True while fetching leaderboard
+  String _error = '';                              // Holds error message; empty string = no error
+  String _selectedDifficulty = 'all';              // Current difficulty filter ('all', 'easy', etc.)
+
+  // ==============================================================================
+  // TabController — Controls Which Tab Is Active
+  // ==============================================================================
+  // TabController.index = 0 means Tab 1 (Achievements) is active.
+  // TabController.index = 1 means Tab 2 (Leaderboard) is active.
+  // 'late' means this variable is guaranteed to be assigned before it's used —
+  // it's set in initState(), so Flutter knows it will never be null when read.
+  // ==============================================================================
   late TabController _tabController;
 
+  // ==============================================================================
+  // initState - Runs Once When the Widget Is Inserted Into the Widget Tree
+  // ==============================================================================
+  // This is where we set up the TabController and start fetching data.
+  // We must call super.initState() first — this initialises the parent State class.
+  // ==============================================================================
   @override
   void initState() {
-    super.initState();
-    // Create a TabController with 2 tabs, using this State as the TickerProvider
+    super.initState();                                      // Always call super first
+    // TabController(length: 2) means we have exactly 2 tabs.
+    // vsync: this passes the ticker from SingleTickerProviderStateMixin to the controller.
     _tabController = TabController(length: 2, vsync: this);
-    _loadAchievements();
-    _loadLeaderboard();
+    _loadAchievements();   // Start loading Tab 1 data
+    _loadLeaderboard();    // Start loading Tab 2 data (both run concurrently)
   }
 
+  // ==============================================================================
+  // dispose - Clean Up Resources When the Widget Is Removed From the Tree
+  // ==============================================================================
+  // dispose() is called when the user navigates away from this screen.
+  // We MUST dispose the TabController here to stop its animation ticker.
+  // If we forget, the ticker keeps firing 60 times/second after the screen is gone,
+  // which wastes battery and can cause "setState called on a disposed widget" errors.
+  // ==============================================================================
   @override
   void dispose() {
-    _tabController.dispose(); // Always dispose controllers to free resources
-    super.dispose();
+    _tabController.dispose();  // Stop the tab animation ticker and free memory
+    super.dispose();           // Always call super.dispose() last
   }
 
-  // _loadAchievements fetches all achievements for the current user from the backend
+  // ==============================================================================
+  // _loadAchievements - Fetch All Achievements for the Current User
+  // ==============================================================================
+  // Calls GET /api/gamification/user/<id>/achievements
+  // The response merges the master achievement list with the user's progress,
+  // so we get locked/unlocked status and progress percentage for every achievement.
+  // ==============================================================================
   Future<void> _loadAchievements() async {
+    // Reset to loading state and clear any previous error message
     setState(() {
       _isLoading = true;
       _error = '';
     });
 
     try {
+      // --- Step 1: Get the current user's ID from SharedPreferences ---
       final userId = await ApiService.getCurrentUserId();
       if (userId == null) {
         setState(() {
@@ -62,19 +124,25 @@ class _AchievementsScreenState extends State<AchievementsScreen>
         return;
       }
 
+      // --- Step 2: Call the API ---
       final result = await ApiService.getUserAchievements(userId);
 
       if (result['success']) {
+        // --- Step 3: Parse the response ---
+        // result['userAchievements'] is a raw JSON List (List<dynamic>).
+        // We cast it to List, then call .map() to convert each item (a JSON Map)
+        // into a typed UserAchievement object using its fromJson factory constructor.
+        // .toList() converts the lazy Iterable returned by .map() into an actual List.
         final achievementsList = (result['userAchievements'] as List)
             .map((json) => UserAchievement.fromJson(json))
             .toList();
         setState(() {
-          _achievements = achievementsList;
+          _achievements = achievementsList;   // Store achievements and trigger rebuild
           _isLoading = false;
         });
       } else {
         setState(() {
-          _error = result['error'] ?? 'Failed to load achievements';
+          _error = result['error'] ?? 'Failed to load achievements'; // '??' returns right side if left is null
           _isLoading = false;
         });
       }
@@ -86,14 +154,24 @@ class _AchievementsScreenState extends State<AchievementsScreen>
     }
   }
 
-  // _loadLeaderboard fetches the global XP leaderboard from the backend
+  // ==============================================================================
+  // _loadLeaderboard - Fetch the Global XP Leaderboard
+  // ==============================================================================
+  // Calls GET /api/gamification/leaderboard
+  // Returns the top 10 users ranked by total XP, with their level and display name.
+  // Uses List<Map<String, dynamic>> because the leaderboard JSON doesn't have its
+  // own typed model — a Map is sufficient for the simple list display.
+  // ==============================================================================
   Future<void> _loadLeaderboard() async {
     setState(() => _leaderboardLoading = true);
     try {
       final result = await ApiService.getLeaderboard();
       if (result['success']) {
-        // leaderboard is a List of Maps with user name, level, totalXp, rank
         setState(() {
+          // List<Map<String, dynamic>>.from() converts the raw List<dynamic> from JSON
+          // into a typed List<Map<String, dynamic>> so we can safely access keys like
+          // entry['rank'], entry['totalXp'], etc. without runtime type errors.
+          // '?? []' returns an empty list if 'leaderboard' key is null (safe fallback).
           _leaderboard = List<Map<String, dynamic>>.from(result['leaderboard'] ?? []);
           _leaderboardLoading = false;
         });
@@ -105,8 +183,16 @@ class _AchievementsScreenState extends State<AchievementsScreen>
     }
   }
 
-  // _filteredAchievements is a computed getter - a property that runs code to return a value
-  // It returns a subset of _achievements based on the selected difficulty filter
+  // ==============================================================================
+  // _filteredAchievements — Computed Getter
+  // ==============================================================================
+  // A Dart "getter" is a property that runs code to produce its value.
+  // Instead of storing a pre-filtered list, this is computed fresh every time
+  // the widget rebuilds — so it always reflects the current _selectedDifficulty.
+  //
+  // Syntax: `List<UserAchievement> get _filteredAchievements { ... }`
+  // Usage:  `_filteredAchievements.length`  (no parentheses — reads like a field)
+  // ==============================================================================
   List<UserAchievement> get _filteredAchievements {
     if (_selectedDifficulty == 'all') {
       return _achievements; // No filter: return everything
@@ -415,7 +501,12 @@ class _AchievementsScreenState extends State<AchievementsScreen>
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  // _buildLeaderboard builds the ranked leaderboard tab content
+  // ==============================================================================
+  // _buildLeaderboard — Tab 2: Ranked Leaderboard Widget
+  // ==============================================================================
+  // Returns the full leaderboard list. Each row shows rank, name, level, and XP.
+  // Top 3 entries use gold / silver / bronze colours defined as hex Color values.
+  // ==============================================================================
   Widget _buildLeaderboard() {
     if (_leaderboardLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -494,6 +585,13 @@ class _AchievementsScreenState extends State<AchievementsScreen>
     );
   }
 
+  // ==============================================================================
+  // build — Root Widget Tree for This Screen
+  // ==============================================================================
+  // The Scaffold has an AppBar with a TabBar attached to its `bottom` property.
+  // TabBarView in the body renders one child per tab. Both are bound to the same
+  // _tabController so tapping a tab and swiping the body stay in sync.
+  // ==============================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -502,7 +600,9 @@ class _AchievementsScreenState extends State<AchievementsScreen>
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
-        // TabBar sits at the bottom of the AppBar, giving two tabs
+        // TabBar at the bottom of AppBar — this is a standard Flutter pattern for
+        // tabbed screens. The AppBar's `bottom` property accepts PreferredSizeWidget,
+        // and TabBar implements that interface.
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,     // White underline under active tab

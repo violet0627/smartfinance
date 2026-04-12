@@ -1,15 +1,43 @@
-// add_investment_screen.dart
-// This screen lets users add a new investment to their portfolio.
-// Users select an asset type from a grid, then fill in details like name, quantity, and price.
+// ==============================================================================
+// add_investment_screen.dart - Add New Investment Screen
+// ==============================================================================
+// Lets users record a new investment in their portfolio.
+//
+// Two-section form:
+//   1. Asset Type Grid: a visual grid of all 10 supported asset types
+//      (Stocks, Cryptocurrency, Bonds, Mutual Funds, ETF, Real Estate,
+//       Commodities, Fixed Deposit, Unit Trust, Other)
+//      — tapping a tile selects it and shows the detail fields
+//
+//   2. Detail Fields (shown after selecting an asset type):
+//      - Asset Name (required): e.g., "Apple Inc." or "Bitcoin"
+//      - Stock Symbol (optional): e.g., "AAPL" — useful for stocks/ETFs
+//      - Quantity (required): how many units purchased
+//      - Purchase Price (required): price per unit at the time of purchase
+//      - Current Price (optional): today's market price — used to calculate P&L
+//      - Purchase Date: date picker defaulting to today
+//      - Notes (optional): any extra information
+//
+// On save, calls ApiService.addInvestment() and pops with result == true
+// so PortfolioOverviewScreen knows to refresh.
+// ==============================================================================
 
-import 'package:flutter/material.dart'; // Flutter UI toolkit
-import 'package:intl/intl.dart'; // Date formatting (e.g., "15 Mar 2024")
-import '../../models/investment_model.dart'; // InvestmentModel data class
-import '../../services/api_service.dart'; // Backend API calls
-import '../../utils/colors.dart'; // AppColors constants
-import '../../utils/investment_types.dart'; // InvestmentTypes utility with icons/colors per asset type
+import 'package:flutter/material.dart';        // Flutter UI toolkit
+import 'package:intl/intl.dart';               // Date formatting (e.g., "15 Mar 2024")
+import '../../models/investment_model.dart';    // InvestmentModel data class
+import '../../services/api_service.dart';       // Backend API calls
+import '../../utils/colors.dart';              // AppColors constants
+import '../../utils/investment_types.dart';    // InvestmentTypes utility with icons/colors per asset type
 
-// AddInvestmentScreen is a StatefulWidget because form data and selected type change over time
+// ==============================================================================
+// AddInvestmentScreen — StatefulWidget
+// ==============================================================================
+// StatefulWidget because it manages:
+//   - _selectedType: which asset type tile is highlighted
+//   - Text controllers: asset name, symbol, quantity, prices, notes
+//   - _purchaseDate: chosen in a date picker
+//   - _isSubmitting: disables the Save button while the API call is in progress
+// ==============================================================================
 class AddInvestmentScreen extends StatefulWidget {
   const AddInvestmentScreen({super.key});
 

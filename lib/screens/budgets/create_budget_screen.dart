@@ -1,17 +1,45 @@
-// create_budget_screen.dart
-// This screen handles both creating a new monthly budget and editing an existing one.
-// The user sets a total budget amount, then allocates portions to each spending category.
-// The progress bar shows how much of the total budget has been allocated vs. what remains.
-// The "Distribute Evenly" action splits the total equally across all categories.
+// ==============================================================================
+// create_budget_screen.dart - Create / Edit Monthly Budget Screen
+// ==============================================================================
+// Dual-purpose form: creating a new budget OR editing the current month's budget.
+//
+// Create mode (budget == null):
+//   - Month defaults to the current month
+//   - Category allocations all start at 0
+//   - Save calls ApiService.createBudget()
+//
+// Edit mode (budget != null):
+//   - Total and per-category amounts are pre-filled from the existing BudgetModel
+//   - Save calls ApiService.updateBudget()
+//
+// How allocation works:
+//   - User enters a Total Budget amount (e.g., RM 3000)
+//   - User types a RM amount for each expense category
+//   - A progress bar and "Allocated / Total" text update in real time
+//   - If total exceeds the budget, an over-allocation warning turns red
+//   - "Distribute Evenly" button divides the total equally across all categories
+//
+// On save success, Navigator.pop(context, true) signals BudgetOverviewScreen to refresh.
+// ==============================================================================
 
-import 'package:flutter/material.dart'; // Flutter UI toolkit
-import 'package:intl/intl.dart'; // Date formatting (e.g., "March 2024")
-import '../../models/budget_model.dart'; // BudgetModel data class
-import '../../services/api_service.dart'; // Backend API calls
-import '../../utils/categories.dart'; // TransactionCategories utility (icons, colors per category)
-import '../../utils/colors.dart'; // AppColors constants
+import 'package:flutter/material.dart';     // Flutter UI toolkit
+import 'package:intl/intl.dart';            // Date formatting (e.g., "March 2024")
+import '../../models/budget_model.dart';    // BudgetModel data class
+import '../../services/api_service.dart';   // Backend API calls
+import '../../utils/categories.dart';       // TransactionCategories utility (icons, colors per category)
+import '../../utils/colors.dart';           // AppColors constants
 
-// CreateBudgetScreen handles both creating and editing budgets
+// ==============================================================================
+// CreateBudgetScreen — StatefulWidget
+// ==============================================================================
+// StatefulWidget because it manages:
+//   - _formKey: validates the total budget field
+//   - _totalBudgetController: the main budget amount input
+//   - _selectedMonth: the month this budget covers (month picker)
+//   - _categoryAllocations: Map<categoryName, allocatedAmount> — one entry per category
+//   - _categoryControllers: Map<categoryName, TextEditingController> — one per input field
+//   - _isSubmitting: disables the Save button while API call is in progress
+// ==============================================================================
 class CreateBudgetScreen extends StatefulWidget {
   final BudgetModel? budget; // Existing budget for editing; null = creating a new one
 

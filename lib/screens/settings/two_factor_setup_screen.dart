@@ -1,17 +1,40 @@
-// two_factor_setup_screen.dart
-// This screen guides users through a 2-step process to enable Two-Factor Authentication (2FA).
-// Step 1: Display a QR code (and secret key) for the user to scan with an authenticator app.
-// Step 2: Ask the user to enter the 6-digit code from the app to verify it works.
-// On success, navigates to BackupCodesScreen to display the one-time backup codes.
+// ==============================================================================
+// two_factor_setup_screen.dart - Two-Factor Authentication Setup Screen
+// ==============================================================================
+// Guides the user through a 2-step flow to enable 2FA on their account.
+//
+// Step 1 — Scan QR Code:
+//   - Calls /api/auth/2fa/setup → receives a base64-encoded QR code image + plain-text secret
+//   - The QR code encodes a TOTP URI that authenticator apps (Google Authenticator,
+//     Authy, etc.) can scan to add this account
+//   - The secret key is shown as text for manual entry if scanning doesn't work
+//   - "Copy" button copies the secret to the clipboard
+//
+// Step 2 — Verify Code:
+//   - User enters the 6-digit code shown in their authenticator app
+//   - Calls /api/auth/2fa/verify-setup → if correct, 2FA is enabled on the account
+//   - On success, navigates to BackupCodesScreen (shows the one-time backup codes)
+//
+// dart:convert is imported because the QR code from the API is a base64 string — we
+// decode it with base64Decode to get raw bytes, then display it as an Image.memory widget.
+// ==============================================================================
 
-import 'package:flutter/material.dart'; // Flutter UI toolkit
-import 'package:flutter/services.dart'; // Clipboard for copying the secret key
-import 'dart:convert'; // Provides base64Decode for converting QR code data to image bytes
-import '../../services/api_service.dart'; // Backend API calls for 2FA setup
-import '../../utils/colors.dart'; // AppColors constants
-import 'backup_codes_screen.dart'; // Next screen after successful 2FA verification
+import 'package:flutter/material.dart';     // Flutter UI toolkit
+import 'package:flutter/services.dart';     // Clipboard for copying the secret key
+import 'dart:convert';                       // Provides base64Decode for converting QR code data to image bytes
+import '../../services/api_service.dart';   // Backend API calls for 2FA setup
+import '../../utils/colors.dart';           // AppColors constants
+import 'backup_codes_screen.dart';          // Next screen after successful 2FA verification
 
-// TwoFactorSetupScreen is a StatefulWidget because it manages a 2-step process with loading states
+// ==============================================================================
+// TwoFactorSetupScreen — StatefulWidget
+// ==============================================================================
+// StatefulWidget because it manages a multi-step flow with several loading states:
+//   - _isLoading: true while fetching the QR code from the backend
+//   - _isVerifying: true while the verification API call is in progress
+//   - _qrCode / _secret: data received from the setup endpoint
+//   - _backupCodes: returned by the verify endpoint on success
+// ==============================================================================
 class TwoFactorSetupScreen extends StatefulWidget {
   const TwoFactorSetupScreen({super.key});
 

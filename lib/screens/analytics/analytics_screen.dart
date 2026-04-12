@@ -1,28 +1,47 @@
-// analytics_screen.dart
-// This screen shows visual charts and statistics about the user's finances over a time range.
-// It loads all transactions and the current budget, then delegates to chart widgets and
-// the AnalyticsService utility to calculate and display:
-// - Time range selector (1M, 3M, 6M, 1Y, ALL)
-// - Summary cards (Total Income, Total Spent, Net Savings, Savings Rate)
-// - Spending Trend chart (line chart over time)
-// - Income vs Expense bar chart (monthly comparison)
-// - Category Pie Chart (expense breakdown by category)
-// - Budget vs Actual comparison chart (if budget exists)
-// - Top 5 spending categories list
+// ==============================================================================
+// analytics_screen.dart - Spending Analytics & Charts Screen
+// ==============================================================================
+// This screen gives users a visual overview of their finances for a chosen period.
+//
+// What it shows:
+// - Time range selector: 1M / 3M / 6M / 1Y / ALL
+// - Summary cards: Total Income, Total Spent, Net Savings, Savings Rate
+// - Spending Trend Line Chart — spending over time
+// - Income vs Expense Bar Chart — monthly grouped comparison
+// - Category Pie Chart — expense breakdown by category (tappable slices)
+// - Budget vs Actual Comparison — only shown when a budget is active
+// - Top 5 Spending Categories — ranked list
+//
+// Architecture:
+// All chart calculations are delegated to AnalyticsService (analytics_service.dart).
+// AnalyticsScreen only handles API fetching and UI composition — it passes raw data
+// to each chart widget, keeping the logic and UI separate.
+//
+// Each chart is a separate reusable widget in widgets/charts/ — this keeps the
+// build() method readable and each chart independently testable.
+// ==============================================================================
 
-import 'package:flutter/material.dart'; // Flutter UI toolkit
-import '../../models/transaction_model.dart'; // TransactionModel data class
-import '../../models/budget_model.dart'; // BudgetModel data class
-import '../../services/api_service.dart'; // Backend API calls
-import '../../services/analytics_service.dart'; // Business logic for analytics calculations
-import '../../utils/colors.dart'; // AppColors constants
-// Chart widgets (each chart is a separate reusable widget):
-import '../../widgets/charts/spending_trend_chart.dart';
-import '../../widgets/charts/category_pie_chart.dart';
-import '../../widgets/charts/income_expense_bar_chart.dart';
-import '../../widgets/charts/budget_comparison_chart.dart';
+import 'package:flutter/material.dart';                          // For Scaffold, RefreshIndicator, etc.
+import '../../models/transaction_model.dart';                    // For TransactionModel data class
+import '../../models/budget_model.dart';                         // For BudgetModel data class
+import '../../services/api_service.dart';                        // For API calls
+import '../../services/analytics_service.dart';                  // For chart data calculation logic
+import '../../utils/colors.dart';                                 // For AppColors constants
+import '../../widgets/charts/spending_trend_chart.dart';          // Line chart widget
+import '../../widgets/charts/category_pie_chart.dart';            // Pie chart widget
+import '../../widgets/charts/income_expense_bar_chart.dart';      // Bar chart widget
+import '../../widgets/charts/budget_comparison_chart.dart';       // Budget comparison chart widget
 
-// AnalyticsScreen is a StatefulWidget because data loads dynamically and time range can change
+// ==============================================================================
+// AnalyticsScreen — StatefulWidget
+// ==============================================================================
+// StatefulWidget because it manages:
+// - _selectedRange: the active time period filter
+// - _transactions: the list fetched from the API
+// - _currentBudget: the active budget (may be null)
+// - _isLoading: controls the loading spinner
+// - _startDate / _endDate: computed from _selectedRange, passed to chart widgets
+// ==============================================================================
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
 
@@ -31,24 +50,36 @@ class AnalyticsScreen extends StatefulWidget {
 }
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
-  String _selectedRange = '6M'; // Default time range: last 6 months
-  List<TransactionModel> _transactions = []; // All transactions for the user
-  BudgetModel? _currentBudget;              // Current budget (null if no budget set)
-  bool _isLoading = true;                   // True while fetching data
+  String _selectedRange = '6M';              // Default time range: last 6 months
+  List<TransactionModel> _transactions = []; // All transactions fetched from the API
+  BudgetModel? _currentBudget;               // Current month's budget (null if no budget set)
+  bool _isLoading = true;                    // True while data is loading
 
-  // Date range derived from _selectedRange - used to filter transactions for charts
+  // _startDate and _endDate are derived from _selectedRange.
+  // They are passed to AnalyticsService methods to filter transactions to the chosen period.
+  // Initialised to DateTime.now() — overwritten in _loadData() before first use.
   DateTime _startDate = DateTime.now();
   DateTime _endDate = DateTime.now();
 
+  // ==============================================================================
+  // initState - Called Once When the Widget Is First Built
+  // ==============================================================================
   @override
   void initState() {
-    super.initState();
-    _loadData(); // Fetch data when screen opens
+    super.initState();    // Always call super first
+    _loadData();          // Fetch transactions and budget on screen open
   }
 
-  // _loadData fetches transactions and budget for the selected time range
+  // ==============================================================================
+  // _loadData - Fetch All Data Needed by the Charts
+  // ==============================================================================
+  // Called on first load and whenever the user changes the time range.
+  // Sequential (not parallel) because:
+  // 1. Both calls are fast enough that sequential is acceptable.
+  // 2. The budget call failing should NOT block the transaction charts.
+  // ==============================================================================
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    setState(() => _isLoading = true);   // Show spinner
 
     final userId = await ApiService.getCurrentUserId();
     if (userId == null) return;
@@ -82,14 +113,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     setState(() => _isLoading = false);
   }
 
-  // _changeRange updates the selected time range and reloads data
+  // ==============================================================================
+  // _changeRange - Update the Selected Time Range and Refresh All Charts
+  // ==============================================================================
+  // Called when the user taps a range button (1M / 3M / 6M / 1Y / ALL).
+  // setState() updates _selectedRange so the button highlights correctly,
+  // then _loadData() re-fetches transactions and recomputes all chart data
+  // for the new date window.
+  // ==============================================================================
   void _changeRange(String range) {
     setState(() {
-      _selectedRange = range;
+      _selectedRange = range;   // Highlight the tapped button
     });
-    _loadData(); // Reload with new date range
+    _loadData();                // Re-fetch and re-render all charts
   }
 
+  // ==============================================================================
+  // build - Assemble the Full Analytics Screen
+  // ==============================================================================
+  // While loading: shows a centered spinner.
+  // After loading: shows a scrollable column of charts wrapped in RefreshIndicator
+  // so the user can pull down to refresh all data.
+  //
+  // The charts are built by private helpers (_buildTimeRangeSelector, _buildSummaryCards,
+  // etc.) to keep this method readable. Each helper either returns a chart widget or
+  // _buildEmptyChartState() when there is no data.
+  // ==============================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(

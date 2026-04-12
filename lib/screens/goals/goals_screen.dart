@@ -1,16 +1,38 @@
-// goals_screen.dart
-// This screen shows all financial goals (e.g., save for a house, build emergency fund).
-// It shows a summary card at the top, filter chips (All/Active/Completed), and goal cards.
-// Each goal card has a progress bar, amounts, deadline, priority badge, and contribute button.
-// Swiping left on a goal card deletes it.
+// ==============================================================================
+// goals_screen.dart - Financial Goals Screen
+// ==============================================================================
+// Shows all user-created financial goals (e.g., "Save RM 10,000 for car",
+// "Build 3-month emergency fund").
+//
+// What it shows:
+//   - Goals Overview summary card: active count, completed count, overall progress %,
+//     total saved vs total target
+//   - Filter chips: All / Active / Completed
+//   - Goal cards with: progress bar, amounts, deadline, priority badge,
+//     "Add Contribution" button, swipe-to-delete
+//
+// Key interactions:
+//   - Tap a goal card → navigate to AddGoalScreen (pre-filled for editing)
+//   - "Add Contribution" → StatefulBuilder dialog updates goal's saved amount
+//   - Swipe left → confirmDismiss dialog → _deleteGoal API call
+//   - Filter chip → setState + _loadData (reload with status filter)
+// ==============================================================================
 
-import 'package:flutter/material.dart'; // Flutter UI toolkit
-import 'package:intl/intl.dart'; // NumberFormat for comma-separated currency, DateFormat for dates
-import '../../services/api_service.dart'; // Backend API calls
-import '../../utils/colors.dart'; // AppColors constants
-import 'add_goal_screen.dart'; // Screen for adding/editing goals
+import 'package:flutter/material.dart';           // Flutter UI toolkit
+import 'package:intl/intl.dart';                  // NumberFormat for comma-separated currency, DateFormat for dates
+import '../../services/api_service.dart';          // Backend API calls
+import '../../utils/colors.dart';                  // AppColors constants
+import 'add_goal_screen.dart';                     // Screen for adding/editing goals
 
-// GoalsScreen is a StatefulWidget because filter selection, data, and loading state change
+// ==============================================================================
+// GoalsScreen — StatefulWidget
+// ==============================================================================
+// StatefulWidget because it manages:
+//   - _goals: list of goal maps loaded from the API
+//   - _summary: overview stats (active/completed counts, amounts, overall progress)
+//   - _isLoading: controls the loading spinner
+//   - _selectedFilter: which filter chip is active ('all', 'active', 'completed')
+// ==============================================================================
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
 
@@ -24,13 +46,22 @@ class _GoalsScreenState extends State<GoalsScreen> {
   bool _isLoading = true;                 // True while loading data
   String _selectedFilter = 'all';         // 'all', 'active', or 'completed'
 
+  // ==============================================================================
+  // initState - Called Once When the Widget Is First Inserted into the Tree
+  // ==============================================================================
   @override
   void initState() {
-    super.initState();
-    _loadData(); // Load goals and summary when screen opens
+    super.initState();    // Always call super first
+    _loadData();          // Fetch goals and summary on screen open
   }
 
-  // _loadData fetches goals and the summary in parallel using Future.wait
+  // ==============================================================================
+  // _loadData - Fetch Goals List and Summary Stats in Parallel
+  // ==============================================================================
+  // Uses Future.wait([...]) to run getUserGoals and getGoalsSummary at the same time.
+  // This is faster than awaiting them one by one.
+  // When _selectedFilter is 'all', status is passed as null (backend returns all goals).
+  // ==============================================================================
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
@@ -241,6 +272,19 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
+  // ==============================================================================
+  // build - Assemble the Goals Screen
+  // ==============================================================================
+  // Two body states:
+  //   1. _isLoading == true  → centered spinner
+  //   2. Loaded              → RefreshIndicator > ListView with:
+  //        - Summary card (goals overview)
+  //        - Filter chips (All / Active / Completed)
+  //        - Goal cards list, or empty state if _goals is empty
+  //
+  // The ListView (not SingleChildScrollView) is used here because each goal card
+  // is a Dismissible — ListView handles swipe-to-dismiss more naturally.
+  // ==============================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
