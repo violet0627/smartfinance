@@ -1,691 +1,719 @@
 # SmartFinance — Final Presentation Script
-# Estimated speaking time: ~45–50 minutes + Q&A
+# Target speaking time: ~40 minutes + 20 minutes Q&A = 1 hour total
 
 ---
 ## HOW TO USE THIS SCRIPT
-- Text in **[square brackets]** = action notes, not spoken
-- Speak slowly and clearly — don't rush
-- It's okay to pause. A short pause sounds confident, not nervous.
-- If you forget a line, just say "Let me move on to the next part" — it's fine.
+- Text in [square brackets] = action to do — not spoken
+- Speak slowly. One sentence at a time. Pause between sections.
+- If you lose your place, say "let me move on to the next part" — it's fine.
+- The database section is OPTIONAL — only include it if you plan to show the ERD or architecture diagram.
 ---
 
 ---
-# PART 1 — INTRODUCTION (3 minutes)
+# PART 1 — INTRODUCTION (2 minutes)
 ---
 
-Good morning / afternoon.
+Good morning / good afternoon.
 
-My name is [your name], and today I'll be presenting my Final Year Project.
+My name is [your name], and today I'm presenting my Final Year Project — **SmartFinance**.
 
-The project is called **SmartFinance**.
+SmartFinance is a mobile app for personal finance management.
 
-It's a mobile app that helps young Malaysians manage their personal finances.
+It's designed for young Malaysians who want to track their money, set budgets, save toward goals, and monitor investments.
 
-The app covers things like — tracking income and expenses, setting budgets, saving toward goals, monitoring investments, and viewing financial reports.
+What makes it different is the **gamification system**.
 
-On top of that, I added a **gamification system** — so the app gives users XP points, levels, achievement badges, and daily streaks, just like a game.
+The app gives users XP points, levels, achievement badges, and daily streaks — like a game.
 
-The idea is to make financial management more fun and motivating — so people actually stick with it.
-
----
-# PART 2 — PROBLEM & MOTIVATION (5 minutes)
----
-
-So, why did I build this?
-
-The problem is that many young Malaysians don't manage their money well.
-
-Studies show that financial literacy among Malaysian youth is quite low.
-
-And the existing apps on the market — most of them are either too complicated, too expensive, or designed for Western users — not for Malaysians.
-
-So people either don't use any app at all, or they try one and give up after a few weeks.
-
-That's the core problem I wanted to solve.
-
-I wanted to build something that is — simple enough for anyone to use, and engaging enough that they actually keep using it.
-
-That's where the gamification comes in.
-
-Research shows that when people get rewards, progress bars, and achievement badges — they're more likely to continue a habit.
-
-So I applied that same idea to personal finance.
+The goal is to make financial management more fun, so people actually keep using it.
 
 ---
-# PART 3 — TECHNOLOGY STACK (5 minutes)
+# PART 2 — PROBLEM AND MOTIVATION (3 minutes)
 ---
 
-Now let me talk about the technologies I used to build this app.
+So why did I build this?
 
-**[Show architecture diagram if available]**
+Many young Malaysians don't manage their money well.
 
-SmartFinance has three main parts — we call this a **three-tier architecture**.
+Financial literacy among Malaysian youth is quite low.
 
-**First — the Frontend**, which is what the user sees and interacts with.
-I used **Flutter** for this.
-Flutter is a framework made by Google.
-It lets me write one codebase — and it automatically works on both Android and iOS.
-I used the **Dart** programming language for Flutter.
+And most existing finance apps are either too complicated, too expensive, or designed for Western users — not Malaysians.
 
-**Second — the Backend**, which is the server that handles all the logic.
-I used **Python Flask** for this.
-Flask is a lightweight web framework.
-It receives requests from the app, processes them, and sends back a response.
-I designed the backend as a **REST API** — which means the app communicates with the server by sending HTTP requests, like GET or POST, and receives JSON data back.
+So people either don't use any app, or they try one and give up quickly.
 
-**Third — the Database**, which stores all the data.
-I used **MySQL** for this.
-MySQL is a relational database — it stores data in tables, and the tables are linked together.
+I wanted to build something simple enough for anyone to use — and engaging enough that they actually stick with it.
+
+That's the whole idea behind combining finance management with gamification.
+
+Research shows that rewards, progress bars, and badges help people build habits.
+
+So I applied that to personal finance.
+
+---
+# PART 3 — TECHNOLOGY STACK (3 minutes)
+---
+
+Let me briefly explain the technologies I used.
+
+**[Show architecture diagram if available — otherwise just speak]**
+
+SmartFinance has three layers.
+
+**First — the Frontend.**
+I used **Flutter**, a framework by Google.
+Flutter lets me write one codebase that works on both Android and iOS.
+
+**Second — the Backend.**
+I used **Python Flask**.
+Flask is a lightweight web server.
+It handles all the logic — receiving requests from the app, processing them, and sending back a response.
+I built it as a **REST API** — meaning the app communicates with the server using standard HTTP requests like GET and POST, and gets back JSON data.
+
+**Third — the Database.**
+I used **MySQL**.
 My database has **16 tables** in total.
-I used **SQLAlchemy** to connect Flask to MySQL.
-SQLAlchemy is an **ORM** — which means "Object Relational Mapper".
-Instead of writing raw SQL queries, I define Python classes, and SQLAlchemy handles the database operations for me.
+I used **SQLAlchemy** as the ORM — which means instead of writing raw SQL, I write Python classes and SQLAlchemy handles the database for me.
 
 ---
 # PART 4 — SYSTEM FEATURES (25 minutes)
 ---
 
-Now I'll walk through all the features of the app.
+Now let me show you the app.
 
 ---
 
-## 4.1 — Authentication
+## 4.1 — Registration and Login
 
-**[Show login screen]**
+**[Show the login screen on the emulator]**
 
-When users first open the app, they see the **login screen**.
+This is the **login screen**.
 
-To register, the user fills in their name, email, phone number, and a password.
+Let me show the registration first.
 
-For security, the password must be at least 8 characters, and it must contain uppercase letters, lowercase letters, and a special character.
-This is enforced on the server side — so it can't be bypassed.
+**[Tap Create Account]**
 
-The password is never stored as plain text.
-I use a library called **bcrypt** to hash the password before saving it.
-Hashing means the password is converted into a scrambled string that can't be reversed.
-So even if someone looks at the database, they can't see the real password.
+The user fills in their name, email, phone number, and a password.
 
-After registration, the user gets a verification email.
-They need to click the link in the email to confirm their email address.
-This makes sure the email actually belongs to them.
+The password rules are enforced **on the server side** — at least 8 characters, uppercase, lowercase, and a special character.
 
-When the user logs in, the server checks the email and the password.
-If they match, the server returns a **JWT** — a JSON Web Token.
+The password is never saved as plain text.
+
+I use **bcrypt** to hash it before storing.
+
+Hashing converts the password into a scrambled string that can't be reversed.
+
+So even if someone accesses the database, they can't see the real password.
+
+After registering, the user gets a **verification email**.
+
+They click the link to confirm their email address.
+
+**[Go back to login, log in with test account]**
+
+When logging in, the server checks the email and password.
+
+If they match, it returns a **JWT — a JSON Web Token**.
 
 JWT is basically a digital key.
-The app stores it locally, and it attaches this key to every future request.
-The server checks the key to confirm the user is who they say they are.
-The key expires after a short time — so if someone steals it, it becomes useless quickly.
+
+The app stores it and attaches it to every future request.
+
+The server uses it to confirm who the user is.
+
+The token has an expiry time — so if someone steals it, it becomes useless quickly.
 
 ---
 
-## 4.2 — Two-Factor Authentication (2FA)
+## 4.2 — Two-Factor Authentication
 
-**[Show 2FA setup screen]**
+**[Navigate to Settings → Security → 2FA]**
 
-I also built **Two-Factor Authentication**, or 2FA.
+This is the **2FA setup screen**.
 
-2FA adds an extra security step after the password.
+When the user enables 2FA, the server generates a secret key and shows it as a **QR code**.
 
-When users enable it, the server generates a **secret key** and turns it into a **QR code**.
-The user scans that QR code with an authenticator app — like Google Authenticator.
+The user scans it with an authenticator app — like Google Authenticator.
 
-From that point on, every time they log in, after entering their password — they also need to enter a 6-digit code from the authenticator app.
-That code changes every 30 seconds.
-This is called **TOTP** — Time-based One-Time Password.
+After that, every login has two steps.
 
-The standard I follow is called **RFC 6238** — it's the same standard used by Google, Facebook, and most banks.
-I use a Python library called **pyotp** to generate and verify these codes.
-
-I also generate **10 backup codes** when 2FA is set up.
-These backup codes are for situations where the user loses their phone.
-They can use one of these codes instead of the 6-digit code.
-The backup codes are hashed with bcrypt before being stored — so they're secure too.
-
-If 2FA is enabled — the login flow becomes two steps.
 Step 1 — enter email and password.
-Step 2 — enter the 6-digit TOTP code.
-If the code is wrong, the session is rejected.
+
+Step 2 — enter a **6-digit code** from the authenticator app.
+
+That code changes every 30 seconds.
+
+This is called **TOTP — Time-based One-Time Password**.
+
+I use a Python library called **pyotp** which follows the **RFC 6238** standard — the same standard used by Google and most banks.
+
+I also generate **10 backup codes** during setup.
+
+These are one-time codes the user can use if they lose their phone.
+
+The backup codes are also hashed with bcrypt before being stored.
 
 ---
 
 ## 4.3 — Dashboard
 
-**[Show dashboard screen]**
+**[Navigate to the main dashboard]**
 
-After logging in, the user lands on the **main dashboard**.
+This is the **main dashboard**.
 
-The dashboard shows a summary of their current financial situation.
-It shows total income, total expenses, and the net balance for the current month.
+It shows the current month's total income, total expenses, and net balance.
 
-There's also a compact **budget summary card** at the bottom.
-If any budget category is overspent, it shows a red warning — so the user is alerted immediately without needing to navigate anywhere.
+There's also a **budget summary card** — if any category is over budget, it shows a red warning here immediately.
 
-The dashboard also shows the **gamification strip** — current level, XP points, and the daily activity streak.
-This gives the user a quick sense of progress every time they open the app.
+And the **gamification strip** at the bottom shows the user's current level, XP, and daily streak.
 
 ---
 
-## 4.4 — Transactions
+## 4.4 — Transactions and Recurring Transactions
 
-**[Show add transaction screen]**
+**[Tap the add transaction button]**
 
-The transaction module is the core of the app.
+This is the **Add Transaction screen**.
 
-The user can add two types: **income** or **expense**.
+The user can add **income** or **expense** — they toggle between them here.
 
-They enter the amount, select a category from a visual icon grid — like Food, Transport, Shopping, Bills — and pick a date.
+They enter the amount, pick a category from the icon grid, and select a date.
 
-When the user types a description — the app runs a **keyword analysis algorithm**.
-This automatically suggests a category based on the words they typed.
-For example, if they type "mamak lunch" — the system suggests the Food category.
-If the confidence score is above 0.7 — the app highlights the suggested category.
-But the user can always override it.
+When they type a description, the app runs a **keyword analysis** to suggest a category automatically.
 
-The **transaction history** screen shows all past transactions.
-There's a **search bar** at the top.
-There are also **filter chips** to filter by type — income or expense — or by category.
+For example — if they type "lunch at mamak", it suggests Food.
 
----
+The confidence threshold is 0.7 — if the algorithm is more than 70% sure, it highlights the suggested category.
 
-## 4.5 — Recurring Transactions
+The user can always pick a different one.
 
-**[Show recurring transactions screen]**
+**[Navigate to Transaction History]**
 
-Some transactions happen on a regular schedule — like monthly rent or a weekly salary.
+The **Transaction History** screen shows all past transactions.
 
-Instead of manually adding them every time, users can create a **recurring transaction**.
+There's a **search bar** at the top, and **filter chips** to filter by income, expense, or category.
 
-They set the amount, category, and frequency — which can be daily, weekly, monthly, or yearly.
+**[Navigate to Recurring Transactions]**
 
-The backend automatically checks the **NextExecution** date.
-When that date arrives, the system creates the real transaction record and advances the NextExecution date by one period.
+For transactions that repeat regularly — like monthly rent — the user can set up a **Recurring Transaction**.
 
-Users can also **pause** a recurring transaction — for example if they cancel a subscription.
-Paused transactions are skipped until the user resumes them.
+They choose a frequency — daily, weekly, monthly, or yearly.
+
+The backend checks the **NextExecution** date automatically.
+
+When that date arrives, it creates the real transaction and advances the date to the next period.
+
+Users can also **pause** a recurring transaction if they no longer need it.
 
 ---
 
-## 4.6 — Budgets
+## 4.5 — Budgets
 
-**[Show budget creation screen]**
+**[Navigate to Budget Overview]**
 
-The budget module lets users plan their monthly spending.
-
-To create a budget, the user enters the total amount for the month — for example, RM 3,000.
-
-Then they allocate that amount across different categories.
-For example, RM 800 for food, RM 400 for transport, RM 600 for bills, and so on.
-
-As they type in each amount, the screen **updates in real time** and shows how much is still unallocated.
-If the total allocation exceeds the budget, the app blocks the save and shows an error.
-
-**[Show budget overview screen]**
-
-Once the budget is saved, the Budget Overview screen shows the progress for each category.
+This is the **Budget Overview**.
 
 Each category has a **linear progress bar**.
-The colour changes depending on how much has been spent:
-- Green means they're on track — below 75%.
-- Amber means warning — approaching the limit.
-- Red means they've exceeded the budget.
 
-The backend calculates the budget status dynamically by adding up all the expense transactions for that month and comparing them against the allocated amounts.
+The colour shows the spending level:
+- **Green** — on track, below 75%.
+- **Amber** — getting close.
+- **Red** — over budget.
 
----
+**[Navigate to Create Budget]**
 
-## 4.7 — Financial Goals
+To create a budget, the user enters a total amount — for example RM 3,000.
 
-**[Show goals screen]**
+Then they allocate it to each category.
 
-The goals module lets users set savings targets.
+As they type, this counter updates in real time and shows the remaining unallocated amount.
 
-For example, a user might create a goal called "Japan Trip" with a target of RM 5,000 and a deadline.
+If the total goes over the budget, the app blocks the save and shows an error.
 
-They can also set a **priority level** — low, medium, or high — to indicate which goals matter most.
-
-When they contribute money toward a goal, the app increases the **CurrentAmount** and shows a progress bar.
-
-When the CurrentAmount reaches the TargetAmount, the goal is marked as **completed** — and this also unlocks a gamification achievement.
+Once saved, the backend tracks spending by summing expense transactions each month and comparing them against the allocated amounts.
 
 ---
 
-## 4.8 — Investments
+## 4.6 — Goals
 
-**[Show investment portfolio screen]**
+**[Navigate to Goals screen]**
 
-The investment module tracks the user's investment portfolio.
+The **Goals module** lets users set savings targets.
+
+For example — "Japan Trip", target RM 5,000, deadline December 2026.
+
+Each goal has a **priority level** — low, medium, or high.
+
+When the user contributes money, the progress bar fills up.
+
+When the goal is fully funded, it's marked as **completed** and the user earns a gamification achievement.
+
+---
+
+## 4.7 — Investments
+
+**[Navigate to Investment Portfolio]**
+
+This is the **Investment Portfolio screen**.
+
+At the top — total invested, current value, and overall gain or loss.
 
 I support **10 asset types** — Stocks, Cryptocurrency, ETF, Bonds, Real Estate, Commodities, Fixed Deposit, Unit Trust, Options, and Others.
 
-For each investment, the user enters the asset name, the number of units, the purchase price, and the purchase date.
+Each holding shows the asset name, value, and profit or loss in green or red.
 
-The app then calculates the **gain or loss** by comparing the current price against the purchase price.
-Each holding shows the profit or loss in green or red.
+**[Tap the add investment button]**
 
-The portfolio overview shows the **total invested**, the **current value**, and the **overall percentage return**.
-It also highlights the best-performing and worst-performing holdings.
+To add an investment, the user selects the asset type from this grid.
 
-Users update the current price manually — by tapping the holding and entering the latest market price.
+Then fills in the name, quantity, purchase price, and purchase date.
 
----
+The total is calculated automatically — quantity times price.
 
-## 4.9 — Analytics and Reports
-
-**[Show analytics screen]**
-
-The analytics screen gives users a visual breakdown of their spending.
-
-I use a Flutter chart library called **fl_chart** to render four types of charts:
-1. **Spending Trend** — a line chart showing expenses over time.
-2. **Income vs Expense** — a bar chart comparing income and expenses side by side each month.
-3. **Category Pie Chart** — a pie chart showing which categories the user spends the most on.
-4. **Budget vs Actual** — horizontal bars comparing what they budgeted against what they actually spent.
-
-There's a time range selector at the top — 1 month, 3 months, 6 months, 1 year, or all time.
-Changing the range **refreshes all four charts** at the same time.
-
-I load the chart data efficiently using **Future.wait** in Flutter.
-Future.wait runs multiple API calls **simultaneously** — so instead of waiting for them one by one, they all finish together.
-This makes the loading time roughly half of what it would be otherwise.
-
-**[Show reports screen]**
-
-The reports screen lets users **export their data**.
-
-They can export a CSV file — which opens in Excel or Google Sheets.
-Or they can generate a PDF report.
-
-The CSV is generated by the Flask backend using Python's built-in csv module.
-The PDF is generated entirely on the Flutter side using the pdf package, and shared via the system share sheet.
+Users update the current price manually over time to track performance.
 
 ---
 
-## 4.10 — Financial Insights
+## 4.8 — Analytics, Reports, and Financial Insights
 
-**[Show financial insights screen]**
+**[Navigate to Analytics screen]**
 
-This is one of the features I added beyond the original scope.
+The **Analytics screen** shows spending charts.
 
-The Financial Insights screen gives the user a **personalised financial health score** — from 0 to 100.
+I use a Flutter chart library called **fl_chart**.
 
-The score is calculated from four pillars, each worth 25 points:
-1. **Savings Rate** — are they saving enough of their income?
-2. **Budget Adherence** — are they staying within their budget?
-3. **Spending Consistency** — is their spending steady, or very irregular?
-4. **Goal Progress** — are they making progress on their savings goals?
+There are four chart types — a spending trend line chart, an income vs expense bar chart, a category pie chart, and a budget vs actual comparison.
 
-Below the score, the screen shows **insight cards** — short, personalised messages.
-Each card is colour-coded:
-- Green = positive feedback.
-- Blue = informational tip.
-- Yellow = warning.
-- Red = urgent action needed.
+**[Show the time range selector]**
 
-This gives users actionable feedback, not just numbers.
+The user can change the time range — 1 month, 3 months, 6 months, 1 year, or all time.
 
----
+All four charts update at the same time.
 
-## 4.11 — Gamification
+I load them using **Future.wait** — which runs all the API calls simultaneously instead of one by one, so it loads faster.
 
-**[Show gamification/achievements screen]**
+**[Navigate to Reports screen]**
 
-The gamification system is designed to keep users engaged over time.
+The **Reports screen** lets users export their data.
 
-It has four parts:
+They can download a **CSV** — generated by the Flask backend and opened in Excel.
 
-**XP and Levelling.**
-Users earn XP — experience points — by using the app.
-For example, they earn 10 XP every time they add a transaction.
-XP accumulates and increases their level, from Level 1 up to Level 10.
-Higher levels unlock more badges.
+Or a **PDF** — generated on the Flutter side and shared via the system share sheet.
 
-**Achievements.**
-There are over 20 achievement badges.
-Each one has a condition — for example, "Record your first transaction", "Stay within budget for a full month", or "Maintain a 30-day streak".
-Each achievement also has a difficulty level — Easy, Medium, Hard, or Expert.
-When an achievement is unlocked, an animation plays and the user gets notified.
+**[Navigate to Financial Insights screen]**
 
-**Habit Streaks.**
-The app tracks how many consecutive days the user has recorded a transaction.
-If they record a transaction today and yesterday — they're on a streak.
-If they miss a day — the streak resets to zero.
-Milestones at 7, 14, 30, and 90 days give bonus XP.
+This is the **Financial Insights screen** — a feature I added beyond the original scope.
 
-**Leaderboard.**
-Users can see their XP ranking compared to other users.
-This adds a social motivation element.
+It shows a **Financial Health Score** from 0 to 100.
+
+The score comes from four things — savings rate, budget adherence, spending consistency, and goal progress.
+
+Below the score are **personalised insight cards** — short messages in colour.
+
+Green means something positive. Yellow is a warning. Red means urgent action needed.
 
 ---
 
-## 4.12 — Settings and Security Centre
+## 4.9 — Gamification
 
-**[Show settings / security screen]**
+**[Navigate to Achievements screen]**
 
-The settings module covers profile editing, notification preferences, and security.
+This is the **Achievements screen**.
 
-The **Security Centre** screen shows the user's **security score**.
-The score is either 30, 60, or 100.
-- 30 means email not verified.
-- 60 means email verified but 2FA not enabled.
-- 100 means both done.
+There are over 20 badges, each with a name, difficulty — Easy, Medium, Hard, or Expert — and an XP reward.
 
-This encourages users to complete the security steps.
+**[Show a locked and unlocked badge]**
 
-The screen also shows **Active Sessions** — a list of all devices currently logged in.
-Each session shows the device name and the last active time.
-Users can **remotely log out** any individual device, or log out all other devices at once.
+Locked ones are grey. Unlocked ones show the badge in colour.
 
-There's also a **Security Activity Log** that shows recent events — like logins, password changes, and session terminations.
-This helps users spot suspicious activity.
+Users earn **XP** for every action — adding transactions, completing goals, staying within budget.
+
+XP fills a level bar — from Level 1 to Level 10.
+
+There's also a **habit streak** — consecutive days the user has recorded a transaction.
+
+Miss a day and the streak resets.
+
+And a **leaderboard** to compare XP rankings with other users.
 
 ---
 
-# PART 5 — DATABASE DESIGN (5 minutes)
+## 4.10 — Settings and Security Centre
+
+**[Navigate to Settings → Security Centre]**
+
+This is the **Security Centre**.
+
+At the top is the **Security Score** — either 30, 60, or 100.
+
+- 30 means email is not verified.
+- 60 means email verified but 2FA is off.
+- 100 means both are done.
+
+The bar is red, amber, or green depending on the score.
+
+This encourages users to improve their account security.
+
+**[Show Active Sessions]**
+
+This section shows all devices currently logged in.
+
+The user can **revoke** any session — which logs out that device remotely.
+
+**[Show Security Log]**
+
+The **Security Log** records every security event — logins, password changes, 2FA changes, session terminations.
+
+This helps users spot any suspicious activity.
+
+---
+
+# PART 5 — DATABASE DESIGN — OPTIONAL (3 minutes)
+# [Only include this if you are showing the ERD or architecture diagram]
 ---
 
 **[Show ERD diagram]**
 
-Now let me talk about the database.
-
 My database has **16 tables** in total.
 
-The **central table** is the **Users** table.
-Almost every other table links back to Users through a foreign key.
+The central one is the **Users** table — almost every other table links back to it.
 
-The **core tables** are: Users, Transactions, Budgets, BudgetCategories, and Investments.
+The core tables are Users, Transactions, Budgets, BudgetCategories, and Investments.
 
-The **extended feature tables** are: Goals, RecurringTransactions, Achievements, UserAchievements, HabitStreaks, and UserSettings.
+The extended tables cover Goals, Recurring Transactions, Achievements, Streaks, and User Settings.
 
-The **security tables** are: UserSessions, SecurityLogs, EmailVerificationTokens, PasswordResetTokens, and TwoFactorAuths.
+The security tables cover Sessions, Security Logs, Email Verification Tokens, Password Reset Tokens, and 2FA records.
 
 I use **ON DELETE CASCADE** on all foreign keys.
-This means — if a user deletes their account, all their data is automatically removed too.
-I don't need to write separate delete queries for each table.
 
-I also added **indexes** on the most frequently searched columns — like UserId, TransactionDate, and NextExecution.
-Indexes make queries much faster, especially as the data grows.
+This means if a user deletes their account, all their data is automatically removed — I don't need to write separate delete queries.
+
+I also added **indexes** on frequently searched columns like UserId and TransactionDate, to keep queries fast as the data grows.
 
 ---
-
-# PART 6 — TESTING RESULTS (5 minutes)
+# PART 6 — TESTING RESULTS (3 minutes)
 ---
 
-Now I'll talk about how I tested the system.
+Let me go through the testing results quickly.
 
-I ran four types of testing.
+**Functional Testing** — I wrote 50 test cases covering every feature.
 
-**Functional Testing.**
-I wrote 50 test cases covering every feature — registration, login, transactions, budgets, investments, goals, gamification, security, reports.
-All 50 test cases passed — 100% pass rate.
+All 50 passed. That's a **100% pass rate**.
 
-**Security Testing.**
-I ran 7 security test cases — testing things like wrong password rejection, expired JWT handling, TOTP code verification, and backup code usage.
-All 7 passed — 100% pass rate.
+**Security Testing** — 7 test cases covering login rejection, JWT expiry, TOTP verification, and backup codes.
 
-**Usability Testing.**
-I recruited 6 participants and gave them a set of tasks to complete — like "add an expense", "create a budget", "set a savings goal".
-I measured whether they could complete each task, and then asked them to rate their experience.
+All 7 passed. **100% pass rate**.
 
-The results:
-- **91.7% task completion rate** — my acceptance threshold was 80%, so this exceeded the target.
+**Usability Testing** — 6 participants completed structured tasks in the app.
+
+Results:
+- **91.7% task completion rate** — my target was 80%, so this exceeded it.
 - **Average satisfaction score: 4.30 out of 5.00**
-- **System Usability Scale score: 78.5** — which is rated as "Good" usability.
-
-**Performance Testing.**
-I tested the app on both Android and iOS.
-I also tested on older low-end Android devices.
-For charts with large amounts of data, I applied data aggregation — grouping daily data into weekly averages for ranges over 90 days.
-This kept the charts smooth even on older devices.
+- **System Usability Scale: 78.5** — rated as "Good" usability.
 
 ---
-
-# PART 7 — CHALLENGES AND SOLUTIONS (3 minutes)
+# PART 7 — CHALLENGES (2 minutes)
 ---
 
-Let me briefly mention some technical challenges I faced, and how I solved them.
+Two main technical challenges I want to mention.
 
-**JWT expiry causing silent logouts.**
-My first implementation didn't handle expired tokens gracefully.
-When the token expired, the app just failed silently.
-I fixed this by adding an automatic token refresh mechanism — the app quietly requests a new access token before the old one expires.
+**First — field naming mismatch.**
 
-**2FA flow errors.**
-During early testing, the login session could be completed without finishing the 2FA step.
-I fixed this by redesigning the login as a strict two-stage process — the session is only created after the TOTP code is verified.
+The database uses PascalCase names — like `UserId`.
 
-**Field naming mismatch — Python uses PascalCase, Dart uses camelCase.**
-The database column names were PascalCase — like `UserId`.
 But Flutter expected camelCase — like `userId`.
-This caused silent null values — the app ran fine but showed blank or zero data.
+
+This caused silent null values — the app ran fine but showed blank data.
+
 I fixed it by adding explicit key mapping in every `to_dict()` method in the Flask models.
-Now every API response consistently uses camelCase.
 
-**Decimal type error in Flask 3.0.**
-MySQL returns money values as Python `Decimal` objects.
-Flask 3.0 can't convert Decimal to JSON directly — it throws an error.
-I fixed it by converting every Decimal value to `float()` before building the JSON response.
+**Second — 2FA flow error.**
 
----
+Early on, the login session could be created before the 2FA step was completed.
 
-# PART 8 — LIMITATIONS AND FUTURE WORK (3 minutes)
----
+I fixed it by redesigning the login as a strict two-stage process.
 
-I want to be honest about the current limitations.
+The server issues a temporary token after the password check.
 
-**Manual data entry.**
-Right now, users have to type in every transaction manually.
-In the future, I'd like to integrate with Malaysian bank APIs so the app can import transactions automatically.
-
-**No real-time market prices.**
-Investment prices have to be updated manually.
-In the future, I'd connect to a market data API — like Yahoo Finance or CoinGecko for crypto — so prices update automatically.
-
-**Local deployment only.**
-During this FYP period, the Flask backend runs on my local machine.
-Users can only connect when they're on the same network.
-The next step is to deploy it to a cloud platform — like AWS or Google Cloud — so it works for anyone, anywhere.
-
-**No offline mode.**
-The app requires an internet connection.
-In the future, I'd add a local cache so users can still view their data when offline.
+The real JWT is only issued after the TOTP code is verified.
 
 ---
+# PART 8 — LIMITATIONS AND FUTURE WORK (2 minutes)
+---
 
-# PART 9 — CONCLUSION (2 minutes)
+Three honest limitations of the current system.
+
+**First — manual data entry.**
+
+Users have to type every transaction manually.
+
+In the future, I'd connect to Malaysian bank APIs for automatic import.
+
+**Second — no real-time prices.**
+
+Investment prices are updated manually.
+
+I'd connect to a market data API like Yahoo Finance to automate this.
+
+**Third — local deployment only.**
+
+The backend runs on my local machine right now.
+
+To make this a real product, I'd deploy it to a cloud platform like AWS or Google Cloud.
+
+---
+# PART 9 — CONCLUSION (1 minute)
 ---
 
 To summarise.
 
-SmartFinance is a full-stack mobile application built with Flutter, Python Flask, and MySQL.
+SmartFinance is a full-stack mobile app — Flutter frontend, Python Flask backend, MySQL database.
 
-It covers six core financial features — transactions, budgets, goals, investments, analytics, and reports.
+It covers transactions, budgets, goals, investments, analytics, reports, gamification, and security.
 
-It has a complete security system — email verification, two-factor authentication, JWT session management, and a security activity log.
+Testing results confirm it works correctly — 100% functional test pass rate, 91.7% usability completion, and a SUS score of 78.5.
 
-And it has a gamification system — XP, levelling, achievement badges, streaks, and a leaderboard — to keep users motivated.
-
-The testing results confirm that the system works correctly and is genuinely usable.
-100% functional test pass rate, 91.7% usability task completion, and a System Usability Scale score of 78.5.
-
-I'm proud of what I've built, and I believe SmartFinance is a useful and well-engineered solution to the financial literacy problem among Malaysian young adults.
-
-Thank you. I'm ready for any questions.
+Thank you. I'm happy to answer any questions.
 
 ---
 ---
 ---
 
-# ANTICIPATED Q&A — MODERATOR QUESTIONS
-# Read through ALL of these before the presentation. Know the answers well.
-
+# Q&A — LIKELY MODERATOR QUESTIONS
+# Read all of these before the presentation.
+# If you're not sure, say: "That's a good question, let me think for a moment."
 ---
 
-## Q1: Why did you choose Flutter instead of React Native or a native Android/iOS app?
+## Q1: Why Flutter instead of native Android or React Native?
 
-Flutter lets me write one codebase that runs on both Android and iOS.
-Native Android requires Kotlin/Java, and native iOS requires Swift — that's two separate codebases.
-React Native is similar to Flutter in that it's cross-platform, but Flutter has better performance because it compiles directly to native machine code — it doesn't use a JavaScript bridge.
-My supervisor also confirmed Flutter was suitable for this type of project.
+Flutter lets me write **one codebase** for both Android and iOS.
+
+Native Android needs Kotlin and native iOS needs Swift — that's two separate codebases.
+
+React Native is also cross-platform, but Flutter compiles directly to native machine code.
+
+React Native uses a JavaScript bridge, which adds overhead.
+
+Flutter doesn't have that, so it's faster and smoother.
 
 ---
 
 ## Q2: Why Flask instead of Django or Node.js?
 
-Flask is lightweight and simple.
-It gives me full control — I only add the components I need.
-Django is more powerful but has a lot of built-in things I didn't need — it would add unnecessary complexity.
-Node.js would have worked too, but I'm more comfortable with Python, and Flask integrates well with the scientific Python libraries I used for the analytics module.
+Flask is **lightweight and simple**.
+
+Django has a lot of built-in features I didn't need — like an admin panel — which would add unnecessary complexity.
+
+Node.js would work too, but I'm more comfortable with Python.
+
+Flask also integrates well with the data processing libraries I used for analytics.
 
 ---
 
-## Q3: How does JWT authentication work exactly?
+## Q3: How does JWT work?
 
-When the user logs in, the server creates a JWT — a JSON Web Token.
-A JWT is a string that contains encoded information — like the user's ID and an expiry time.
-The server signs it with a secret key that only the server knows.
-The app stores this token locally.
-Every time the app makes a request to the backend, it sends this token in the request header.
-The server checks the token — if the signature is valid and it hasn't expired, the request is allowed.
-If the token is expired or tampered with, the server rejects it with a 401 error.
+When the user logs in, the server creates a **JWT — a JSON Web Token**.
 
----
+It contains encoded information — like the user's ID and an expiry time.
 
-## Q4: How does the TOTP two-factor authentication work?
+The server **signs it** with a secret key only the server knows.
 
-TOTP stands for Time-based One-Time Password.
-When the user enables 2FA, the server generates a random secret key and shows it as a QR code.
-The user scans it with an authenticator app — like Google Authenticator.
-Both the app and the server now share the same secret key.
-Every 30 seconds, they both use the same formula — secret key + current time — to calculate the same 6-digit code.
-When the user types the code, the server runs the same calculation and checks if they match.
-Because the code changes every 30 seconds and is based on a shared secret — it's very hard to fake.
-I use the `pyotp` library which follows the RFC 6238 standard.
+The app stores the token and attaches it to every request.
+
+The server checks the signature on each request.
+
+If it's valid and not expired — the request is allowed.
+
+If it's expired or tampered with — the server returns a 401 error.
 
 ---
 
-## Q5: Why did you use SQLAlchemy instead of writing SQL queries directly?
+## Q4: How does TOTP 2FA work?
 
-SQLAlchemy is an ORM — Object Relational Mapper.
-It lets me define database tables as Python classes, and query them using Python code instead of SQL.
-This has a few advantages.
-First — it protects against SQL injection attacks, because SQLAlchemy handles the escaping automatically.
-Second — it makes the code easier to read and maintain.
-Third — if I ever need to switch databases — from MySQL to PostgreSQL for example — I can do that without rewriting all the queries.
+When 2FA is set up, the server generates a **random secret key** shown as a QR code.
 
----
+The user scans it with an authenticator app.
 
-## Q6: What happens if the user forgets their 2FA device?
+Now both the app and the server share the **same secret key**.
 
-I handle this with backup codes.
-When 2FA is first set up, the system generates 10 one-time backup codes.
-These are shown to the user once, and the user is instructed to save them somewhere safe.
-If they lose their phone, they can enter one of these backup codes instead of the TOTP code.
-Each backup code can only be used once — the system marks it as used after consumption.
-The backup codes are stored hashed in the database — same security as passwords.
+Every 30 seconds, both calculate the same 6-digit code using — secret key + current time.
+
+When the user enters the code, the server runs the same calculation and checks if they match.
+
+I use **pyotp** which follows the **RFC 6238** standard — same as Google and most banks.
 
 ---
 
-## Q7: What is bcrypt and why use it for password hashing?
+## Q5: What if the user loses their 2FA phone?
 
-bcrypt is a hashing algorithm designed specifically for passwords.
-Normal hashing algorithms like MD5 or SHA are very fast — which is good for most things, but bad for passwords.
-Because they're fast, an attacker can try millions of passwords per second.
-bcrypt is intentionally slow — it has a "cost factor" that controls how slow it is.
+I generate **10 backup codes** when 2FA is set up.
+
+The user saves them somewhere safe.
+
+If they lose their phone, they enter a backup code instead of the 6-digit TOTP code.
+
+Each code can only be used once.
+
+They're stored **hashed with bcrypt** — same security as passwords.
+
+---
+
+## Q6: Why bcrypt for passwords?
+
+Normal hash algorithms like MD5 are very fast — which is bad for passwords.
+
+An attacker can try millions of passwords per second.
+
+**bcrypt is intentionally slow**.
+
 This makes brute-force attacks much harder.
-bcrypt also adds a random "salt" — extra random data mixed in before hashing.
-This means two users with the same password will have completely different hashes — so a pre-computed attack list doesn't work.
+
+bcrypt also adds a **random salt** — extra random data mixed in before hashing.
+
+So two users with the same password will have completely different hashes.
+
+Pre-computed attack tables — called rainbow tables — don't work against bcrypt.
 
 ---
 
-## Q8: How does the budget monitoring work in real time?
+## Q7: Why SQLAlchemy instead of raw SQL?
 
-When the user adds an expense transaction, the backend checks if a budget exists for that month.
-If it does, it finds the matching budget category and adds the transaction amount to the SpentAmount field.
-It then calculates the consumption percentage — SpentAmount divided by AllocatedAmount, multiplied by 100.
-If the percentage is above 80%, the status becomes "warning".
-If it's above 100%, the status becomes "over budget".
-The Flutter app receives this status and changes the progress bar colour accordingly — green, amber, or red.
+SQLAlchemy is an **ORM — Object Relational Mapper**.
+
+I define database tables as Python classes instead of writing SQL.
+
+Three main benefits:
+
+First — **SQL injection protection** — SQLAlchemy handles escaping automatically.
+
+Second — **easier to read and maintain**.
+
+Third — **portability** — if I switch databases later, I mostly just change the connection string.
 
 ---
 
-## Q9: Why only 6 usability testing participants? Isn't that too few?
+## Q8: How does budget monitoring work?
+
+When an expense transaction is saved, the backend:
+
+1. Checks if a budget exists for this month.
+2. Finds the matching category.
+3. Adds the transaction amount to **SpentAmount**.
+4. Calculates consumption — SpentAmount divided by AllocatedAmount times 100.
+5. If above 80% — warning. If above 100% — over budget.
+
+Flutter gets this status and changes the progress bar colour — green, amber, or red.
+
+---
+
+## Q9: What is a REST API?
+
+REST stands for **Representational State Transfer**.
+
+It's a way for the app to talk to the server using standard HTTP methods.
+
+**GET** reads data. **POST** creates data. **PUT** updates data. **DELETE** removes data.
+
+I built it as REST because it **cleanly separates** the frontend from the backend.
+
+The Flutter app doesn't touch the database directly — it just sends requests and gets JSON back.
+
+---
+
+## Q10: How is the Financial Health Score calculated?
+
+It's a score from 0 to 100, made up of four equal parts — each worth 25 points.
+
+**Savings Rate** — what percentage of income is being saved.
+
+**Budget Adherence** — how well they stay within budget.
+
+**Spending Consistency** — is their spending regular or very irregular.
+
+**Goal Progress** — are they contributing to savings goals.
+
+For new users without enough data yet, missing pillars get a **neutral mid-range value** instead of zero.
+
+This prevents the score from unfairly showing 0 just because they're new.
+
+---
+
+## Q11: Why only 6 usability participants?
 
 I acknowledge this as a limitation in my report.
-In academic usability research, Jakob Nielsen's guideline says that 5 users can identify around 85% of usability problems.
-So 6 participants is a recognised minimum threshold for exploratory usability testing.
-However — I agree it's not enough to make strong statistical claims about the whole population.
-For a more rigorous study, I'd want 30 or more participants, and ideally a longitudinal study over several weeks.
-I document this honestly in the limitations section.
+
+Jakob Nielsen's research says **5 users** can identify around 85% of usability problems.
+
+So 6 is a recognised minimum for exploratory usability testing.
+
+But it's not enough to make strong statistical claims about the whole population.
+
+For a more rigorous study, I'd want 30+ participants and a longer study over several weeks.
 
 ---
 
-## Q10: What is the Financial Health Score and how is it calculated?
+## Q12: What are all the security features?
 
-The Financial Health Score is a number from 0 to 100.
-It's calculated from four equal pillars — each worth up to 25 points.
-Pillar 1 — Savings Rate: what percentage of their income are they saving?
-Pillar 2 — Budget Adherence: how well are they staying within their budget?
-Pillar 3 — Spending Consistency: how regular and predictable is their spending?
-Pillar 4 — Goal Progress: are they actively contributing to their savings goals?
-The total is summed to give the final score.
-For new users who haven't added enough data yet, pillars with missing data are given a neutral mid-range value — so the score doesn't unfairly show zero.
-
----
-
-## Q11: How do you handle the case where the Flask backend returns a Decimal that JSON can't serialize?
-
-MySQL stores money values as Decimal types.
-Flask 3.0's default JSON serializer doesn't know how to convert Python's Decimal type to JSON.
-It raises a TypeError and returns an HTTP 500 error.
-I solved this by explicitly calling `float()` on every Decimal value when building the JSON response dictionary in the `to_dict()` methods.
-This converts the Decimal to a plain Python float, which Flask can serialize normally.
-I apply this pattern consistently across all models and API routes that return monetary values.
+1. **bcrypt password hashing** — passwords never stored as plain text.
+2. **Email verification** — confirms the email is real.
+3. **Two-factor authentication** — second step after password.
+4. **JWT with expiry** — tokens expire and become invalid.
+5. **Session management** — users can see and revoke sessions per device.
+6. **Security activity log** — records all security events.
+7. **Security score** — visible feedback to nudge users to complete security steps.
 
 ---
 
-## Q12: What are the security features beyond just login?
+## Q13: What would you improve first if this were a real product?
 
-There are several layers:
-1. **Password hashing** with bcrypt — plain text passwords never stored.
-2. **Email verification** — confirms the email is real before full access.
-3. **Two-factor authentication** — adds a second step beyond the password.
-4. **JWT with expiry** — tokens expire and can't be reused after expiry.
-5. **Session management** — every login creates a session record. Users can see and revoke sessions per device.
-6. **Security activity log** — logs every login, password change, 2FA toggle, and session termination.
-7. **Security score** — visible feedback that nudges users to complete security steps.
+**Cloud deployment** first.
 
----
+Right now the backend runs on my local machine — so only people on the same network can connect.
 
-## Q13: If this were a real product, what would be the most important thing to improve?
+For a real product, I'd deploy to AWS or Google Cloud, add HTTPS, and set up a proper production database.
 
-The most important thing is **cloud deployment**.
-Right now, the backend runs on my local machine — so only people on the same network can use it.
-To make it a real product, I'd deploy the Flask API to a cloud service like AWS or Google Cloud, add HTTPS for encrypted communication, and set up a proper database server instead of a local MySQL instance.
+**Second — automatic bank import.**
 
-The second most important thing is **automatic transaction import** via bank APIs.
-Manual entry is the biggest friction point — users who have to type in every transaction are likely to give up.
+Manual entry is the biggest friction point.
+
+Connecting to Malaysian bank APIs would remove the need to type in every transaction.
 
 ---
 
-## Q14: What is a REST API and why did you build the backend as one?
+## Q14: What was the hardest part to build?
 
-REST stands for Representational State Transfer.
-A REST API is a way for the app to communicate with the server using standard HTTP methods — GET, POST, PUT, DELETE.
-GET is for reading data. POST is for creating data. PUT is for updating data. DELETE is for removing data.
-I built the backend as a REST API because it cleanly separates the frontend from the backend.
-The Flutter app doesn't care what database the server uses — it just sends requests and receives JSON responses.
-This also means in the future, I could build a web version of the app that uses the same API without changing the backend.
+The **2FA system**.
+
+It required many things to work together — generating the QR code, verifying the TOTP code during login, generating and hashing backup codes, and making sure the session is only created after 2FA is fully completed.
+
+Early on I had a bug where login could finish without completing the 2FA step.
+
+I fixed it by making the login a strict two-stage process — a temporary token is issued after the password, and the real JWT only comes after the TOTP code is verified.
 
 ---
 
-## Q15: Did you encounter any challenges with cross-platform compatibility between Android and iOS?
+## Q15: What does ON DELETE CASCADE mean?
 
-Yes. Some Flutter widgets render slightly differently on iOS and Android.
-For example, date pickers and dialog boxes have a different style on each platform.
-I solved this by standardising on **Material Design** widgets throughout the app.
-Material Design is Google's design system — it looks consistent on both platforms.
-I avoided using Cupertino-style widgets (which are Apple-style) because they introduced visual inconsistencies on Android.
+It's a database rule on foreign keys.
+
+If a parent record is deleted, all related child records are **automatically deleted too**.
+
+For example — if a user deletes their account, all their transactions, budgets, goals, sessions, and everything else are removed automatically.
+
+I don't need to write separate delete queries for each table.
+
+---
+
+## Q16: How do recurring transactions know when to run?
+
+Each recurring transaction stores a **NextExecution** date.
+
+When the app makes certain requests, the backend checks if any NextExecution date is today or overdue.
+
+If yes — it creates the real transaction and moves NextExecution forward by one period.
+
+For example, a monthly transaction moves forward by one month.
+
+This runs automatically without any background scheduler.
 
 ---
 
