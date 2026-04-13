@@ -1,0 +1,36 @@
+flowchart TD
+    START([Start: User Taps Add Transaction]) --> FORM[Display Add Transaction Form]
+    FORM --> AMOUNT[User Enters Amount - RM prefix auto-applied]
+    AMOUNT --> TYPE[User Selects Type: Income or Expense]
+    TYPE --> DESC[User Enters Description - Optional]
+    DESC --> KEYWORD{Description Provided?}
+    KEYWORD -- Yes --> ALGO[Run Keyword Analysis Algorithm]
+    ALGO --> CONF{Confidence above 0.7?}
+    CONF -- Yes --> SUGGEST[Highlight Suggested Category on Grid]
+    CONF -- No --> GRID[User Selects Category from Visual Icon Grid]
+    SUGGEST --> GRID
+    KEYWORD -- No --> GRID
+    GRID --> DATE[User Selects Date - Default Today]
+    DATE --> VAL[Client-Side Validation - Amount greater than 0 and Category Required]
+    VAL --> VALID{All Valid?}
+    VALID -- No --> ERR[Display Error Message]
+    ERR --> FORM
+    VALID -- Yes --> POST[Send POST Request to /transactions]
+    POST --> BVAL[Backend Validates Data]
+    BVAL --> BVALID{Valid?}
+    BVALID -- No --> BERR[Return 400 Error]
+    BERR --> ERRDISP[Display Error]
+    ERRDISP --> FORM
+    BVALID -- Yes --> CREATE[Create Transaction Record]
+    CREATE --> BUDGET[Update Budget Category SpentAmount if Expense]
+    BUDGET --> RECALC[Recalculate Budget Consumption Percentage]
+    RECALC --> XP[Award +10 XP for Logging Transaction]
+    XP --> STREAK[Update Habit Streak for Today]
+    STREAK --> ACH[Evaluate Achievement Criteria]
+    ACH --> RESP[Return Success Response]
+    RESP --> DASH[Update Client Dashboard]
+    DASH --> UNLOCK{Achievement Unlocked?}
+    UNLOCK -- Yes --> BADGE[Display Badge Animation]
+    BADGE --> SUCCESS[Display Success Message]
+    UNLOCK -- No --> SUCCESS
+    SUCCESS --> DONE([End])

@@ -1,0 +1,184 @@
+erDiagram
+    USERS {
+        int UserId PK
+        varchar Email UK
+        varchar PasswordHash
+        varchar FullName
+        varchar PhoneNumber
+        bool EmailVerified
+        bool TwoFactorEnabled
+        int ExperiencePts
+        int CurrentLevel
+        timestamp CreatedAt
+        timestamp LastLogin
+    }
+    TRANSACTIONS {
+        int TransactionId PK
+        int UserId FK
+        decimal Amount
+        varchar Category
+        text Description
+        date TransactionDate
+        enum TransactionType
+        timestamp CreatedAt
+    }
+    BUDGETS {
+        int BudgetId PK
+        int UserId FK
+        varchar MonthYear
+        varchar BudgetPeriod
+        decimal TotalBudget
+        timestamp CreatedAt
+        timestamp UpdatedAt
+    }
+    BUDGETCATEGORIES {
+        int BudgetCategoryId PK
+        int BudgetId FK
+        varchar CategoryName
+        decimal AllocatedAmount
+        decimal SpentAmount
+    }
+    INVESTMENTS {
+        int InvestmentId PK
+        int UserId FK
+        varchar AssetName
+        varchar AssetsType
+        varchar StockSymbol
+        decimal Quantity
+        decimal PurchasePrice
+        date PurchaseDate
+        decimal CurrentPrice
+        timestamp LastUpdated
+        text Notes
+    }
+    GOALS {
+        int GoalId PK
+        int UserId FK
+        varchar GoalName
+        text Description
+        decimal TargetAmount
+        decimal CurrentAmount
+        date StartDate
+        date Deadline
+        enum Status
+        varchar Category
+        enum Priority
+        datetime CreatedAt
+    }
+    RECURRINGTRANSACTIONS {
+        int RecurringId PK
+        int UserId FK
+        varchar Name
+        varchar TransactionType
+        varchar Category
+        decimal Amount
+        varchar Frequency
+        date StartDate
+        date EndDate
+        date LastExecuted
+        date NextExecution
+        bool IsActive
+        datetime CreatedAt
+    }
+    ACHIEVEMENTS {
+        int AchievementId PK
+        varchar Name
+        text Description
+        varchar BadgeIcon
+        int XpReward
+        text UnlockCriteria
+        enum DifficultyLevel
+    }
+    USERACHIEVEMENTS {
+        int UserAchievementId PK
+        int UserId FK
+        int AchievementId FK
+        bool IsUnlocked
+        int Progress
+        timestamp UnlockedAt
+    }
+    HABITSTREAKS {
+        int StreakId PK
+        int UserId FK
+        varchar StreakType
+        int CurrentStreak
+        int LongestStreak
+        date LastActivity
+    }
+    USERSETTINGS {
+        int SettingId PK
+        int UserId FK
+        bool EnableNotifications
+        bool EnableBudgetAlerts
+        bool EnableAchievementAlerts
+        bool EnableStreakAlerts
+        int BudgetWarningThreshold
+        int BudgetDangerThreshold
+        int BudgetCriticalThreshold
+        bool ShowInLeaderboard
+        datetime CreatedAt
+        datetime UpdatedAt
+    }
+    USERSESSIONS {
+        int SessionId PK
+        int UserId FK
+        varchar DeviceName
+        varchar DeviceType
+        varchar IpAddress
+        text UserAgent
+        datetime LoginAt
+        datetime LastActiveAt
+        bool IsActive
+        varchar RefreshToken
+        datetime ExpiresAt
+    }
+    SECURITYLOGS {
+        int LogId PK
+        int UserId FK
+        varchar EventType
+        text EventDescription
+        varchar IpAddress
+        varchar DeviceInfo
+        bool Success
+        datetime CreatedAt
+    }
+    EMAILVERIFICATIONTOKENS {
+        int TokenId PK
+        int UserId FK
+        varchar Token
+        datetime CreatedAt
+        datetime ExpiresAt
+        bool Used
+    }
+    PASSWORDRESETTOKENS {
+        int TokenId PK
+        int UserId FK
+        varchar Token
+        datetime CreatedAt
+        datetime ExpiresAt
+        bool Used
+    }
+    TWOFACTORAUTHS {
+        int TwoFactorId PK
+        int UserId FK
+        varchar Secret
+        text BackupCodes
+        datetime CreatedAt
+        datetime LastUsedAt
+    }
+
+    USERS ||--o{ TRANSACTIONS : "records"
+    USERS ||--o{ BUDGETS : "creates"
+    BUDGETS ||--o{ BUDGETCATEGORIES : "allocates into"
+    USERS ||--o{ INVESTMENTS : "holds"
+    USERS ||--o{ GOALS : "targets"
+    USERS ||--o{ RECURRINGTRANSACTIONS : "schedules"
+    USERS ||--o{ USERACHIEVEMENTS : "earns"
+    ACHIEVEMENTS ||--o{ USERACHIEVEMENTS : "awarded via"
+    USERS ||--o{ HABITSTREAKS : "maintains"
+    USERS ||--|| USERSETTINGS : "configures"
+    USERS ||--o{ USERSESSIONS : "opens"
+    USERS ||--o{ SECURITYLOGS : "audited in"
+    USERS ||--o{ EMAILVERIFICATIONTOKENS : "verifies via"
+    USERS ||--o{ PASSWORDRESETTOKENS : "resets via"
+    USERS ||--o| TWOFACTORAUTHS : "secures with"

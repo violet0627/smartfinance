@@ -1,0 +1,67 @@
+flowchart TB
+    subgraph PT["PRESENTATION TIER — Flutter Mobile App (Dart)"]
+        direction LR
+        S1[Login / Register / 2FA Setup]
+        S2[Dashboard Summary]
+        S3[Transactions - History and Recurring]
+        S4[Budgets - Overview and Create]
+        S5[Investments - Portfolio]
+        S6[Goals Tracking]
+        S7[Analytics Charts]
+        S8[Gamification - XP and Badges]
+        S9[Settings - Security and Profile]
+    end
+
+    subgraph LT["LOGIC TIER — Python Flask REST API"]
+        direction LR
+        subgraph AUTH["Auth Services"]
+            A1[JWT Authentication]
+            A2[bcrypt Password Hashing]
+            A3[TOTP Two-Factor Auth]
+            A4[Email Verification]
+            A5[Password Reset]
+        end
+        subgraph BIZ["Business Logic"]
+            B1[Transaction Engine]
+            B2[Budget Monitor - Real-Time Alerts]
+            B3[Investment Performance Calc]
+            B4[Goals Tracker]
+            B5[Recurring Transaction Scheduler]
+            B6[XP and Achievement Engine]
+        end
+        subgraph UTIL["Utilities"]
+            U1[SMTP Email Service]
+            U2[Receipt Scanner OCR]
+            U3[CSV Export Service]
+            U4[Analytics Aggregation]
+        end
+    end
+
+    subgraph DT["DATA TIER — MySQL Database"]
+        direction LR
+        subgraph CORE["Core Tables"]
+            D1[Users]
+            D2[Transactions]
+            D3[Budgets]
+            D4[BudgetCategories]
+            D5[Investments]
+        end
+        subgraph EXT["Extended Tables"]
+            D6[Goals]
+            D7[RecurringTransactions]
+            D8[Achievements]
+            D9[UserAchievements]
+            D10[HabitStreaks]
+            D11[UserSettings]
+        end
+        subgraph SEC["Security Tables"]
+            D12[UserSessions]
+            D13[SecurityLogs]
+            D14[EmailVerificationTokens]
+            D15[PasswordResetTokens]
+            D16[TwoFactorAuths]
+        end
+    end
+
+    PT -- "HTTPS JSON REST API" --> LT
+    LT -- "SQLAlchemy ORM - MySQL Queries" --> DT
