@@ -323,7 +323,7 @@ Green means something positive. Yellow is a warning. Red means urgent action nee
 
 This is the **Achievements screen**.
 
-There are over 20 badges, each with a name, difficulty — Easy, Medium, Hard, or Expert — and an XP reward.
+There are 20 badges in total, each with a name, difficulty — Easy, Medium, Hard, or Expert — and an XP reward.
 
 **[Show a locked and unlocked badge]**
 
