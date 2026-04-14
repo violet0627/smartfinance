@@ -135,7 +135,7 @@ Go to the **Goals** screen and tap **+** for each goal.
 - Target Amount: RM 5000.00
 - Current Amount: RM 1200.00  ← this shows 24% progress
 - Start Date: 1 Feb 2026
-- Deadline: 31 Mar 2027
+- Deadline: 31 Dec 2026
 - Category: Travel
 - Priority: Medium
 
@@ -197,7 +197,7 @@ Go to the **Recurring Transactions** screen and tap **+** for each one.
 - Category: Salary
 - Amount: RM 3500.00
 - Frequency: Monthly
-- Start Date: 1 Jan 2026
+- Start Date: 1 May 2026  ← use a future date since the app only accepts future dates
 
 **Recurring 2 — Netflix Subscription**
 - Name: `Netflix Subscription`
@@ -205,7 +205,7 @@ Go to the **Recurring Transactions** screen and tap **+** for each one.
 - Category: Entertainment
 - Amount: RM 54.90
 - Frequency: Monthly
-- Start Date: 10 Jan 2026
+- Start Date: 10 May 2026  ← use a future date since the app only accepts future dates
 
 ---
 

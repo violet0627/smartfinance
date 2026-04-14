@@ -186,7 +186,11 @@ The confidence threshold is 0.7 — if the algorithm is more than 70% sure, it h
 
 The user can always pick a different one.
 
-**[Navigate to Transaction History]**
+**[Enter amount RM 15.00, toggle to Expense, type "lunch at mamak" in description — pause and show the category suggestion highlighting Food & Dining — select it, set date to today, tap Save]**
+
+Let me add one now to show it working live.
+
+**[Navigate to Transaction History — the new RM 15 transaction should appear at the top]**
 
 The **Transaction History** screen shows all past transactions.
 
@@ -216,8 +220,8 @@ Each category has a **linear progress bar**.
 
 The colour shows the spending level:
 - **Green** — on track, below 75%.
-- **Amber** — getting close.
-- **Red** — over budget.
+- **Amber** — getting close, between 75% and 90%.
+- **Red** — danger zone, above 90%.
 
 **[Navigate to Create Budget]**
 
