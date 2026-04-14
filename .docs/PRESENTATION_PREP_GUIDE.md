@@ -56,213 +56,215 @@ Write down the number. For example if it returns `UserId = 3`, replace every `YO
 
 ---
 
-# PART C — ADD ALL DEMO DATA
+# PART C — ADD ALL DEMO DATA (Manual Tapping)
 
-Run the SQL below in MySQL Workbench. Replace `YOUR_USER_ID` with the number from Step 7 above.
+Enter everything through the app. This also doubles as practice for the presentation.
+The achievements will unlock automatically as you do each action — no SQL needed for those.
+
+Estimated time: about 30–45 minutes of tapping.
 
 ---
 
-## C1 — Past Transactions (February and March 2026)
-## These give the Analytics charts enough data to look good.
+## C1 — Add Past Transactions
+
+Go to the **Transactions** screen and tap **+** for each one below. Make sure you set the **date** correctly using the date picker — these are historical transactions, not today.
+
+### February 2026 (6 transactions)
+
+| Type | Amount | Category | Description | Date |
+|------|--------|----------|-------------|------|
+| Income | RM 3500.00 | Salary | Monthly salary | 1 Feb 2026 |
+| Expense | RM 450.00 | Food & Dining | Food expenses Feb | 3 Feb 2026 |
+| Expense | RM 280.00 | Transport | Transport Feb | 5 Feb 2026 |
+| Expense | RM 80.00 | Entertainment | Entertainment Feb | 10 Feb 2026 |
+| Expense | RM 520.00 | Bills & Utilities | Utilities Feb | 15 Feb 2026 |
+| Expense | RM 150.00 | Shopping | Shopping Feb | 20 Feb 2026 |
+
+### March 2026 (7 transactions)
+
+| Type | Amount | Category | Description | Date |
+|------|--------|----------|-------------|------|
+| Income | RM 3500.00 | Salary | Monthly salary | 1 Mar 2026 |
+| Income | RM 500.00 | Freelance | Web design project | 5 Mar 2026 |
+| Expense | RM 520.00 | Food & Dining | Food expenses Mar | 4 Mar 2026 |
+| Expense | RM 260.00 | Transport | Transport Mar | 6 Mar 2026 |
+| Expense | RM 150.00 | Entertainment | Entertainment Mar | 10 Mar 2026 |
+| Expense | RM 500.00 | Bills & Utilities | Utilities Mar | 15 Mar 2026 |
+| Expense | RM 200.00 | Shopping | Shopping Mar | 22 Mar 2026 |
+
+### April 2026 — Current Month (5 transactions)
+These are the ones the budget will track against. The amounts are set so the budget shows green, amber, and red progress bars.
+
+| Type | Amount | Category | Description | Date |
+|------|--------|----------|-------------|------|
+| Income | RM 3500.00 | Salary | Monthly salary | 1 Apr 2026 |
+| Expense | RM 480.00 | Food & Dining | Food this month | 3 Apr 2026 |
+| Expense | RM 280.00 | Transport | Grab and fuel | 5 Apr 2026 |
+| Expense | RM 54.90 | Entertainment | Netflix subscription | 10 Apr 2026 |
+| Expense | RM 560.00 | Bills & Utilities | Electricity and water | 12 Apr 2026 |
+
+---
+
+## C2 — Create the April 2026 Budget
+
+Go to the **Budget** screen and tap **Create Budget**.
+
+- **Month:** April 2026
+- **Total Budget:** RM 2500.00
+- **Allocate categories as follows:**
+
+| Category | Allocated Amount | Why |
+|----------|-----------------|-----|
+| Food & Dining | RM 600.00 | RM480 spent → 80% → AMBER bar |
+| Transport | RM 350.00 | RM280 spent → 80% → AMBER bar |
+| Entertainment | RM 250.00 | RM54.90 spent → 22% → GREEN bar |
+| Bills & Utilities | RM 600.00 | RM560 spent → 93% → RED bar |
+| Shopping | RM 400.00 | RM0 spent → 0% → GREEN bar |
+| Others | RM 300.00 | RM0 spent → 0% → GREEN bar |
+
+Tap **Save**. After saving, open the Budget Overview — you should see all three colours (green, amber, red) visible at once. This looks great for the demo.
+
+---
+
+## C3 — Add Goals
+
+Go to the **Goals** screen and tap **+** for each goal.
+
+**Goal 1 — Emergency Fund**
+- Name: `Emergency Fund`
+- Description: `Save 3 months of expenses as emergency backup`
+- Target Amount: RM 10000.00
+- Current Amount: RM 3500.00  ← this shows 35% progress
+- Start Date: 1 Jan 2026
+- Deadline: 31 Dec 2026
+- Category: Emergency Fund
+- Priority: High
+
+**Goal 2 — Japan Trip**
+- Name: `Japan Trip`
+- Description: `Holiday trip to Japan with family`
+- Target Amount: RM 5000.00
+- Current Amount: RM 1200.00  ← this shows 24% progress
+- Start Date: 1 Feb 2026
+- Deadline: 31 Mar 2027
+- Category: Travel
+- Priority: Medium
+
+---
+
+## C4 — Add Investments
+
+Go to the **Investment Portfolio** screen and tap **+** for each holding.
+
+**Investment 1 — Apple Inc. (profit, shows green)**
+- Asset Type: Stocks
+- Asset Name: `Apple Inc.`
+- Stock Symbol: `AAPL`
+- Quantity: `10`
+- Purchase Price: RM 765.00
+- Purchase Date: 10 Jan 2026
+- Current Price: RM 825.00
+- Notes: `Long-term hold`
+
+**Investment 2 — Bitcoin (profit, shows green)**
+- Asset Type: Cryptocurrency
+- Asset Name: `Bitcoin`
+- Stock Symbol: `BTC`
+- Quantity: `0.05`
+- Purchase Price: RM 290000.00
+- Purchase Date: 1 Feb 2026
+- Current Price: RM 315000.00
+- Notes: `High risk high reward`
+
+**Investment 3 — KLCI ETF (loss, shows red)**
+- Asset Type: ETF
+- Asset Name: `KLCI ETF`
+- Stock Symbol: `KLCI`
+- Quantity: `50`
+- Purchase Price: RM 148.00
+- Purchase Date: 20 Jan 2026
+- Current Price: RM 142.00
+- Notes: `Diversified local market`
+
+**Investment 4 — Maybank FD (profit, shows green)**
+- Asset Type: Fixed Deposit
+- Asset Name: `Maybank FD`
+- Stock Symbol: (leave empty)
+- Quantity: `1`
+- Purchase Price: RM 5000.00
+- Purchase Date: 5 Jan 2026
+- Current Price: RM 5150.00
+- Notes: `3.8% annual return`
+
+---
+
+## C5 — Add Recurring Transactions
+
+Go to the **Recurring Transactions** screen and tap **+** for each one.
+
+**Recurring 1 — Monthly Salary**
+- Name: `Monthly Salary`
+- Type: Income
+- Category: Salary
+- Amount: RM 3500.00
+- Frequency: Monthly
+- Start Date: 1 Jan 2026
+
+**Recurring 2 — Netflix Subscription**
+- Name: `Netflix Subscription`
+- Type: Expense
+- Category: Entertainment
+- Amount: RM 54.90
+- Frequency: Monthly
+- Start Date: 10 Jan 2026
+
+---
+
+## C6 — Small SQL Tweaks (Things You Can't Set in the App)
+
+The three main achievements (First Step, Budget Beginner, Investment Initiate) will have **unlocked automatically** when you did C1, C2, and C4 above. No SQL needed for those.
+
+But these three things can't be set through the app UI, so run this SQL in MySQL Workbench.
+
+First, get your UserId:
 
 ```sql
 USE smartfinance;
-
--- ===== FEBRUARY 2026 =====
-INSERT INTO Transactions (UserId, Amount, Category, Description, TransactionDate, TransactionType) VALUES
-(YOUR_USER_ID, 3500.00, 'Salary',             'Monthly salary',          '2026-02-01', 'income'),
-(YOUR_USER_ID,  450.00, 'Food & Dining',       'Food expenses Feb',       '2026-02-03', 'expense'),
-(YOUR_USER_ID,  280.00, 'Transport',           'Transport Feb',           '2026-02-05', 'expense'),
-(YOUR_USER_ID,   80.00, 'Entertainment',       'Entertainment Feb',       '2026-02-10', 'expense'),
-(YOUR_USER_ID,  520.00, 'Bills & Utilities',   'Utilities Feb',           '2026-02-15', 'expense'),
-(YOUR_USER_ID,  150.00, 'Shopping',            'Shopping Feb',            '2026-02-20', 'expense');
-
--- ===== MARCH 2026 =====
-INSERT INTO Transactions (UserId, Amount, Category, Description, TransactionDate, TransactionType) VALUES
-(YOUR_USER_ID, 3500.00, 'Salary',             'Monthly salary',          '2026-03-01', 'income'),
-(YOUR_USER_ID,  500.00, 'Freelance',          'Web design project',      '2026-03-05', 'income'),
-(YOUR_USER_ID,  520.00, 'Food & Dining',       'Food expenses Mar',       '2026-03-04', 'expense'),
-(YOUR_USER_ID,  260.00, 'Transport',           'Transport Mar',           '2026-03-06', 'expense'),
-(YOUR_USER_ID,  150.00, 'Entertainment',       'Entertainment Mar',       '2026-03-10', 'expense'),
-(YOUR_USER_ID,  500.00, 'Bills & Utilities',   'Utilities Mar',           '2026-03-15', 'expense'),
-(YOUR_USER_ID,  200.00, 'Shopping',            'Shopping Mar',            '2026-03-22', 'expense');
+SELECT UserId FROM Users WHERE Email = 'chuanshengsiow@gmail.com';
 ```
 
----
-
-## C2 — April 2026 Transactions (Current Month)
-## These are the transactions the budget tracks against.
-## The amounts are set so each budget category shows a different colour.
+Write down the number. Replace `YOUR_USER_ID` below with it.
 
 ```sql
--- ===== APRIL 2026 (current month) =====
-INSERT INTO Transactions (UserId, Amount, Category, Description, TransactionDate, TransactionType) VALUES
-(YOUR_USER_ID, 3500.00, 'Salary',             'Monthly salary',          '2026-04-01', 'income'),
-(YOUR_USER_ID,  480.00, 'Food & Dining',       'Food this month',         '2026-04-03', 'expense'),
-(YOUR_USER_ID,  280.00, 'Transport',           'Grab and fuel',           '2026-04-05', 'expense'),
-(YOUR_USER_ID,   54.90, 'Entertainment',       'Netflix subscription',    '2026-04-10', 'expense'),
-(YOUR_USER_ID,  560.00, 'Bills & Utilities',   'Electricity and water',   '2026-04-12', 'expense');
-```
-
----
-
-## C3 — Budget for April 2026
-## Shows Food at 80% (amber), Bills at 93% (red), Entertainment at 22% (green).
-## This makes all three progress bar colours visible in the demo.
-
-```sql
--- Create the parent budget record
-INSERT INTO Budgets (UserId, MonthYear, BudgetPeriod, TotalBudget)
-VALUES (YOUR_USER_ID, '2026-04', 'April 2026', 2500.00);
-
--- Get the BudgetId that was just created
--- Run this line separately and note the number:
-SELECT BudgetId FROM Budgets WHERE UserId = YOUR_USER_ID AND MonthYear = '2026-04';
-```
-
-After you run the SELECT above, write down the BudgetId number. Replace `YOUR_BUDGET_ID` below with it:
-
-```sql
--- Create budget categories
--- Food: RM600 budget, RM480 spent = 80% = AMBER (warning)
--- Transport: RM350 budget, RM280 spent = 80% = AMBER (warning)
--- Entertainment: RM250 budget, RM55 spent = 22% = GREEN (safe)
--- Bills: RM600 budget, RM560 spent = 93% = RED (danger)
--- Shopping: RM400 budget, RM0 spent = 0% = GREEN
-
-INSERT INTO BudgetCategories (BudgetId, CategoryName, AllocatedAmount, SpentAmount) VALUES
-(YOUR_BUDGET_ID, 'Food & Dining',     600.00, 480.00),
-(YOUR_BUDGET_ID, 'Transport',         350.00, 280.00),
-(YOUR_BUDGET_ID, 'Entertainment',     250.00,  54.90),
-(YOUR_BUDGET_ID, 'Bills & Utilities', 600.00, 560.00),
-(YOUR_BUDGET_ID, 'Shopping',          400.00,   0.00),
-(YOUR_BUDGET_ID, 'Others',            300.00,   0.00);
-```
-
----
-
-## C4 — Goals
-
-```sql
-INSERT INTO Goals (UserId, GoalName, Description, TargetAmount, CurrentAmount, StartDate, Deadline, Status, Category, Priority)
-VALUES
--- Emergency fund: 35% done, HIGH priority
-(YOUR_USER_ID, 'Emergency Fund',  'Save 3 months of expenses as emergency backup', 10000.00, 3500.00, '2026-01-01', '2026-12-31', 'active', 'Emergency Fund', 'high'),
--- Japan trip: 24% done, MEDIUM priority
-(YOUR_USER_ID, 'Japan Trip',      'Holiday trip to Japan with family',              5000.00,  1200.00, '2026-02-01', '2027-03-31', 'active', 'Travel',         'medium');
-```
-
----
-
-## C5 — Investments
-## Mix of profit (green) and loss (red) to make the demo interesting.
-
-```sql
-INSERT INTO Investments (UserId, AssetName, AssetsType, StockSymbol, Quantity, PurchasePrice, PurchaseDate, CurrentPrice, Notes)
-VALUES
--- Apple: profit (purchase RM765, now RM825)
-(YOUR_USER_ID, 'Apple Inc.',   'Stocks',          'AAPL', 10.0000,   765.00, '2026-01-10',  825.00, 'Long-term hold'),
--- Bitcoin: profit (purchase RM290000, now RM315000)
-(YOUR_USER_ID, 'Bitcoin',      'Cryptocurrency',  'BTC',   0.0500, 290000.00, '2026-02-01', 315000.00, 'High risk high reward'),
--- KLCI ETF: small loss (purchase RM148, now RM142) — shows red
-(YOUR_USER_ID, 'KLCI ETF',     'ETF',             'KLCI', 50.0000,   148.00, '2026-01-20',  142.00, 'Diversified local market'),
--- Fixed Deposit: safe profit
-(YOUR_USER_ID, 'Maybank FD',   'Fixed Deposit',   NULL,    1.0000,  5000.00, '2026-01-05',  5150.00, '3.8% annual return');
-```
-
----
-
-## C6 — Recurring Transactions
-
-```sql
-INSERT INTO recurringtransactions (UserId, Name, TransactionType, Category, Amount, Frequency, StartDate, NextExecution, IsActive)
-VALUES
-(YOUR_USER_ID, 'Monthly Salary',        'income',  'Salary',        3500.00, 'monthly', '2026-01-01', '2026-05-01', TRUE),
-(YOUR_USER_ID, 'Netflix Subscription',  'expense', 'Entertainment',   54.90, 'monthly', '2026-01-10', '2026-05-10', TRUE);
-```
-
----
-
-## C7 — Unlock Starter Achievements and Give XP
-## This gives the gamification screen something to show.
-
-```sql
--- Give the user XP for all the activity above
+-- Give XP and set level to 2
 UPDATE Users
 SET ExperiencePts = 320, CurrentLevel = 2
 WHERE UserId = YOUR_USER_ID;
 
--- Make sure all achievements exist for this user
--- First, insert UserAchievement rows for all 8 achievements
--- Get achievement IDs
-SELECT AchievementId, Name FROM Achievements;
-```
-
-Run the SELECT above. It will show you the AchievementId for each achievement. Then run:
-
-```sql
--- Insert all achievement tracking rows (all locked at first)
-INSERT INTO UserAchievements (UserId, AchievementId, IsUnlocked, Progress)
-SELECT YOUR_USER_ID, AchievementId, FALSE, 0
-FROM Achievements;
-```
-
-Then unlock the three starter achievements:
-
-```sql
--- Unlock "First Step" (recorded first transaction)
-UPDATE UserAchievements
-SET IsUnlocked = TRUE, Progress = 100, UnlockedAt = '2026-02-03 10:00:00'
-WHERE UserId = YOUR_USER_ID
-  AND AchievementId = (SELECT AchievementId FROM Achievements WHERE Name = 'First Step');
-
--- Unlock "Budget Beginner" (created first budget)
-UPDATE UserAchievements
-SET IsUnlocked = TRUE, Progress = 100, UnlockedAt = '2026-04-01 09:00:00'
-WHERE UserId = YOUR_USER_ID
-  AND AchievementId = (SELECT AchievementId FROM Achievements WHERE Name = 'Budget Beginner');
-
--- Unlock "Investment Initiate" (added first investment)
-UPDATE UserAchievements
-SET IsUnlocked = TRUE, Progress = 100, UnlockedAt = '2026-01-10 11:00:00'
-WHERE UserId = YOUR_USER_ID
-  AND AchievementId = (SELECT AchievementId FROM Achievements WHERE Name = 'Investment Initiate');
-
--- Set Week Warrior progress to 5/7 (almost unlocked — looks impressive)
+-- Set Week Warrior to 5/7 progress (looks almost complete — impressive)
 UPDATE UserAchievements
 SET Progress = 71
 WHERE UserId = YOUR_USER_ID
   AND AchievementId = (SELECT AchievementId FROM Achievements WHERE Name = 'Week Warrior');
 
--- Set Expense Expert progress to 13/100 transactions
+-- Set Expense Expert to 13/100 transactions
 UPDATE UserAchievements
 SET Progress = 13
 WHERE UserId = YOUR_USER_ID
   AND AchievementId = (SELECT AchievementId FROM Achievements WHERE Name = 'Expense Expert');
-```
 
----
-
-## C8 — Habit Streak
-
-```sql
+-- Add habit streak (7-day current, 12-day longest)
 INSERT INTO HabitStreaks (UserId, StreakType, CurrentStreak, LongestStreak, LastActivity)
-VALUES
-(YOUR_USER_ID, 'transaction_log', 7, 12, '2026-04-13');
-```
+VALUES (YOUR_USER_ID, 'transaction_log', 7, 12, '2026-04-13');
 
----
-
-## C9 — User Settings
-
-```sql
+-- User settings (notifications and alerts on)
 INSERT INTO UserSettings (UserId, EnableNotifications, EnableBudgetAlerts, EnableAchievementAlerts, EnableStreakAlerts, BudgetWarningThreshold, BudgetDangerThreshold, BudgetCriticalThreshold, ShowInLeaderboard)
 VALUES (YOUR_USER_ID, TRUE, TRUE, TRUE, TRUE, 75, 90, 100, TRUE);
 ```
 
 ---
 
-# PART D — SET UP 2FA (Do this AFTER all the SQL above)
+# PART D — SET UP 2FA (Do this AFTER PART C is done)
 
 **Step 1.** Open the app on the emulator and log in with:
 - Email: `chuanshengsiow@gmail.com`
