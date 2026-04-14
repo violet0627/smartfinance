@@ -69,17 +69,6 @@ Estimated time: about 30–45 minutes of tapping.
 
 Go to the **Transactions** screen and tap **+** for each one below. Make sure you set the **date** correctly using the date picker — these are historical transactions, not today.
 
-### February 2026 (6 transactions)
-
-| Type | Amount | Category | Description | Date |
-|------|--------|----------|-------------|------|
-| Income | RM 3500.00 | Salary | Monthly salary | 1 Feb 2026 |
-| Expense | RM 450.00 | Food & Dining | Food expenses Feb | 3 Feb 2026 |
-| Expense | RM 280.00 | Transport | Transport Feb | 5 Feb 2026 |
-| Expense | RM 80.00 | Entertainment | Entertainment Feb | 10 Feb 2026 |
-| Expense | RM 520.00 | Bills & Utilities | Utilities Feb | 15 Feb 2026 |
-| Expense | RM 150.00 | Shopping | Shopping Feb | 20 Feb 2026 |
-
 ### March 2026 (7 transactions)
 
 | Type | Amount | Category | Description | Date |
