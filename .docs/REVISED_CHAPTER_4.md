@@ -315,7 +315,7 @@ The SmartFinance data model comprises twelve entities. Figure 4.3.2.1 shows the 
 
 *[See Figure 4.3.2.1 — Entity Relationship Diagram (resources/new_diagrams/Figure_4.3.2.1_ERD.html)]*
 
-The eight core domain entities are USERS, TRANSACTIONS, BUDGETS, BUDGETCATEGORIES, INVESTMENTS, ACHIEVEMENTS, USERACHIEVEMENTS, and HABITSTREAKS. Four additional tables — TWOFACTORAUTHS, BACKUPCODES, USERSESSIONS, and SECURITYLOGS — support authentication security and audit trail requirements.
+The core domain entities are USERS, TRANSACTIONS, BUDGETS, BUDGETCATEGORIES, INVESTMENTS, GOALS, ACHIEVEMENTS, USERACHIEVEMENTS, HABITSTREAKS, RECURRINGTRANSACTIONS, and USERSETTINGS. Three additional tables — TWOFACTORAUTHS, USERSESSIONS, and SECURITYLOGS — support authentication security and audit trail requirements.
 
 **USERS to TRANSACTIONS (one-to-many).** Each user may have zero or more transaction records. The `UserId` foreign key in TRANSACTIONS references USERS with `ON DELETE CASCADE`, so that deleting a user account automatically removes all associated transaction history without requiring explicit multi-step deletion in application code.
 
@@ -327,7 +327,13 @@ The eight core domain entities are USERS, TRANSACTIONS, BUDGETS, BUDGETCATEGORIE
 
 **ACHIEVEMENTS and USERS (many-to-many via USERACHIEVEMENTS).** The ACHIEVEMENTS table defines the catalogue of available badges and their unlock criteria. USERACHIEVEMENTS is a bridge table recording which achievements each user has unlocked and at what timestamp. The `Progress` column in USERACHIEVEMENTS tracks partial completion for count-based and milestone-based achievements, enabling the progress bars shown on the Achievements screen. The composite unique constraint on `(UserId, AchievementId)` prevents duplicate unlock records.
 
-**USERS to HABITSTREAKS (one-to-many).** The HABITSTREAKS table records streak data per user and streak type. Current and longest streak values are also cached in the USERS table to avoid a JOIN query on every streak display; the HABITSTREAKS table provides the historical record used for milestone evaluation.
+**USERS to HABITSTREAKS (one-to-many).** The HABITSTREAKS table records streak data per user and streak type. Current and longest streak values are stored directly in HABITSTREAKS and accessed per user when needed.
+
+**USERS to GOALS (one-to-many).** Each user may have zero or more savings goals in the GOALS table. Goals carry a target amount, current amount, start date, deadline, status, category, and priority level.
+
+**USERS to RECURRINGTRANSACTIONS (one-to-many).** The RECURRINGTRANSACTIONS table stores rules for automatically repeated income or expense entries. Each rule tracks its frequency (daily/weekly/monthly/yearly), last execution date, next execution date, and active status.
+
+**USERS to USERSETTINGS (one-to-one).** The USERSETTINGS table holds notification preferences, budget alert thresholds, and leaderboard visibility for each user. The `UNIQUE` constraint on `UserId` enforces the one-to-one relationship.
 
 ---
 
@@ -348,26 +354,22 @@ The USERS table stores the core account record for each registered user.
 ```sql
 CREATE TABLE Users (
     UserId            INT           NOT NULL AUTO_INCREMENT,
-    FullName          VARCHAR(100)  NOT NULL,
     Email             VARCHAR(255)  NOT NULL,
     PasswordHash      VARCHAR(255)  NOT NULL,
+    FullName          VARCHAR(255)  NOT NULL,
     PhoneNumber       VARCHAR(20)   NULL,
-    IsEmailVerified   BOOLEAN       NOT NULL DEFAULT FALSE,
+    EmailVerified     BOOLEAN       NOT NULL DEFAULT FALSE,
     TwoFactorEnabled  BOOLEAN       NOT NULL DEFAULT FALSE,
-    CurrentLevel      INT           NOT NULL DEFAULT 1,
-    ExperiencePts     INT           NOT NULL DEFAULT 0,
-    CurrentStreak     INT           NOT NULL DEFAULT 0,
-    LongestStreak     INT           NOT NULL DEFAULT 0,
-    ProfilePicture    VARCHAR(500)  NULL,
-    Currency          VARCHAR(10)   NOT NULL DEFAULT 'MYR',
     CreatedAt         DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UpdatedAt         DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    LastLogin         DATETIME      NULL,
+    ExperiencePts     INT           NOT NULL DEFAULT 0,
+    CurrentLevel      INT           NOT NULL DEFAULT 1,
     PRIMARY KEY (UserId),
     UNIQUE KEY uq_users_email (Email)
 );
 ```
 
-The `PasswordHash` column stores the bcrypt hash of the user's password, never the plaintext value. `CurrentStreak` and `LongestStreak` are denormalised from HABITSTREAKS for read performance. The `UNIQUE` constraint on `Email` enforces account uniqueness at the database level as a second line of defence after application-level validation.
+The `PasswordHash` column stores the bcrypt hash of the user's password, never the plaintext value. `EmailVerified` is set to TRUE when the user clicks the verification link sent to their email address. `TwoFactorEnabled` is updated in tandem with the `TwoFactorAuths` record when 2FA is enrolled or removed. The `UNIQUE` constraint on `Email` enforces account uniqueness at the database level as a second line of defence after application-level validation.
 
 #### TRANSACTIONS Table
 
@@ -454,13 +456,12 @@ CREATE TABLE Investments (
 ```sql
 CREATE TABLE Achievements (
     AchievementId    INT           NOT NULL AUTO_INCREMENT,
-    Name             VARCHAR(100)  NOT NULL,
-    Description      TEXT          NOT NULL,
-    BadgeIcon        VARCHAR(255)  NOT NULL,
+    Name             VARCHAR(255)  NOT NULL,
+    Description      TEXT          NULL,
+    BadgeIcon        VARCHAR(255)  NULL,
     XpReward         INT           NOT NULL DEFAULT 0,
-    UnlockCriteria   TEXT          NOT NULL,
-    Category         VARCHAR(50)   NOT NULL,
-    Difficulty       VARCHAR(20)   NOT NULL,
+    UnlockCriteria   TEXT          NULL,
+    DifficultyLevel  ENUM('easy', 'medium', 'hard', 'expert') NOT NULL DEFAULT 'easy',
     PRIMARY KEY (AchievementId)
 );
 ```
@@ -472,16 +473,16 @@ CREATE TABLE Achievements (
 ```sql
 CREATE TABLE UserAchievements (
     UserAchievementId  INT       NOT NULL AUTO_INCREMENT,
+    IsUnlocked         BOOLEAN   NOT NULL DEFAULT FALSE,
+    Progress           INT       NOT NULL DEFAULT 0,
     UserId             INT       NOT NULL,
     AchievementId      INT       NOT NULL,
-    UnlockedAt         DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    Progress           INT       NOT NULL DEFAULT 0,
+    UnlockedAt         DATETIME  NULL,
     PRIMARY KEY (UserAchievementId),
-    UNIQUE KEY uq_userachievements_user_achievement (UserId, AchievementId),
     CONSTRAINT fk_userachievements_user
-        FOREIGN KEY (UserId) REFERENCES Users (UserId) ON DELETE CASCADE,
+        FOREIGN KEY (UserId) REFERENCES Users (UserId),
     CONSTRAINT fk_userachievements_achievement
-        FOREIGN KEY (AchievementId) REFERENCES Achievements (AchievementId) ON DELETE CASCADE
+        FOREIGN KEY (AchievementId) REFERENCES Achievements (AchievementId)
 );
 ```
 
@@ -505,46 +506,30 @@ CREATE TABLE HabitStreaks (
 
 #### TwoFactorAuths Table
 
-The `TwoFactorAuths` table stores the TOTP secret key for each user who has enrolled in two-factor authentication. A record is created when setup is initiated and removed when 2FA is disabled. The `UNIQUE` constraint on `UserId` enforces the one-to-one relationship with USERS.
+The `TwoFactorAuths` table stores the TOTP secret key and one-time-use backup codes for each user who has enrolled in two-factor authentication. A record is created when setup is initiated and removed when 2FA is disabled.
 
 ```sql
 CREATE TABLE TwoFactorAuths (
-    TwoFactorAuthId  INT          NOT NULL AUTO_INCREMENT,
-    UserId           INT          NOT NULL,
-    SecretKey        VARCHAR(255) NOT NULL,
-    IsEnabled        BOOLEAN      NOT NULL DEFAULT FALSE,
-    EnabledAt        DATETIME     NULL,
-    PRIMARY KEY (TwoFactorAuthId),
-    UNIQUE KEY uq_twofactorauths_userid (UserId),
+    TwoFactorId   INT          NOT NULL AUTO_INCREMENT,
+    UserId        INT          NOT NULL,
+    Secret        VARCHAR(500) NOT NULL,
+    BackupCodes   TEXT         NULL,
+    CreatedAt     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    LastUsedAt    DATETIME     NULL,
+    PRIMARY KEY (TwoFactorId),
     CONSTRAINT fk_twofactorauths_user
         FOREIGN KEY (UserId) REFERENCES Users (UserId) ON DELETE CASCADE
 );
 ```
 
-#### BackupCodes Table
-
-The `BackupCodes` table stores bcrypt-hashed one-time-use recovery codes generated during 2FA enrolment. Hashes rather than plaintext values are stored so that a database compromise does not expose usable codes.
-
-```sql
-CREATE TABLE BackupCodes (
-    BackupCodeId  INT          NOT NULL AUTO_INCREMENT,
-    UserId        INT          NOT NULL,
-    CodeHash      VARCHAR(255) NOT NULL,
-    IsUsed        BOOLEAN      NOT NULL DEFAULT FALSE,
-    UsedAt        DATETIME     NULL,
-    CreatedAt     DATETIME     NOT NULL,
-    PRIMARY KEY (BackupCodeId),
-    CONSTRAINT fk_backupcodes_user
-        FOREIGN KEY (UserId) REFERENCES Users (UserId) ON DELETE CASCADE
-);
-```
+The `Secret` column stores the base32-encoded TOTP secret shared between the server and the user's authenticator application. `BackupCodes` stores a JSON array of the ten one-time-use recovery codes generated during enrolment (e.g., `["a1b2c3d4", "e5f6g7h8", ...]`). These codes are stored in plaintext in this column; the security guarantee relies on the overall database access controls rather than per-code hashing. `LastUsedAt` records when the TOTP code was most recently used for login, providing a usage audit trail.
 
 #### UserSessions Table
 
 The `UserSessions` table records every login session, enabling users to review and revoke active sessions from the Security Settings screen.
 
 ```sql
-CREATE TABLE UserSessions (
+CREATE TABLE usersessions (
     SessionId     INT          NOT NULL AUTO_INCREMENT,
     UserId        INT          NOT NULL,
     DeviceName    VARCHAR(255) NULL,
@@ -569,7 +554,7 @@ CREATE TABLE UserSessions (
 The `SecurityLogs` table constitutes the security audit trail. Records are written for every security-relevant event and are never updated or deleted through normal application operation, preserving the integrity of the log.
 
 ```sql
-CREATE TABLE SecurityLogs (
+CREATE TABLE securitylogs (
     LogId             INT          NOT NULL AUTO_INCREMENT,
     UserId            INT          NOT NULL,
     EventType         VARCHAR(100) NOT NULL,
@@ -584,7 +569,86 @@ CREATE TABLE SecurityLogs (
 );
 ```
 
-The `ON DELETE CASCADE` clause is applied consistently across all twelve tables so that account deletion via the `/api/security/account` endpoint results in a complete, clean removal of all associated data without requiring explicit multi-table delete logic in application code.
+#### GOALS Table
+
+The `Goals` table stores each user's savings targets. A goal carries a name, optional description, target amount, current amount saved, start and deadline dates, status (`active`, `completed`, or `abandoned`), optional category, and priority level.
+
+```sql
+CREATE TABLE Goals (
+    GoalId         INT             NOT NULL AUTO_INCREMENT,
+    UserId         INT             NOT NULL,
+    GoalName       VARCHAR(100)    NOT NULL,
+    Description    TEXT            NULL,
+    TargetAmount   DECIMAL(15, 2)  NOT NULL,
+    CurrentAmount  DECIMAL(15, 2)  NOT NULL DEFAULT 0.00,
+    StartDate      DATE            NOT NULL,
+    Deadline       DATE            NOT NULL,
+    Status         ENUM('active', 'completed', 'abandoned') NOT NULL DEFAULT 'active',
+    Category       VARCHAR(50)     NULL,
+    Priority       ENUM('low', 'medium', 'high') NOT NULL DEFAULT 'medium',
+    CreatedAt      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (GoalId),
+    CONSTRAINT fk_goals_user
+        FOREIGN KEY (UserId) REFERENCES Users (UserId) ON DELETE CASCADE
+);
+```
+
+#### RECURRINGTRANSACTIONS Table
+
+The `recurringtransactions` table stores rules for automatically repeated financial entries. Each rule specifies the transaction name, type (income or expense), category, amount, frequency, start and optional end dates, last execution date, next scheduled execution date, and active status. When the `NextExecution` date arrives, the system creates a regular transaction from the rule and advances `NextExecution` by one frequency interval.
+
+```sql
+CREATE TABLE recurringtransactions (
+    RecurringId      INT             NOT NULL AUTO_INCREMENT,
+    UserId           INT             NOT NULL,
+    Name             VARCHAR(255)    NOT NULL,
+    TransactionType  VARCHAR(20)     NOT NULL,
+    Category         VARCHAR(50)     NOT NULL,
+    Amount           DECIMAL(15, 2)  NOT NULL,
+    Description      TEXT            NULL,
+    Frequency        VARCHAR(20)     NOT NULL,
+    StartDate        DATE            NOT NULL,
+    EndDate          DATE            NULL,
+    LastExecuted     DATE            NULL,
+    NextExecution    DATE            NOT NULL,
+    IsActive         BOOLEAN         NOT NULL DEFAULT TRUE,
+    CreatedAt        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (RecurringId),
+    CONSTRAINT fk_recurringtransactions_user
+        FOREIGN KEY (UserId) REFERENCES Users (UserId) ON DELETE CASCADE
+);
+```
+
+#### USERSETTINGS Table
+
+The `UserSettings` table stores each user's notification preferences, budget alert thresholds, and leaderboard visibility. The `UNIQUE` constraint on `UserId` enforces the one-to-one relationship with USERS.
+
+```sql
+CREATE TABLE UserSettings (
+    SettingId                INT      NOT NULL AUTO_INCREMENT,
+    UserId                   INT      NOT NULL,
+    EnableNotifications      BOOLEAN  NOT NULL DEFAULT TRUE,
+    EnableBudgetAlerts       BOOLEAN  NOT NULL DEFAULT TRUE,
+    EnableAchievementAlerts  BOOLEAN  NOT NULL DEFAULT TRUE,
+    EnableStreakAlerts        BOOLEAN  NOT NULL DEFAULT TRUE,
+    QuietHoursStart          TIME     NULL,
+    QuietHoursEnd            TIME     NULL,
+    BudgetWarningThreshold   INT      NOT NULL DEFAULT 80,
+    BudgetDangerThreshold    INT      NOT NULL DEFAULT 90,
+    BudgetCriticalThreshold  INT      NOT NULL DEFAULT 100,
+    ShowInLeaderboard        BOOLEAN  NOT NULL DEFAULT TRUE,
+    PRIMARY KEY (SettingId),
+    UNIQUE KEY uq_usersettings_userid (UserId),
+    CONSTRAINT fk_usersettings_user
+        FOREIGN KEY (UserId) REFERENCES Users (UserId)
+);
+```
+
+The three threshold columns (`BudgetWarningThreshold`, `BudgetDangerThreshold`, `BudgetCriticalThreshold`) allow each user to configure the percentage at which budget alerts fire. The defaults of 80%, 90%, and 100% reflect practical spending awareness needs while remaining adjustable for users who prefer earlier or later warnings.
+
+The `ON DELETE CASCADE` clause is applied across tables where account deletion should propagate automatically. Wherever it is omitted (UserAchievements, HabitStreaks, UserSettings), the SQLAlchemy relationship cascade configuration in application code handles the removal order to maintain referential integrity.
 
 ---
 
@@ -1501,7 +1565,7 @@ Enabling 2FA is a two-step process. The user first initiates setup, which genera
 
 When a user with 2FA enabled submits login credentials, the server validates the password and, if correct, returns `{"requires_2fa": true}` rather than a JWT. The client presents a TOTP verification screen. The server verifies the submitted code against the stored secret; only upon successful verification is a JWT issued.
 
-**Backup codes.** During enrolment, the server generates ten one-time-use backup codes using `secrets.token_hex(4)`, yielding eight-character hexadecimal strings. Each code is individually hashed with bcrypt before storage. The plaintext codes are returned to the client once, at generation time, and are never retrievable thereafter. A user may regenerate backup codes at any time from the Security Settings screen, which invalidates all previously issued codes.
+**Backup codes.** During enrolment, the server generates ten one-time-use recovery codes and stores them as a JSON array in the `TwoFactorAuths.BackupCodes` column. The plaintext codes are returned to the client once, at generation time, for the user to record. If the user loses access to their authenticator application, they may enter a backup code at the TOTP verification step to complete login; the server removes the consumed code from the JSON array on use so each code can only be used once. A user may regenerate a fresh set of ten codes at any time from the Security Settings screen, which replaces the stored array.
 
 **Disabling 2FA.** Disabling requires the user to confirm their current password, preventing an attacker with temporary device access from silently removing the second factor.
 
@@ -1625,7 +1689,7 @@ The development environment uses locally managed encryption keys stored in envir
 
 ## 4.8 Chapter Summary
 
-This chapter has presented the complete system design for SmartFinance. The three-tier client-server architecture separates the Flutter presentation layer, Flask application layer, and MySQL data layer into independently testable and deployable tiers. The twelve-table normalised database schema handles all domain entities with referential integrity enforced through foreign key constraints and `ON DELETE CASCADE`, while a deliberate denormalisation in `BudgetCategories.SpentAmount` ensures sub-20ms budget status queries. The 52-endpoint RESTful API is organised into thirteen Blueprint modules covering authentication, transactions, budgets, goals, investments, gamification, analytics, settings, 2FA, security, recurring transactions, insights, and the dashboard.
+This chapter has presented the complete system design for SmartFinance. The three-tier client-server architecture separates the Flutter presentation layer, Flask application layer, and MySQL data layer into independently testable and deployable tiers. The fourteen-table database schema covers all domain entities — Users, Transactions, Budgets, BudgetCategories, Investments, Goals, Achievements, UserAchievements, HabitStreaks, RecurringTransactions, UserSettings, TwoFactorAuths, usersessions, and securitylogs — with referential integrity enforced through foreign key constraints and a deliberate denormalisation in `BudgetCategories.SpentAmount` for sub-20ms budget status queries. The 52-endpoint RESTful API is organised into thirteen Blueprint modules covering authentication, transactions, budgets, goals, investments, gamification, analytics, settings, 2FA, security, recurring transactions, insights, and the dashboard.
 
 Six computational algorithms address the specific performance constraints of mid-range Android devices: intelligent categorisation achieves 85% accuracy in under 5ms using in-memory keyword matching and bounded user history; budget alerting completes in under 20ms through denormalised caching; XP progression uses a linear formula for O(1) level calculations; portfolio performance uses single-pass aggregation to complete in under 100ms for typical holdings; streak tracking uses a `MAX()` indexed query for O(1) streak checks; and achievement evaluation uses trigger-based selective checking to reduce evaluation time from 2.5 seconds to under 220ms. Multi-layered security — AES-256 encryption, bcrypt hashing, JWT authentication, TOTP-based 2FA, TLS 1.3, and a persistent security audit log — provides defence-in-depth while complying with PDPA 2010 requirements.
 
