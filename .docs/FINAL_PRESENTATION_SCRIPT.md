@@ -735,4 +735,184 @@ This runs automatically without any background scheduler.
 
 ---
 
+## Q17: How do you store the JWT securely on the Flutter side?
+
+I use a package called **flutter_secure_storage**.
+
+On Android, it stores the token using the **Android Keystore** system.
+
+On iOS, it uses the **iOS Keychain**.
+
+Both are encrypted storage areas built into the operating system itself.
+
+So the token is never saved as plain text on the device.
+
+---
+
+## Q18: How does the keyword analysis work exactly?
+
+I have a predefined list of keywords mapped to each category.
+
+For example — "mamak", "lunch", "dinner" all map to Food & Dining. "Grab", "petrol", "fuel" map to Transport.
+
+When the user types a description, the app counts how many keywords match each category.
+
+The category with the most matches gets a confidence score.
+
+If the score is above 0.7, the app highlights that category as the suggestion.
+
+This runs entirely on the Flutter side — no server call needed.
+
+---
+
+## Q19: How do you prevent one user from accessing another user's data?
+
+Every API endpoint requires a **JWT in the request header**.
+
+The server decodes the JWT and extracts the UserId from it.
+
+Then every database query is filtered by that UserId.
+
+So even if someone manually sends a request with a different user's ID in the URL, the server ignores it and only returns data for the user their token belongs to.
+
+---
+
+## Q20: What happens if there is no internet connection?
+
+Currently the app requires an internet connection to work.
+
+If there's no connection, the API calls fail and the app shows an error message.
+
+This is a limitation I acknowledged — offline caching is something I would add in the future.
+
+---
+
+## Q21: Why did you use two separate tables for Budget and BudgetCategories?
+
+This follows **database normalisation** rules.
+
+One budget can have many category allocations.
+
+If I stored all categories in one row, the table would be messy and hard to query.
+
+By separating them, each category row is clean and independent.
+
+I can add, update, or delete one category without touching the others.
+
+---
+
+## Q22: If a user deletes a transaction, does the budget update automatically?
+
+Yes.
+
+When a transaction is deleted, the backend recalculates the SpentAmount for that category.
+
+It sums all remaining expense transactions for that month and updates the BudgetCategory record.
+
+So the progress bar reflects the deletion immediately.
+
+---
+
+## Q23: Can a user create two budgets for the same month?
+
+No — the backend checks if a budget already exists for that month before allowing a new one.
+
+If one already exists, it returns an error.
+
+The app then tells the user to edit the existing budget instead of creating a new one.
+
+---
+
+## Q24: What happens if the TOTP clock is slightly out of sync?
+
+pyotp has a built-in **tolerance window**.
+
+By default it accepts codes from one 30-second window before and after the current time.
+
+So even if the phone clock is a few seconds off, the code still works.
+
+This follows the **RFC 6238** standard which defines this tolerance.
+
+---
+
+## Q25: Why MySQL instead of PostgreSQL or MongoDB?
+
+MySQL is a **relational database**, which fits well because all my data has clear relationships.
+
+Transactions belong to users. Budget categories belong to budgets.
+
+A relational database enforces these with foreign keys — which prevents orphaned data.
+
+MongoDB is a document database — better for unstructured data, which I don't have.
+
+PostgreSQL would also work, but MySQL is more familiar to me and well-supported with SQLAlchemy.
+
+---
+
+## Q26: How does the app stop users from cheating the gamification system?
+
+The backend validates every transaction before saving — the amount must be positive, the category must be valid, the date must be reasonable.
+
+XP rewards are small per action, so one fake transaction doesn't help much.
+
+The harder achievements require **sustained behaviour** — like logging transactions every day for 7 consecutive days.
+
+You can't fake a streak because the backend checks the actual transaction dates in the database.
+
+---
+
+## Q27: How does session revocation work?
+
+Every time a user logs in, the server creates a **session record** in the Sessions table.
+
+It stores the device info and a reference to the JWT.
+
+When the user revokes a session from the Security Centre, the server marks that session as inactive.
+
+On the next request from that device, the server checks if the session is still active.
+
+If it's been revoked, the request is rejected — even if the JWT itself hasn't expired yet.
+
+---
+
+## Q28: How do you calculate spending consistency in the Financial Health Score?
+
+Spending consistency measures how **regular** the user's spending pattern is across the month.
+
+The backend looks at how expenses are distributed across different weeks.
+
+If spending is spread evenly — a little each week — the score is high.
+
+If spending is very irregular — nothing for three weeks then a huge amount — the score is lower.
+
+This detects poor spending habits even if the total amount is within budget.
+
+---
+
+## Q29: What makes your app different from existing apps like Money Manager or Spendee?
+
+Most existing apps focus only on tracking — they record what you spend but don't motivate you to keep going.
+
+SmartFinance adds **gamification** — XP, levels, achievement badges, and daily streaks.
+
+Research shows that rewards and progress bars help people build habits.
+
+I also built it specifically for Malaysian users — the categories, currency, and context match local life.
+
+And the Financial Insights feature gives personalised feedback, not just raw numbers.
+
+---
+
+## Q30: How does the leaderboard work?
+
+The leaderboard queries all users who have **ShowInLeaderboard** set to true in their settings.
+
+The backend sorts them by total XP in descending order and returns the list.
+
+It's not real-time — it fetches fresh data each time the user opens the leaderboard screen.
+
+Users who prefer privacy can turn this off in Settings and their name won't appear to anyone.
+
+---
+
 # END OF SCRIPT
