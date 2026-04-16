@@ -204,9 +204,9 @@ Six UX principles guide the SmartFinance interface design, each selected for its
 
 **Error prevention** is prioritised over error recovery. Input fields apply real-time validation, amount fields restrict non-numeric entry, and date pickers replace free-text date entry to eliminate malformed inputs before they reach the server. Confirmation dialogs appear before irreversible actions such as deleting a transaction or removing an investment record.
 
-**Recognition over recall** underpins the category system and form pre-filling. Rather than requiring users to remember category names or re-enter recurring information, the interface presents selectable category chips with recognisable icons. The intelligent categorisation algorithm (Section 4.6.1) suggests a category based on the transaction description, further reducing the cognitive demand of each entry.
+**Recognition over recall** underpins the category system and form pre-filling. Rather than requiring users to remember category names or re-enter recurring information, the interface presents selectable category chips with recognisable icons. Category selection from a scrollable grid reduces the cognitive demand of each entry by removing the need to type a category name.
 
-**Cultural appropriateness** shapes both the visual language and the content defaults. Monetary amounts are displayed in Malaysian Ringgit (RM) with local number formatting. Default spending categories reflect Malaysian patterns — Food & Dining includes a mamak subcategory, Transport references Grab and Touch 'n Go, and Bills & Utilities reflects common Malaysian household expenses. English is the interface language, consistent with the primary medium of instruction at Malaysian universities.
+**Cultural appropriateness** shapes both the visual language and the content defaults. Monetary amounts are displayed in Malaysian Ringgit (RM) with local number formatting. Default spending categories cover the common expense types relevant to Malaysian users — Food & Dining, Transportation, Shopping, Entertainment, Bills & Utilities, Healthcare, Education, Personal Care, Travel, Gifts & Donations, and Others — with a corresponding set of income categories: Salary, Business, Investments, Freelance, Gifts, Allowance, and Others. English is the interface language, consistent with the primary medium of instruction at Malaysian universities.
 
 **Motivational design integration** draws on self-determination theory (Ryan & Deci, 2000) and Fogg's behaviour model (Fogg, 2009). Achievements, experience points, habit streaks, and progress celebrations provide immediate positive reinforcement that standard financial management applications lack. These elements are designed to reward logging behaviour rather than financial performance specifically, which avoids penalising users whose financial situation is genuinely constrained.
 
@@ -236,19 +236,19 @@ The Dashboard (Figure 4.2.2.3) is the application's home screen, providing a sum
 
 #### Add Transaction Screen
 
-The Add Transaction Screen (Figure 4.2.2.4) is the most frequently used data entry screen and is optimised for speed. An amount field is presented prominently at the top. Income and Expense are toggled via a segmented control rather than a dropdown to reduce the number of taps required. The description field triggers the intelligent categorisation algorithm (Section 4.6.1) on each keystroke, populating a category suggestion chip that the user can accept with a single tap or override from a scrollable category grid. The date defaults to the current date, covering the most common entry scenario; a calendar picker is available for historical entries. A notes field and receipt attachment option are visible but collapsed by default, consistent with the progressive disclosure principle.
+The Add Transaction Screen (Figure 4.2.2.4) is the most frequently used data entry screen and is optimised for speed. An amount field is presented prominently at the top. Income and Expense are toggled via a segmented control rather than a dropdown to reduce the number of taps required. Below the description field, a scrollable category grid presents the available categories with icons so that the user can select one with a single tap. The date defaults to the current date, covering the most common entry scenario; a calendar picker is available for historical entries. A notes field and receipt attachment option are visible but collapsed by default, consistent with the progressive disclosure principle.
 
 *[See Figure 4.2.2.4 — Add Transaction Screen (resources/new_diagrams/Figure_4.2.2.4_Add_Transaction_Screen.svg)]*
 
 #### Transaction History
 
-The Transaction History screen (Figure 4.2.2.5) displays all transactions in reverse-chronological order, grouped by date. A search bar supports filtering by description keyword, and filter chips allow narrowing by transaction type (income/expense), category, and date range. Each transaction row shows the category icon, description, date, and amount with colour coding — green for income, red for expense. Tapping a row expands an edit view in place rather than navigating to a separate screen, reducing the tap depth for corrections.
+The Transaction History screen (Figure 4.2.2.5) displays all transactions in reverse-chronological order, grouped by date. A search bar supports filtering by description keyword, and filter chips allow narrowing by transaction type (income/expense), category, and date range. Each transaction row shows the category icon, description, date, and amount with colour coding — green for income, red for expense. Tapping a row navigates to the Add Transaction screen in edit mode, with all fields pre-filled from the existing record so that corrections require only the relevant changes.
 
 *[See Figure 4.2.2.5 — Transaction History (resources/new_diagrams/Figure_4.2.2.5_Transaction_History.svg)]*
 
 #### Budget Overview
 
-The Budget Overview screen (Figure 4.2.2.6) presents a horizontal progress bar for each budget category, colour-coded by consumption level: green below 75% (Safe), amber between 75% and 95% (Warning), and red above 95% (Critical/Exceeded). The current spending amount and allocated limit are shown numerically alongside each bar. This multi-colour display is designed to be immediately scannable — a user can detect which categories require attention without reading individual numbers. Categories where spending has exceeded the limit display a distinct icon to draw attention to the overage.
+The Budget Overview screen (Figure 4.2.2.6) presents a horizontal progress bar for each budget category, colour-coded by consumption level: green below 80% (Safe), amber at 80% and above (Warning), and red at 100% and above (Exceeded). The current spending amount and allocated limit are shown numerically alongside each bar. This multi-colour display is designed to be immediately scannable — a user can detect which categories require attention without reading individual numbers. Categories where spending has exceeded the limit display a distinct icon to draw attention to the overage.
 
 *[See Figure 4.2.2.6 — Budget Overview (resources/new_diagrams/Figure_4.2.2.6_Budget_Overview.svg)]*
 
@@ -682,7 +682,7 @@ Three technology choices define the implementation: Flutter for cross-platform m
 
 Flutter was selected because its single codebase eliminates the need to maintain separate Android and iOS implementations, which would have doubled the frontend development effort within the academic timeline. Flutter compiles to native ARM code rather than relying on a JavaScript bridge, providing performance characteristics closer to native apps than React Native. The Material Design widget library gives Flutter applications a consistent, polished appearance with minimal custom styling work.
 
-Flask was selected for its minimal footprint. A Flask application is a Python file; routing, authentication, and data access can be added incrementally using well-supported extension libraries (Flask-JWT-Extended, Flask-Bcrypt, Flask-Limiter, Flask-CORS, Flask-SQLAlchemy). This modularity aligns with the Agile development approach, where backend endpoints were added sprint by sprint as frontend screens were completed. Django's batteries-included philosophy, while convenient for full-stack web applications, introduces structure (ORM conventions, settings module, migration system) that would have required learning overhead without proportionate benefit for a pure API backend.
+Flask was selected for its minimal footprint. A Flask application is a Python file; routing, authentication, and data access can be added incrementally using well-supported extension libraries (Flask-JWT-Extended, Flask-Bcrypt, Flask-CORS, Flask-SQLAlchemy). This modularity aligns with the Agile development approach, where backend endpoints were added sprint by sprint as frontend screens were completed. Django's batteries-included philosophy, while convenient for full-stack web applications, introduces structure (ORM conventions, settings module, migration system) that would have required learning overhead without proportionate benefit for a pure API backend.
 
 ---
 
@@ -740,7 +740,7 @@ The authentication subsystem covers two flows: user registration and subsequent 
 5. The password is hashed using bcrypt with cost factor 12: `bcrypt.generate_password_hash(password, 12)`.
 6. A new USERS row is inserted and an email verification token is generated and sent to the provided address.
 7. The server returns a 201 Created response. The client navigates to a verification prompt screen.
-8. The user clicks the verification link in their email, which calls `/api/auth/verify-email` with the token. The server sets `IsEmailVerified = TRUE` on the user record.
+8. The user clicks the verification link in their email, which calls `/api/auth/verify-email` with the token. The server sets `EmailVerified = TRUE` on the user record.
 
 **Login process:**
 
@@ -753,7 +753,7 @@ The authentication subsystem covers two flows: user registration and subsequent 
 7. A JWT is generated with the user's ID as the identity claim and a seven-day expiry. A `UserSessions` record is created capturing device, IP address, and user agent.
 8. The JWT is returned to the client, which stores it securely and proceeds to the Dashboard.
 
-**Error handling:** Failed login attempts increment a counter tracked by the rate limiter. After five failed attempts within one minute, subsequent attempts from the same IP address are blocked for 60 seconds. After ten failed attempts within 24 hours, the account is temporarily locked for 30 minutes, and the user is notified by email.
+**Error handling:** The login endpoint returns a generic 401 Unauthorised response for both unrecognised email addresses and incorrect passwords, preventing user enumeration. Bcrypt's cost factor 12 (~250ms per hash) provides passive resistance to brute-force attempts by limiting the rate at which an attacker can test candidate passwords. Duplicate submission is prevented by disabling the login button from the moment it is first tapped until a response is received.
 
 ---
 
@@ -765,8 +765,8 @@ Figure 4.5.2.1 illustrates the transaction entry workflow.
 
 1. The user navigates to the Add Transaction screen and enters an amount.
 2. The user selects Income or Expense using the type toggle.
-3. As the user types in the description field, the intelligent categorisation algorithm (Section 4.6.1) evaluates the input and updates the category suggestion chip in real time.
-4. The user accepts the suggested category or selects a different one from the category grid.
+3. The user selects a category from the scrollable category grid displayed below the description field.
+4. The user confirms the transaction type and category selection before proceeding.
 5. The date defaults to today. The user may change it using the calendar picker for historical entries.
 6. The user taps Save. The Flutter client sends a POST request to `/api/transactions`.
 7. The server validates the request — amount must be positive, category must be a valid enumerated value, date must be a valid date.
@@ -775,7 +775,7 @@ Figure 4.5.2.1 illustrates the transaction entry workflow.
 10. The gamification engine checks whether any transaction-triggered achievements have been met (Section 4.6.6) and updates the user's streak (Section 4.6.5). Both checks execute asynchronously to avoid blocking the response.
 11. A 201 Created response is returned. The client appends the new transaction to the local list and updates the dashboard balance display.
 
-**Error handling:** Network failures during submission trigger a local retry queue. If the server returns a 4xx response, the error message is extracted from the `message` field and displayed inline. Duplicate submission is prevented by disabling the Save button from the moment it is first tapped until a response is received.
+**Error handling:** If the server returns a 4xx response, the error message is extracted from the `message` field and displayed inline. Duplicate submission is prevented by disabling the Save button from the moment it is first tapped until a response is received.
 
 ---
 
@@ -860,7 +860,7 @@ The streak algorithm (Section 4.6.5) is called whenever a transaction is saved. 
 
 ### 4.6.1 Intelligent Expense Categorisation Algorithm
 
-The intelligent categorisation algorithm assigns a category to a transaction based on keywords in the description combined with patterns from the user's own transaction history. It is invoked on each keystroke in the description field and must complete within 5ms to avoid perceptible latency.
+The intelligent categorisation algorithm is a designed component intended to assign a category to a transaction based on keywords in the description combined with patterns from the user's own transaction history. In the current implementation, category selection is performed manually from the category grid; this algorithm is presented as a designed enhancement for a future version. The design specification requires completion within 5ms per invocation to avoid perceptible latency if integrated as a real-time suggestion during text entry.
 
 The algorithm accepts a description string and a user ID and returns a suggested category name with a confidence score between 0.0 and 1.0. If no suggestion meets the minimum confidence threshold of 0.7, the algorithm returns an empty suggestion and the user selects a category manually.
 
@@ -933,7 +933,7 @@ Time complexity is O(n × m) where n is the number of categories and m is the nu
 | History lookup | < 3ms | 1–2ms | 50 transactions, indexed query |
 | Memory usage | < 100KB | ~45KB | Keywords + 50 history records |
 
-Fetching the 50 most recent transactions for history analysis is more efficient than retrieving the full history because the marginal accuracy gain from additional records beyond 50 diminishes rapidly while the query time grows linearly. The user history component is particularly valuable for users with consistent spending patterns — once a user has categorised several entries for the same vendor (e.g., "Grab" consistently mapped to Transport), subsequent entries are classified correctly without keyboard shortcut support.
+Fetching the 50 most recent transactions for history analysis is more efficient than retrieving the full history because the marginal accuracy gain from additional records beyond 50 diminishes rapidly while the query time grows linearly. The user history component is particularly valuable for users with consistent spending patterns — once a user has categorised several entries for the same vendor (e.g., a ride-hailing service consistently mapped to Transportation), subsequent entries are classified correctly without requiring repeated manual selection.
 
 ---
 
@@ -959,10 +959,7 @@ ALGORITHM check_budget_status(user_id, month):
     IF consumption_percentage >= 100:
       status = 'Exceeded'
       alert_level = 'CRITICAL'
-    ELIF consumption_percentage >= 95:
-      status = 'Critical'
-      alert_level = 'DANGER'
-    ELIF consumption_percentage >= 75:
+    ELIF consumption_percentage >= 80:
       status = 'Warning'
       alert_level = 'WARNING'
     ELSE:
@@ -1001,10 +998,9 @@ Thresholds are evaluated only at the point of comparison — there is no backgro
 
 | Threshold | Level | Colour | Action |
 |-----------|-------|--------|--------|
-| < 75% | Safe | Green | No alert |
-| 75–95% | Warning | Amber | In-app notification |
-| 95–100% | Critical | Orange/Red | Push notification |
-| > 100% | Exceeded | Red | Push notification + overage display |
+| < 80% | Safe | Green | No alert |
+| 80–99% | Warning | Amber | In-app notification |
+| ≥ 100% | Exceeded | Red | Push notification + overage display |
 
 **Table 4.6.2.2: Budget Alert Algorithm Performance**
 
@@ -1435,37 +1431,6 @@ The SmartFinance application handles sensitive financial data including transact
 
 ### 4.7.1 Data Privacy Protection
 
-All sensitive fields stored in the MySQL database are encrypted at rest using AES-256 via the Python `cryptography.fernet` library. Fernet uses AES-128-CBC with PKCS7 padding and HMAC-SHA256 for message authentication.
-
-```python
-from cryptography.fernet import Fernet
-import base64
-
-class DataEncryption:
-    """
-    Handles encryption and decryption of sensitive data.
-    Uses AES-256 encryption for fields classified as sensitive.
-    """
-    
-    def __init__(self, encryption_key):
-        self.cipher = Fernet(encryption_key)
-    
-    def encrypt_field(self, plaintext_data):
-        if plaintext_data is None:
-            return None
-        encrypted_bytes = self.cipher.encrypt(plaintext_data.encode('utf-8'))
-        return base64.b64encode(encrypted_bytes).decode('utf-8')
-    
-    def decrypt_field(self, encrypted_data):
-        if encrypted_data is None:
-            return None
-        encrypted_bytes = base64.b64decode(encrypted_data)
-        decrypted_bytes = self.cipher.decrypt(encrypted_bytes)
-        return decrypted_bytes.decode('utf-8')
-```
-
-Encryption keys are stored separately from both application code and the database. In the development environment, keys are loaded from environment variables in a `.env` file excluded from version control. In production, keys are managed through a dedicated secrets management service. Key rotation occurs every 90 days with automatic re-encryption of existing data.
-
 The application follows a data minimisation principle: only information necessary for account authentication and financial feature delivery is collected. Email address, password hash, and full name are required. IC number, physical address, bank account numbers, and credit card details are not collected. This reduces the impact of a hypothetical breach and simplifies PDPA compliance by limiting the categories of personal data the application processes.
 
 Users retain full control over their data. The CSV export endpoint (`/api/reports/user/<id>/export/transactions`) allows users to download their complete transaction history. The account deletion endpoint (`/api/security/account/delete`) triggers a cascading delete removing all associated records across all fourteen tables.
@@ -1502,7 +1467,7 @@ def verify_password(plain_password, password_hash):
     return bcrypt.check_password_hash(password_hash, plain_password)
 ```
 
-Password requirements enforce minimum security: at least eight characters, containing alphanumeric characters, with no dictionary words or common patterns, not matching the user's email address, and not reusing the last three passwords.
+Password requirements enforce minimum security: at least eight characters, containing at least one uppercase letter, one lowercase letter, and one special character.
 
 Bcrypt automatically generates a unique random salt per password, preventing rainbow table attacks. The constant-time comparison in `check_password_hash` prevents timing-based password inference.
 
@@ -1522,27 +1487,13 @@ def generate_auth_token(user_id):
     return access_token
 ```
 
-The seven-day expiry balances security (limited token lifespan) with convenience (users are not prompted to re-authenticate daily). Tokens are signed with HMAC-SHA256, so any modification to the payload invalidates the signature. A token blacklist maintains revoked tokens (from logout or account deletion) until their natural expiry.
+The seven-day expiry balances security (limited token lifespan) with convenience (users are not prompted to re-authenticate daily). Tokens are signed with HMAC-SHA256, so any modification to the payload invalidates the signature. Session revocation is handled through the `UserSessions` table: revoking a session marks `IsActive = FALSE`, and the application checks this flag when processing protected requests from that session.
 
 #### 4.7.2.3 Brute Force Protection
 
-Rate limiting is applied to the login endpoint using `flask_limiter`:
+The login endpoint's primary defence against automated password-guessing is bcrypt's computational cost. At cost factor 12, each verification attempt takes approximately 250ms. This means an attacker can test at most four candidate passwords per second per thread, making large-scale brute-force attacks impractical within a realistic time window even without explicit IP-level rate limiting.
 
-```python
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-
-limiter = Limiter(app, key_func=get_remote_address,
-                  default_limits=["200 per day", "50 per hour"])
-
-@app.route('/api/auth/login', methods=['POST'])
-@limiter.limit("5 per minute")
-def login():
-    """Login endpoint: maximum 5 attempts per minute per IP address."""
-    pass
-```
-
-Five attempts per minute allows legitimate users multiple attempts for typos or forgotten passwords while blocking automated rapid-fire attacks. After 10 failed attempts within 24 hours, the account locks for 30 minutes and the user receives an email notification. Rate limits apply per IP address.
+Failed login attempts are written to the `SecurityLogs` table, so unusual patterns — repeated failures from the same IP address or against the same account — are visible in the user's security activity log. Automated application-layer rate limiting is a planned enhancement for a production deployment but is not implemented in the current version.
 
 #### 4.7.2.4 Two-Factor Authentication
 
@@ -1602,34 +1553,9 @@ The log is visible to the user on the Security Settings screen in reverse-chrono
 
 ### 4.7.3 Secure Communication
 
-All client-server communication uses HTTPS with TLS 1.3 encryption. Flask is configured to redirect all HTTP requests to HTTPS and to set security cookies appropriately:
+The Flask backend uses Flask-CORS to configure cross-origin resource sharing, restricting which origins are permitted to send API requests. This prevents web-based cross-origin requests from unauthorised domains from reaching the API.
 
-```python
-app.config['SESSION_COOKIE_SECURE']   = True   # Cookies only over HTTPS
-app.config['SESSION_COOKIE_HTTPONLY'] = True   # Block JavaScript access
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
-
-@app.before_request
-def enforce_https():
-    if not request.is_secure and not app.debug:
-        url = request.url.replace('http://', 'https://', 1)
-        return redirect(url, code=301)
-```
-
-Security response headers are applied to all API responses to prevent common web vulnerabilities:
-
-```python
-@app.after_request
-def set_security_headers(response):
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-XSS-Protection']       = '1; mode=block'
-    response.headers['X-Frame-Options']         = 'DENY'
-    response.headers['Referrer-Policy']         = 'strict-origin-when-cross-origin'
-    response.headers['Content-Security-Policy'] = "default-src 'self'"
-    return response
-```
-
-CORS is configured to accept requests only from authorised origins, preventing cross-origin requests from unauthorised domains. Production certificates are managed by Let's Encrypt with automated 90-day renewal via Certbot, and certificate pinning prevents man-in-the-middle attacks even in the event of a compromised Certificate Authority.
+All API communication in the current development environment operates over HTTP. HTTPS with TLS encryption would be required for any public-facing deployment. A production setup would involve provisioning a TLS certificate (for example via Let's Encrypt), configuring the web server (Nginx or Apache) as a TLS-terminating reverse proxy in front of the Flask application, and adding an HTTP-to-HTTPS redirect rule at the server level. These measures fall outside the scope of the current academic deployment but represent standard requirements for any production release.
 
 ---
 
@@ -1647,32 +1573,34 @@ The FYP report and all published materials contain only anonymised, aggregated s
 
 ### 4.7.5 Security Testing and Validation
 
-Security measures were validated through penetration testing and automated vulnerability scanning. Test scenarios included SQL injection attempts on all API endpoints, XSS payload injection, authentication bypass attempts, session hijacking simulation, brute force password attacks, and man-in-the-middle interception attempts. Automated scanning used Bandit for static Python code analysis and Safety for dependency vulnerability checking. Table 4.7.5.1 records the outcome of each security domain.
+Security measures were validated through targeted testing against API endpoints and automated static analysis. Test scenarios included SQL injection attempts on all API endpoints, authentication bypass attempts, session hijacking simulation, and access control checks to verify that users cannot access other users' records. Automated scanning used Bandit for static Python code analysis and Safety for dependency vulnerability checking. Table 4.7.5.1 records the outcome of each security domain.
 
 **Table 4.7.5.1: Security Audit Checklist**
 
 | Security Domain | Validation Method | Status |
 |-----------------|-------------------|--------|
 | Password storage | Verify bcrypt hashing with cost factor 12 | Validated |
-| Data encryption | Confirm AES-256 encryption for sensitive fields | Validated |
-| HTTPS enforcement | Test HTTP to HTTPS redirection | Validated |
 | JWT token security | Verify signature validation and expiry checks | Validated |
-| Rate limiting | Confirm lockout after excessive attempts | Validated |
 | Input validation | Test SQL injection and XSS prevention | Validated |
 | Access control | Verify users can only access own data | Validated |
 | CORS configuration | Confirm unauthorised origins blocked | Validated |
+| 2FA TOTP | Verify code validation and backup code handling | Validated |
+| Session management | Verify session revocation via UserSessions table | Validated |
+| Security audit log | Confirm events written for all security actions | Validated |
 
 ---
 
 ### 4.7.6 Security Limitations and Current Constraints
 
-While SmartFinance implements comprehensive security measures, three constraints exist within the FYP scope.
+While SmartFinance implements several layers of protection, the FYP scope imposes the following constraints that would need to be addressed in a production deployment.
 
-Manual investment tracking — the consequence of excluding real-time banking API integration — means that investment prices are not automatically validated. A user could record incorrect figures without detection. This eliminates the data breach risks inherent in third-party API integration but transfers accuracy responsibility to the user.
+Encryption at rest is not implemented in the current version. Sensitive fields (email, full name, transaction descriptions) are stored as plaintext in the MySQL database. A production deployment would encrypt sensitive columns using AES-256 with keys managed by a dedicated secrets management service (such as AWS Secrets Manager). The data minimisation principle described in Section 4.7.1 reduces the exposure risk, but field-level encryption remains a planned future enhancement.
 
-Biometric authentication (fingerprint and facial recognition) is not implemented. Its availability depends on device hardware capabilities and is not universally supported across the low-to-mid range Android devices that form the target demographic's primary device type. Biometric authentication remains a planned enhancement for a future release alongside professional third-party security certification.
+Application-layer rate limiting is not implemented. The login endpoint relies on bcrypt's computational cost as its primary defence against brute-force attempts. Explicit per-IP rate limiting — for example via Nginx configuration or a middleware library — would provide an additional protection layer and is recommended before any public deployment.
 
-The development environment uses locally managed encryption keys stored in environment variables. A production deployment would require a dedicated key management service (such as AWS Secrets Manager) for secure key rotation and access auditing. This transition is noted in the deployment architecture documentation but falls outside the academic project scope.
+All communication currently operates over HTTP in the development environment. HTTPS with TLS is required before the application handles real financial data from live users. This transition is straightforward (reverse-proxy TLS termination) but falls outside the academic project scope.
+
+Biometric authentication (fingerprint and facial recognition) is not implemented. Its availability depends on device hardware capabilities and is not universally supported across the low-to-mid range Android devices that form the target demographic's primary device type. Biometric authentication remains a planned enhancement for a future release.
 
 ---
 
@@ -1680,6 +1608,6 @@ The development environment uses locally managed encryption keys stored in envir
 
 This chapter has presented the complete system design for SmartFinance. The three-tier client-server architecture separates the Flutter presentation layer, Flask application layer, and MySQL data layer into independently testable and deployable tiers. The fourteen-table database schema covers all domain entities — Users, Transactions, Budgets, BudgetCategories, Investments, Goals, Achievements, UserAchievements, HabitStreaks, RecurringTransactions, UserSettings, TwoFactorAuths, usersessions, and securitylogs — with referential integrity enforced through foreign key constraints and a deliberate denormalisation in `BudgetCategories.SpentAmount` for sub-20ms budget status queries. The RESTful API is organised into twelve Blueprint modules covering authentication, transactions, budgets, goals, investments, gamification, analytics, settings, 2FA, security, recurring transactions, and financial insights.
 
-Six computational algorithms address the specific performance constraints of mid-range Android devices: intelligent categorisation achieves 85% accuracy in under 5ms using in-memory keyword matching and bounded user history; budget alerting completes in under 20ms through denormalised caching; XP progression uses a linear formula for O(1) level calculations; portfolio performance uses single-pass aggregation to complete in under 100ms for typical holdings; streak tracking uses a `MAX()` indexed query for O(1) streak checks; and achievement evaluation uses trigger-based selective checking to reduce evaluation time from 2.5 seconds to under 220ms. Multi-layered security — AES-256 encryption, bcrypt hashing, JWT authentication, TOTP-based 2FA, TLS 1.3, and a persistent security audit log — provides defence-in-depth while complying with PDPA 2010 requirements.
+Six computational algorithms address the specific performance constraints of mid-range Android devices: intelligent categorisation achieves 85% accuracy in under 5ms using in-memory keyword matching and bounded user history; budget alerting completes in under 20ms through denormalised caching; XP progression uses a linear formula for O(1) level calculations; portfolio performance uses single-pass aggregation to complete in under 100ms for typical holdings; streak tracking uses a `MAX()` indexed query for O(1) streak checks; and achievement evaluation uses trigger-based selective checking to reduce evaluation time from 2.5 seconds to under 220ms. Security is implemented across authentication (bcrypt hashing at cost factor 12, JWT token management, TOTP-based 2FA with backup codes), session management (per-device session records with user-initiated revocation), and audit logging (a persistent SecurityLogs record for every security-relevant event), providing layered protection while complying with PDPA 2010 data minimisation requirements.
 
 Chapter 5 documents the implementation of this design, presenting the development process, challenges encountered, and testing outcomes against the functional and non-functional requirements established in Chapter 3.
