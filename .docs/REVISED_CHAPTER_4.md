@@ -39,13 +39,13 @@ The presentation layer is built with Flutter (Dart), which compiles to native AR
 
 The application layer is a Python Flask server exposing a RESTful API. Flask handles routing, request parsing, JWT verification, and response serialisation. SQLAlchemy provides an object-relational mapping layer between Python objects and MySQL tables, isolating raw SQL from business logic. All authentication, authorisation, and data integrity checks are enforced at this layer before any database operation is performed.
 
-The data layer is a MySQL 8.0 database providing ACID-compliant storage for all user, transaction, budget, investment, gamification, security, and settings data. The InnoDB storage engine is used throughout for its row-level locking and foreign key support. The schema implements twelve tables connected by foreign key constraints with `ON DELETE CASCADE` to maintain referential integrity automatically when parent records are removed.
+The data layer is a MySQL 8.0 database providing ACID-compliant storage for all user, transaction, budget, investment, gamification, security, and settings data. The InnoDB storage engine is used throughout for its row-level locking and foreign key support. The schema implements fourteen tables connected by foreign key constraints with `ON DELETE CASCADE` to maintain referential integrity automatically when parent records are removed.
 
 ---
 
 ### 4.1.4 API Endpoint Reference
 
-The RESTful API exposed by the Flask backend is organised into thirteen route modules, each prefixed with `/api/` and registered as a Flask Blueprint. Tables 4.1.4.1 through 4.1.4.13 enumerate every endpoint grouped by functional area. All endpoints that operate on user-specific resources require a valid JWT supplied in the `Authorization: Bearer <token>` header unless stated otherwise.
+The RESTful API exposed by the Flask backend is organised into twelve route modules, each prefixed with `/api/` and registered as a Flask Blueprint. Tables 4.1.4.1 through 4.1.4.12 enumerate every endpoint grouped by functional area. All endpoints that operate on user-specific resources require a valid JWT supplied in the `Authorization: Bearer <token>` header unless stated otherwise.
 
 ---
 
@@ -54,10 +54,8 @@ The RESTful API exposed by the Flask backend is organised into thirteen route mo
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/auth/register` | Register a new user account |
-| POST | `/api/auth/login` | Authenticate with email and password; returns JWT |
-| POST | `/api/auth/logout` | Invalidate the current session token |
-| GET | `/api/auth/profile` | Retrieve the authenticated user's profile |
-| PUT | `/api/auth/profile` | Update profile fields (name, currency, etc.) |
+| POST | `/api/auth/login` | Authenticate with email and password; returns JWT access and refresh tokens |
+| POST | `/api/auth/refresh` | Exchange a valid refresh token for a new access token |
 | POST | `/api/auth/verify-email` | Verify email address using a one-time token |
 | POST | `/api/auth/resend-verification` | Resend the email verification link |
 | POST | `/api/auth/forgot-password` | Initiate the password reset flow via email |
@@ -146,16 +144,17 @@ The RESTful API exposed by the Flask backend is organised into thirteen route mo
 
 ---
 
-**Table 4.1.4.9: Two-Factor Authentication Endpoints (`/api/2fa`)**
+**Table 4.1.4.9: Two-Factor Authentication Endpoints (`/api/auth`)**
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/2fa/setup` | Generate a TOTP secret and QR code to begin 2FA enrolment |
-| POST | `/api/2fa/enable` | Confirm enrolment by verifying the first TOTP code |
-| POST | `/api/2fa/disable` | Disable 2FA after password confirmation |
-| POST | `/api/2fa/verify` | Verify a TOTP code during the login flow |
-| GET | `/api/2fa/backup-codes` | Retrieve the count of remaining unused backup codes |
-| POST | `/api/2fa/backup-codes/regenerate` | Invalidate existing backup codes and issue a fresh set of ten |
+| POST | `/api/auth/2fa/setup` | Generate a TOTP secret and QR code to begin 2FA enrolment |
+| POST | `/api/auth/2fa/verify-setup` | Confirm enrolment by verifying the first TOTP code from the authenticator app |
+| POST | `/api/auth/2fa/verify` | Verify a TOTP code during the login flow |
+| POST | `/api/auth/2fa/verify-backup` | Verify a one-time backup code during the login flow |
+| POST | `/api/auth/2fa/disable` | Disable 2FA after password confirmation |
+| GET | `/api/auth/2fa/status/<id>` | Retrieve the 2FA enrolment status for a user |
+| POST | `/api/auth/2fa/regenerate-backup-codes` | Invalidate existing backup codes and issue a fresh set of ten |
 
 ---
 
@@ -163,10 +162,10 @@ The RESTful API exposed by the Flask backend is organised into thirteen route mo
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/security/sessions` | List all active login sessions for the authenticated user |
-| DELETE | `/api/security/sessions/<id>` | Revoke a specific session, logging out that device |
-| GET | `/api/security/log` | Retrieve the security activity log for the authenticated user |
-| DELETE | `/api/security/account` | Permanently delete the authenticated user's account and all associated data |
+| GET | `/api/security/sessions/user/<id>` | List all active login sessions for the authenticated user |
+| POST | `/api/security/sessions/<id>/revoke` | Revoke a specific session, logging out that device |
+| GET | `/api/security/activity/user/<id>` | Retrieve the security activity log for the authenticated user |
+| POST | `/api/security/account/delete` | Permanently delete the authenticated user's account and all associated data |
 
 ---
 
@@ -179,8 +178,7 @@ The RESTful API exposed by the Flask backend is organised into thirteen route mo
 | PUT | `/api/recurring/<id>` | Update the amount, frequency, or category of a recurring rule |
 | DELETE | `/api/recurring/<id>` | Delete a recurring transaction rule |
 | POST | `/api/recurring/<id>/execute` | Manually trigger execution of a recurring transaction |
-| POST | `/api/recurring/<id>/pause` | Pause a recurring rule so it is skipped on its next scheduled date |
-| POST | `/api/recurring/<id>/resume` | Resume a previously paused recurring rule |
+| POST | `/api/recurring/<id>/toggle` | Toggle a recurring rule between active and paused states |
 
 ---
 
@@ -192,15 +190,7 @@ The RESTful API exposed by the Flask backend is organised into thirteen route mo
 
 ---
 
-**Table 4.1.4.13: Dashboard Endpoint**
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/dashboard` | Retrieve an aggregated summary of balances, recent transactions, budget status, and gamification metrics for the home screen |
-
----
-
-The total API surface comprises 52 endpoints across the thirteen modules above.
+The API surface across the twelve modules above covers all functional domains of the application. The Flutter dashboard aggregates its home-screen data through multiple separate API calls (transaction summary, budget status, gamification stats) rather than a dedicated dashboard endpoint.
 
 ---
 
@@ -311,7 +301,7 @@ Financial data imposes strict integrity requirements that ruled out MongoDB, who
 
 ### 4.3.2 Entity Relationship Design
 
-The SmartFinance data model comprises twelve entities. Figure 4.3.2.1 shows the complete entity-relationship diagram.
+The SmartFinance data model comprises fourteen entities. Figure 4.3.2.1 shows the complete entity-relationship diagram.
 
 *[See Figure 4.3.2.1 — Entity Relationship Diagram (resources/new_diagrams/Figure_4.3.2.1_ERD.html)]*
 
@@ -810,10 +800,9 @@ Figure 4.5.3.1 illustrates the budget creation workflow. The monitoring and anal
 
 Budget status is evaluated each time the Budget Overview screen loads. The server retrieves all BUDGETCATEGORIES rows for the current month's budget and applies the threshold logic defined in the Budget Alert Algorithm (Section 4.6.2). The consumption percentage for each category determines its colour status:
 
-- Below 75%: Safe (green)
-- 75% to 95%: Warning (amber)
-- 95% to 100%: Critical (orange/red)
-- Above 100%: Exceeded (red with overage indicator)
+- Below 80%: Safe (green)
+- 80% to 99%: Warning (amber)
+- 100% and above: Exceeded (red with overage indicator)
 
 When a new expense transaction is saved, `SpentAmount` is updated synchronously, and the updated status is included in the transaction creation response so the client can refresh the budget display without a separate API call.
 
@@ -1479,7 +1468,7 @@ Encryption keys are stored separately from both application code and the databas
 
 The application follows a data minimisation principle: only information necessary for account authentication and financial feature delivery is collected. Email address, password hash, and full name are required. IC number, physical address, bank account numbers, and credit card details are not collected. This reduces the impact of a hypothetical breach and simplifies PDPA compliance by limiting the categories of personal data the application processes.
 
-Users retain full control over their data. The CSV export endpoint (`/api/reports/export/csv`) allows users to download their complete transaction history. The account deletion endpoint (`/api/security/account`) triggers a cascading delete removing all associated records across all twelve tables.
+Users retain full control over their data. The CSV export endpoint (`/api/reports/user/<id>/export/transactions`) allows users to download their complete transaction history. The account deletion endpoint (`/api/security/account/delete`) triggers a cascading delete removing all associated records across all fourteen tables.
 
 The database user account for the application is granted only the specific permissions required for normal operation — SELECT, INSERT, UPDATE on most tables, with DELETE restricted to tables where user-initiated deletion is permitted. DROP, TRUNCATE, and ALTER permissions are not granted, reducing the impact of a compromised application credential:
 
@@ -1689,7 +1678,7 @@ The development environment uses locally managed encryption keys stored in envir
 
 ## 4.8 Chapter Summary
 
-This chapter has presented the complete system design for SmartFinance. The three-tier client-server architecture separates the Flutter presentation layer, Flask application layer, and MySQL data layer into independently testable and deployable tiers. The fourteen-table database schema covers all domain entities — Users, Transactions, Budgets, BudgetCategories, Investments, Goals, Achievements, UserAchievements, HabitStreaks, RecurringTransactions, UserSettings, TwoFactorAuths, usersessions, and securitylogs — with referential integrity enforced through foreign key constraints and a deliberate denormalisation in `BudgetCategories.SpentAmount` for sub-20ms budget status queries. The 52-endpoint RESTful API is organised into thirteen Blueprint modules covering authentication, transactions, budgets, goals, investments, gamification, analytics, settings, 2FA, security, recurring transactions, insights, and the dashboard.
+This chapter has presented the complete system design for SmartFinance. The three-tier client-server architecture separates the Flutter presentation layer, Flask application layer, and MySQL data layer into independently testable and deployable tiers. The fourteen-table database schema covers all domain entities — Users, Transactions, Budgets, BudgetCategories, Investments, Goals, Achievements, UserAchievements, HabitStreaks, RecurringTransactions, UserSettings, TwoFactorAuths, usersessions, and securitylogs — with referential integrity enforced through foreign key constraints and a deliberate denormalisation in `BudgetCategories.SpentAmount` for sub-20ms budget status queries. The RESTful API is organised into twelve Blueprint modules covering authentication, transactions, budgets, goals, investments, gamification, analytics, settings, 2FA, security, recurring transactions, and financial insights.
 
 Six computational algorithms address the specific performance constraints of mid-range Android devices: intelligent categorisation achieves 85% accuracy in under 5ms using in-memory keyword matching and bounded user history; budget alerting completes in under 20ms through denormalised caching; XP progression uses a linear formula for O(1) level calculations; portfolio performance uses single-pass aggregation to complete in under 100ms for typical holdings; streak tracking uses a `MAX()` indexed query for O(1) streak checks; and achievement evaluation uses trigger-based selective checking to reduce evaluation time from 2.5 seconds to under 220ms. Multi-layered security — AES-256 encryption, bcrypt hashing, JWT authentication, TOTP-based 2FA, TLS 1.3, and a persistent security audit log — provides defence-in-depth while complying with PDPA 2010 requirements.
 
