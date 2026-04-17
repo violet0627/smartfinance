@@ -1,4 +1,4 @@
-# Chapter 4 — System Design (Revised)
+# Chapter 4: System Design (Revised)
 
 ---
 
@@ -10,7 +10,7 @@ The SmartFinance system is organised as a three-tier client-server architecture 
 
 This separation of concerns means that each tier can be modified, tested, and scaled without affecting the others. The Flutter client delegates all data operations to the Flask API rather than accessing the database directly, which centralises authentication enforcement and business logic validation at the server layer. Figure 4.1.1 illustrates the overall three-tier structure.
 
-*[See Figure 4.1.1 — Overall Architecture Diagram (resources/new_diagrams/Figure_4.1.1_Overall_Diagram.html)]*
+*[See Figure 4.1.1: Overall Architecture Diagram (resources/new_diagrams/Figure_4.1.1_Overall_Diagram.html)]*
 
 ---
 
@@ -29,7 +29,7 @@ Three architectural patterns were evaluated before settling on the three-tier cl
 | Maintenance | Independent layers | Single codebase | Complex | Difficult |
 | FYP suitability | High | Medium | Low | Low |
 
-The three-tier pattern was selected because it achieves the necessary separation between presentation and persistence without the operational overhead of microservices. A monolithic architecture would have tightly coupled the Flutter UI to database access logic, making independent testing of backend business rules impractical. Microservices would have introduced infrastructure complexity — separate service deployment, inter-service communication, distributed authentication — that is disproportionate to the scale of a student project. The three-tier pattern delivers clear layer boundaries, centralised JWT authentication, and independent development of frontend and backend components within a manageable complexity budget.
+The three-tier pattern was selected because it achieves the necessary separation between presentation and persistence without the operational overhead of microservices. A monolithic architecture would have tightly coupled the Flutter UI to database access logic, making independent testing of backend business rules impractical. Microservices would have introduced infrastructure complexity (separate service deployment, inter-service communication, distributed authentication) that is disproportionate to the scale of a student project. The three-tier pattern delivers clear layer boundaries, centralised JWT authentication, and independent development of frontend and backend components within a manageable complexity budget.
 
 ---
 
@@ -200,13 +200,13 @@ The API surface across the twelve modules above covers all functional domains of
 
 Six UX principles guide the SmartFinance interface design, each selected for its relevance to financial applications used by young adults who may have limited prior experience with personal finance tools.
 
-**Progressive disclosure** structures the interface so that only the information relevant to the user's current task is shown at any moment. Advanced options — recurring schedules, custom categories, investment notes — are accessible but not presented by default. This prevents the cognitive overload that causes users to abandon financial apps after initial setup.
+**Progressive disclosure** structures the interface so that only the information relevant to the user's current task is shown at any moment. Advanced options such as recurring schedules, custom categories, and investment notes are accessible but not presented by default. This prevents the cognitive overload that causes users to abandon financial apps after initial setup.
 
 **Error prevention** is prioritised over error recovery. Input fields apply real-time validation, amount fields restrict non-numeric entry, and date pickers replace free-text date entry to eliminate malformed inputs before they reach the server. Confirmation dialogs appear before irreversible actions such as deleting a transaction or removing an investment record.
 
 **Recognition over recall** underpins the category system and form pre-filling. Rather than requiring users to remember category names or re-enter recurring information, the interface presents selectable category chips with recognisable icons. Category selection from a scrollable grid reduces the cognitive demand of each entry by removing the need to type a category name.
 
-**Cultural appropriateness** shapes both the visual language and the content defaults. Monetary amounts are displayed in Malaysian Ringgit (RM) with local number formatting. Default spending categories cover the common expense types relevant to Malaysian users — Food & Dining, Transportation, Shopping, Entertainment, Bills & Utilities, Healthcare, Education, Personal Care, Travel, Gifts & Donations, and Others — with a corresponding set of income categories: Salary, Business, Investments, Freelance, Gifts, Allowance, and Others. English is the interface language, consistent with the primary medium of instruction at Malaysian universities.
+**Cultural appropriateness** shapes both the visual language and the content defaults. Monetary amounts are displayed in Malaysian Ringgit (RM) with local number formatting. Default spending categories cover the common expense types relevant to Malaysian users, namely Food & Dining, Transportation, Shopping, Entertainment, Bills & Utilities, Healthcare, Education, Personal Care, Travel, Gifts & Donations, and Others, with a corresponding set of income categories: Salary, Business, Investments, Freelance, Gifts, Allowance, and Others. English is the interface language, consistent with the primary medium of instruction at Malaysian universities.
 
 **Motivational design integration** draws on self-determination theory (Ryan & Deci, 2000) and Fogg's behaviour model (Fogg, 2009). Achievements, experience points, habit streaks, and progress celebrations provide immediate positive reinforcement that standard financial management applications lack. These elements are designed to reward logging behaviour rather than financial performance specifically, which avoids penalising users whose financial situation is genuinely constrained.
 
@@ -218,63 +218,63 @@ Six UX principles guide the SmartFinance interface design, each selected for its
 
 #### Login Screen
 
-The Login Screen (Figure 4.2.2.1) presents two input fields — email address and password — alongside a primary login button and secondary links for password recovery and account creation. The design deliberately limits the information shown at first contact to reduce the perceived barrier to entry. A SmartFinance logo and brief tagline occupy the upper portion of the screen, establishing brand identity without consuming space needed for functional elements. Password masking is applied by default with a toggle to reveal the entered value, balancing security with usability for users who struggle with small on-screen keyboards.
+The Login Screen (Figure 4.2.2.1) presents two input fields (email address and password) alongside a primary login button and secondary links for password recovery and account creation. The design deliberately limits the information shown at first contact to reduce the perceived barrier to entry. A SmartFinance logo and brief tagline occupy the upper portion of the screen, establishing brand identity without consuming space needed for functional elements. Password masking is applied by default with a toggle to reveal the entered value, balancing security with usability for users who struggle with small on-screen keyboards.
 
-*[See Figure 4.2.2.1 — Login Screen (resources/new_diagrams/Figure_4.2.2.1_Login_Screen.svg)]*
+*[See Figure 4.2.2.1: Login Screen (resources/new_diagrams/Figure_4.2.2.1_Login_Screen.svg)]*
 
 #### Registration Screen
 
-The Registration Screen (Figure 4.2.2.2) collects four fields: full name, email address, password, and password confirmation. Phone number collection is optional. Password strength is communicated through a live indicator that updates as the user types, surfacing the specific requirements (minimum eight characters, at least one uppercase letter, one digit, one special character) rather than presenting them only after a failed submission. The form applies inline validation — green checkmarks or red error messages appear field by field — so users correct mistakes immediately rather than discovering all errors at once upon submission.
+The Registration Screen (Figure 4.2.2.2) collects four fields: full name, email address, password, and password confirmation. Phone number collection is optional. Password strength is communicated through a live indicator that updates as the user types, surfacing the specific requirements (minimum eight characters, at least one uppercase letter, one digit, one special character) rather than presenting them only after a failed submission. The form applies inline validation, with green checkmarks or red error messages appearing field by field, so users correct mistakes immediately rather than discovering all errors at once upon submission.
 
-*[See Figure 4.2.2.2 — Registration Screen (resources/new_diagrams/Figure_4.2.2.2_Registration_Screen.svg)]*
+*[See Figure 4.2.2.2: Registration Screen (resources/new_diagrams/Figure_4.2.2.2_Registration_Screen.svg)]*
 
 #### Dashboard
 
 The Dashboard (Figure 4.2.2.3) is the application's home screen, providing a summary view of the user's current financial position alongside gamification status. The upper section displays the current month's total income, total expenditure, and net balance in large typography. Below this, a budget status bar gives an at-a-glance percentage of the month's budget consumed. A compact achievements and streak display shows current XP level and active streak count without requiring navigation to the gamification screen. The lower section lists the five most recent transactions. This layout enables the user to assess their financial standing and record a new transaction from a single screen, minimising navigation depth for the most frequent use cases.
 
-*[See Figure 4.2.2.3 — Dashboard Screen (original figure retained)]*
+*[See Figure 4.2.2.3: Dashboard Screen (original figure retained)]*
 
 #### Add Transaction Screen
 
 The Add Transaction Screen (Figure 4.2.2.4) is the most frequently used data entry screen and is optimised for speed. An amount field is presented prominently at the top. Income and Expense are toggled via a segmented control rather than a dropdown to reduce the number of taps required. Below the description field, a scrollable category grid presents the available categories with icons so that the user can select one with a single tap. The date defaults to the current date, covering the most common entry scenario; a calendar picker is available for historical entries. A notes field and receipt attachment option are visible but collapsed by default, consistent with the progressive disclosure principle.
 
-*[See Figure 4.2.2.4 — Add Transaction Screen (resources/new_diagrams/Figure_4.2.2.4_Add_Transaction_Screen.svg)]*
+*[See Figure 4.2.2.4: Add Transaction Screen (resources/new_diagrams/Figure_4.2.2.4_Add_Transaction_Screen.svg)]*
 
 #### Transaction History
 
-The Transaction History screen (Figure 4.2.2.5) displays all transactions in reverse-chronological order, grouped by date. A search bar supports filtering by description keyword, and filter chips allow narrowing by transaction type (income/expense), category, and date range. Each transaction row shows the category icon, description, date, and amount with colour coding — green for income, red for expense. Tapping a row navigates to the Add Transaction screen in edit mode, with all fields pre-filled from the existing record so that corrections require only the relevant changes.
+The Transaction History screen (Figure 4.2.2.5) displays all transactions in reverse-chronological order, grouped by date. A search bar supports filtering by description keyword, and filter chips allow narrowing by transaction type (income/expense), category, and date range. Each transaction row shows the category icon, description, date, and amount with colour coding: green for income, red for expense. Tapping a row navigates to the Add Transaction screen in edit mode, with all fields pre-filled from the existing record so that corrections require only the relevant changes.
 
-*[See Figure 4.2.2.5 — Transaction History (resources/new_diagrams/Figure_4.2.2.5_Transaction_History.svg)]*
+*[See Figure 4.2.2.5: Transaction History (resources/new_diagrams/Figure_4.2.2.5_Transaction_History.svg)]*
 
 #### Budget Overview
 
-The Budget Overview screen (Figure 4.2.2.6) presents a horizontal progress bar for each budget category, colour-coded by consumption level: green below 80% (Safe), amber at 80% and above (Warning), and red at 100% and above (Exceeded). The current spending amount and allocated limit are shown numerically alongside each bar. This multi-colour display is designed to be immediately scannable — a user can detect which categories require attention without reading individual numbers. Categories where spending has exceeded the limit display a distinct icon to draw attention to the overage.
+The Budget Overview screen (Figure 4.2.2.6) presents a horizontal progress bar for each budget category, colour-coded by consumption level: green below 80% (Safe), amber at 80% and above (Warning), and red at 100% and above (Exceeded). The current spending amount and allocated limit are shown numerically alongside each bar. This multi-colour display is designed to be immediately scannable, so a user can detect which categories require attention without reading individual numbers. Categories where spending has exceeded the limit display a distinct icon to draw attention to the overage.
 
-*[See Figure 4.2.2.6 — Budget Overview (resources/new_diagrams/Figure_4.2.2.6_Budget_Overview.svg)]*
+*[See Figure 4.2.2.6: Budget Overview (resources/new_diagrams/Figure_4.2.2.6_Budget_Overview.svg)]*
 
 #### Budget Creation Screen
 
 The Budget Creation screen (Figure 4.2.2.7) allows the user to set a total monthly budget and allocate it across spending categories. A month selector at the top establishes which period the budget applies to. Below it, a total amount field accepts the overall budget figure, and a list of category rows each contains an amount input. A running subtotal shows the user how much of the total budget has been allocated as they fill in category amounts, preventing the common error of over-allocating a fixed budget. Categories with no allocation are retained in the list with zero values rather than being hidden, so the user is reminded to consider each category explicitly.
 
-*[See Figure 4.2.2.7 — Budget Creation (resources/new_diagrams/Figure_4.2.2.7_Budget_Creation.svg)]*
+*[See Figure 4.2.2.7: Budget Creation (resources/new_diagrams/Figure_4.2.2.7_Budget_Creation.svg)]*
 
 #### Investment Portfolio Screen
 
 The Investment Portfolio screen (Figure 4.2.2.8) presents a summary card at the top showing total investment cost, current portfolio value, overall absolute gain or loss, and overall percentage return. Below the summary, each holding is listed as a card with the asset name, type, quantity, purchase price, current price, absolute gain or loss, and percentage return. Cards use green text and upward arrows for profitable positions and red text with downward arrows for positions in loss, providing immediate visual differentiation. The portfolio performance categorisation follows the thresholds defined in Table 4.6.4.1.
 
-*[See Figure 4.2.2.8 — Investment Portfolio (resources/new_diagrams/Figure_4.2.2.8_Investment_Portfolio.svg)]*
+*[See Figure 4.2.2.8: Investment Portfolio (resources/new_diagrams/Figure_4.2.2.8_Investment_Portfolio.svg)]*
 
 #### Investment Entry Screen
 
 The Investment Entry screen (Figure 4.2.2.9) collects the information required to record a new holding: asset type (selectable from ten categories including Stocks, Cryptocurrency, ETF, Fixed Deposit, Bonds, Mutual Funds, Real Estate, Commodities, Unit Trust, and Other), asset name, stock symbol, quantity, purchase price, purchase date, current price, and optional notes. The asset type selector is presented as a scrollable chip list rather than a dropdown, keeping all options visible with a single scroll rather than requiring two taps. The Stock Symbol field is optional and hidden for asset types such as Fixed Deposit and Real Estate, where a ticker symbol is not applicable.
 
-*[See Figure 4.2.2.9 — Investment Entry (resources/new_diagrams/Figure_4.2.2.9_Investment_Entry.svg)]*
+*[See Figure 4.2.2.9: Investment Entry (resources/new_diagrams/Figure_4.2.2.9_Investment_Entry.svg)]*
 
 #### Achievements Screen
 
-The Achievements screen (Figure 4.2.2.10) is divided into two sections: unlocked badges and in-progress achievements. Unlocked badges are displayed as a grid of filled icons with the achievement name and unlock date. In-progress achievements show the badge icon in a greyed-out state alongside a progress bar and the completion criteria. The habit streak display occupies a dedicated card at the top of the screen, showing the current streak count, longest streak, and a seven-day calendar visualisation of recent activity. This screen is designed to function as a motivation anchor — giving users a tangible record of their financial tracking consistency.
+The Achievements screen (Figure 4.2.2.10) is divided into two sections: unlocked badges and in-progress achievements. Unlocked badges are displayed as a grid of filled icons with the achievement name and unlock date. In-progress achievements show the badge icon in a greyed-out state alongside a progress bar and the completion criteria. The habit streak display occupies a dedicated card at the top of the screen, showing the current streak count, longest streak, and a seven-day calendar visualisation of recent activity. This screen is designed to function as a motivation anchor, giving users a tangible record of their financial tracking consistency.
 
-*[See Figure 4.2.2.10 — Achievements Screen (original figure retained)]*
+*[See Figure 4.2.2.10: Achievements Screen (original figure retained)]*
 
 ---
 
@@ -303,9 +303,9 @@ Financial data imposes strict integrity requirements that ruled out MongoDB, who
 
 The SmartFinance data model comprises fourteen entities. Figure 4.3.2.1 shows the complete entity-relationship diagram.
 
-*[See Figure 4.3.2.1 — Entity Relationship Diagram (resources/new_diagrams/Figure_4.3.2.1_ERD.html)]*
+*[See Figure 4.3.2.1: Entity Relationship Diagram (resources/new_diagrams/Figure_4.3.2.1_ERD.html)]*
 
-The core domain entities are USERS, TRANSACTIONS, BUDGETS, BUDGETCATEGORIES, INVESTMENTS, GOALS, ACHIEVEMENTS, USERACHIEVEMENTS, HABITSTREAKS, RECURRINGTRANSACTIONS, and USERSETTINGS. Three additional tables — TWOFACTORAUTHS, USERSESSIONS, and SECURITYLOGS — support authentication security and audit trail requirements.
+The core domain entities are USERS, TRANSACTIONS, BUDGETS, BUDGETCATEGORIES, INVESTMENTS, GOALS, ACHIEVEMENTS, USERACHIEVEMENTS, HABITSTREAKS, RECURRINGTRANSACTIONS, and USERSETTINGS. Three additional tables (TWOFACTORAUTHS, USERSESSIONS, and SECURITYLOGS) support authentication security and audit trail requirements.
 
 **USERS to TRANSACTIONS (one-to-many).** Each user may have zero or more transaction records. The `UserId` foreign key in TRANSACTIONS references USERS with `ON DELETE CASCADE`, so that deleting a user account automatically removes all associated transaction history without requiring explicit multi-step deletion in application code.
 
@@ -313,7 +313,7 @@ The core domain entities are USERS, TRANSACTIONS, BUDGETS, BUDGETCATEGORIES, INV
 
 **BUDGETS to BUDGETCATEGORIES (one-to-many).** Each monthly budget is broken into category-level allocations stored in BUDGETCATEGORIES. The `SpentAmount` column in BUDGETCATEGORIES is a denormalised cache of the current month's spending for that category, updated each time a transaction is recorded or modified. This avoids a costly aggregation query every time the Budget Overview screen loads.
 
-**USERS to INVESTMENTS (one-to-many).** Investment holdings are stored per user. Each INVESTMENTS row represents one position — a quantity of a named asset purchased at a specific price. Current price is stored in the same row and updated manually by the user, as the application does not integrate with real-time market data feeds.
+**USERS to INVESTMENTS (one-to-many).** Investment holdings are stored per user. Each INVESTMENTS row represents one position: a quantity of a named asset purchased at a specific price. Current price is stored in the same row and updated manually by the user, as the application does not integrate with real-time market data feeds.
 
 **ACHIEVEMENTS and USERS (many-to-many via USERACHIEVEMENTS).** The ACHIEVEMENTS table defines the catalogue of available badges and their unlock criteria. USERACHIEVEMENTS is a bridge table recording which achievements each user has unlocked and at what timestamp. The `Progress` column in USERACHIEVEMENTS tracks partial completion for count-based and milestone-based achievements, enabling the progress bars shown on the Achievements screen. The composite unique constraint on `(UserId, AchievementId)` prevents duplicate unlock records.
 
@@ -331,7 +331,7 @@ The core domain entities are USERS, TRANSACTIONS, BUDGETS, BUDGETCATEGORIES, INV
 
 The schema is normalised to Third Normal Form (3NF). Each table contains a single primary key with no repeating groups, all non-key attributes depend on the whole primary key (not a partial dependency), and no non-key attribute determines another non-key attribute (no transitive dependency). Category labels and asset types are stored as VARCHAR values in their respective rows rather than in separate lookup tables, which is appropriate given that both sets are fixed application-defined enumerations that do not change independently of the records that reference them.
 
-A deliberate denormalisation is applied in BUDGETCATEGORIES, where `SpentAmount` caches the sum of transactions for a given category and month. This introduces a consistency responsibility — the application must update `SpentAmount` whenever a transaction is created, updated, or deleted — but the performance benefit justifies the trade-off. Budget status is queried on every dashboard load and every transaction save; computing the aggregate from raw transactions on each request would add a GROUP BY query to every such operation.
+A deliberate denormalisation is applied in BUDGETCATEGORIES, where `SpentAmount` caches the sum of transactions for a given category and month. This introduces a consistency responsibility, as the application must update `SpentAmount` whenever a transaction is created, updated, or deleted, but the performance benefit justifies the trade-off. Budget status is queried on every dashboard load and every transaction save; computing the aggregate from raw transactions on each request would add a GROUP BY query to every such operation.
 
 ---
 
@@ -648,9 +648,9 @@ The `ON DELETE CASCADE` clause is applied across tables where account deletion s
 
 SmartFinance implements the three-tier client-server architectural pattern described in Section 4.1, using Flutter for the presentation tier, Python Flask for the application tier, and MySQL for the data tier. Figure 4.4.2.1 illustrates the layer interactions and communication protocols.
 
-*[See Figure 4.4.2.1 — Software Architecture Diagram (resources/new_diagrams/Figure_4.4.2.1_Architecture.html)]*
+*[See Figure 4.4.2.1: Software Architecture Diagram (resources/new_diagrams/Figure_4.4.2.1_Architecture.html)]*
 
-The presentation tier is stateless with respect to business data — it stores only the JWT token and a local cache of recently fetched records. All authoritative data operations occur at the application tier. This design means that if the mobile application is uninstalled and reinstalled, the user's complete financial history is preserved on the server and accessible after re-authentication.
+The presentation tier is stateless with respect to business data, storing only the JWT token and a local cache of recently fetched records. All authoritative data operations occur at the application tier. This design means that if the mobile application is uninstalled and reinstalled, the user's complete financial history is preserved on the server and accessible after re-authentication.
 
 ---
 
@@ -719,7 +719,7 @@ Performance targets and measured outcomes for key API operations are summarised 
 | Portfolio calculation | < 200ms | 85–95ms | 20 investments, single-pass algorithm |
 | Achievement evaluation | < 300ms | 180–220ms | Selective trigger-based evaluation |
 
-All endpoints targeting under 200ms response time operate within that budget under typical load conditions. The login endpoint exceeds 200ms by design — bcrypt's cost factor 12 requires approximately 280ms of computation, which is the intentional cost of making brute-force attacks computationally expensive.
+All endpoints targeting under 200ms response time operate within that budget under typical load conditions. The login endpoint exceeds 200ms by design, as bcrypt's cost factor 12 requires approximately 280ms of computation, which is the intentional cost of making brute-force attacks computationally expensive.
 
 ---
 
@@ -729,12 +729,12 @@ All endpoints targeting under 200ms response time operate within that budget und
 
 The authentication subsystem covers two flows: user registration and subsequent login. Figure 4.5.1.1 illustrates the login and 2FA verification workflow.
 
-*[See Figure 4.5.1.1 — Login and Authentication Workflow (resources/new_diagrams/Figure_4.5.1.1_Login_Auth_Workflow.html)]*
+*[See Figure 4.5.1.1: Login and Authentication Workflow (resources/new_diagrams/Figure_4.5.1.1_Login_Auth_Workflow.html)]*
 
 **Registration process:**
 
 1. The user completes the registration form with full name, email address, password, and optional phone number.
-2. The Flutter client validates input locally — password strength rules, email format, field completeness — and displays inline validation feedback.
+2. The Flutter client validates input locally (password strength rules, email format, field completeness) and displays inline validation feedback.
 3. A POST request is sent to `/api/auth/register` with the validated form data.
 4. The Flask server checks for an existing account with the provided email address. If a duplicate is found, a 409 Conflict response is returned.
 5. The password is hashed using bcrypt with cost factor 12: `bcrypt.generate_password_hash(password, 12)`.
@@ -761,7 +761,7 @@ The authentication subsystem covers two flows: user registration and subsequent 
 
 Figure 4.5.2.1 illustrates the transaction entry workflow.
 
-*[See Figure 4.5.2.1 — Transaction Entry Workflow (resources/new_diagrams/Figure_4.5.2.1_Transaction_Entry_Workflow.html)]*
+*[See Figure 4.5.2.1: Transaction Entry Workflow (resources/new_diagrams/Figure_4.5.2.1_Transaction_Entry_Workflow.html)]*
 
 1. The user navigates to the Add Transaction screen and enters an amount.
 2. The user selects Income or Expense using the type toggle.
@@ -769,7 +769,7 @@ Figure 4.5.2.1 illustrates the transaction entry workflow.
 4. The user confirms the transaction type and category selection before proceeding.
 5. The date defaults to today. The user may change it using the calendar picker for historical entries.
 6. The user taps Save. The Flutter client sends a POST request to `/api/transactions`.
-7. The server validates the request — amount must be positive, category must be a valid enumerated value, date must be a valid date.
+7. The server validates the request: amount must be positive, category must be a valid enumerated value, date must be a valid date.
 8. A new TRANSACTIONS row is inserted.
 9. If the transaction is an Expense and falls within the current budget month, the server updates `SpentAmount` in the corresponding BUDGETCATEGORIES row.
 10. The gamification engine checks whether any transaction-triggered achievements have been met (Section 4.6.6) and updates the user's streak (Section 4.6.5). Both checks execute asynchronously to avoid blocking the response.
@@ -783,9 +783,9 @@ Figure 4.5.2.1 illustrates the transaction entry workflow.
 
 Figure 4.5.3.1 illustrates the budget creation workflow. The monitoring and analysis workflows are shown in Figures 4.5.3.2 and 4.5.3.3.
 
-*[See Figure 4.5.3.1 — Budget Setup Process (resources/new_diagrams/Figure_4.5.3.1_Budget_Setup_Process.html)]*
-*[See Figure 4.5.3.2 — Budget Monitoring Process (original figure retained)]*
-*[See Figure 4.5.3.3 — Budget Analysis Process (original figure retained)]*
+*[See Figure 4.5.3.1: Budget Setup Process (resources/new_diagrams/Figure_4.5.3.1_Budget_Setup_Process.html)]*
+*[See Figure 4.5.3.2: Budget Monitoring Process (original figure retained)]*
+*[See Figure 4.5.3.3: Budget Analysis Process (original figure retained)]*
 
 **Budget creation:**
 
@@ -814,9 +814,9 @@ When a new expense transaction is saved, `SpentAmount` is updated synchronously,
 
 Figure 4.5.4.1 illustrates the investment entry workflow. Price update and portfolio recalculation workflows are shown in Figures 4.5.4.2 and 4.5.4.3.
 
-*[See Figure 4.5.4.1 — Investment Entry Workflow (resources/new_diagrams/Figure_4.5.4.1_Investment_Entry_Workflow.html)]*
-*[See Figure 4.5.4.2 — Investment Price Update Workflow (original figure retained)]*
-*[See Figure 4.5.4.3 — Portfolio Calculation Workflow (original figure retained)]*
+*[See Figure 4.5.4.1: Investment Entry Workflow (resources/new_diagrams/Figure_4.5.4.1_Investment_Entry_Workflow.html)]*
+*[See Figure 4.5.4.2: Investment Price Update Workflow (original figure retained)]*
+*[See Figure 4.5.4.3: Portfolio Calculation Workflow (original figure retained)]*
 
 **Investment entry:**
 
@@ -836,9 +836,9 @@ Figure 4.5.4.1 illustrates the investment entry workflow. Price update and portf
 
 Figures 4.5.5.1, 4.5.5.2, and 4.5.5.3 illustrate the XP award, achievement unlock, and streak tracking workflows respectively.
 
-*[See Figure 4.5.5.1 — XP Award Process (original figure retained)]*
-*[See Figure 4.5.5.2 — Achievement Unlock Process (original figure retained)]*
-*[See Figure 4.5.5.3 — Streak Update Process (original figure retained)]*
+*[See Figure 4.5.5.1: XP Award Process (original figure retained)]*
+*[See Figure 4.5.5.2: Achievement Unlock Process (original figure retained)]*
+*[See Figure 4.5.5.3: Streak Update Process (original figure retained)]*
 
 **XP award process:**
 
@@ -933,7 +933,7 @@ Time complexity is O(n × m) where n is the number of categories and m is the nu
 | History lookup | < 3ms | 1–2ms | 50 transactions, indexed query |
 | Memory usage | < 100KB | ~45KB | Keywords + 50 history records |
 
-Fetching the 50 most recent transactions for history analysis is more efficient than retrieving the full history because the marginal accuracy gain from additional records beyond 50 diminishes rapidly while the query time grows linearly. The user history component is particularly valuable for users with consistent spending patterns — once a user has categorised several entries for the same vendor (e.g., a ride-hailing service consistently mapped to Transportation), subsequent entries are classified correctly without requiring repeated manual selection.
+Fetching the 50 most recent transactions for history analysis is more efficient than retrieving the full history because the marginal accuracy gain from additional records beyond 50 diminishes rapidly while the query time grows linearly. The user history component is particularly valuable for users with consistent spending patterns. Once a user has categorised several entries for the same vendor (e.g., a ride-hailing service consistently mapped to Transportation), subsequent entries are classified correctly without requiring repeated manual selection.
 
 ---
 
@@ -992,7 +992,7 @@ WHERE BudgetId = ? AND Category = ?
 
 This reduces the budget status query from a GROUP BY aggregation over potentially thousands of transactions to a single indexed SELECT over a small number of category rows. For a user with 500 transactions in a month, the naive aggregation approach takes approximately 150ms; the cached approach completes in under 20ms regardless of transaction count.
 
-Thresholds are evaluated only at the point of comparison — there is no background process scanning for threshold crossings. An alert is generated when the Budget Overview screen is loaded or when a transaction triggers a `SpentAmount` update that crosses a threshold. The threshold-only alerting approach means that routine budget checks that do not cross any boundary complete in under 5ms.
+Thresholds are evaluated only at the point of comparison; there is no background process scanning for threshold crossings. An alert is generated when the Budget Overview screen is loaded or when a transaction triggers a `SpentAmount` update that crosses a threshold. The threshold-only alerting approach means that routine budget checks that do not cross any boundary complete in under 5ms.
 
 **Table 4.6.2.1: Budget Alert Threshold Configuration**
 
@@ -1019,13 +1019,13 @@ The XP and level progression algorithm awards experience points for user actions
 
 XP_required = BaseXP × CurrentLevel × GrowthFactor
 
-Where BaseXP = 100 and GrowthFactor = 1.5. This formula was chosen over true exponentiation because it produces a simpler, more predictable progression curve while remaining computationally trivial — a single multiplication rather than a `pow()` call. For levels 1–20, the required XP per level ranges from 150 (Level 1) to 3,000 (Level 20).
+Where BaseXP = 100 and GrowthFactor = 1.5. This formula was chosen over true exponentiation because it produces a simpler, more predictable progression curve while remaining computationally trivial: a single multiplication rather than a `pow()` call. For levels 1–20, the required XP per level ranges from 150 (Level 1) to 3,000 (Level 20).
 
 ```python
 def calculate_level_progression(current_xp: int, current_level: int) -> dict:
     """
     Calculate level progression using linear approximation of exponential growth.
-    O(1) time complexity — single arithmetic operation.
+    O(1) time complexity: single arithmetic operation.
     """
     BASE_XP = 100
     GROWTH_FACTOR = 1.5
@@ -1058,7 +1058,7 @@ def calculate_level_progression(current_xp: int, current_level: int) -> dict:
 def award_experience_points(user_id: int, activity_type: str) -> dict:
     """
     Award XP for a completed user activity and check for level-up.
-    Single database query and update — O(1) operation.
+    Single database query and update: O(1) operation.
     """
     XP_REWARDS = {
         'transaction_logged': 10,
@@ -1091,7 +1091,7 @@ def award_experience_points(user_id: int, activity_type: str) -> dict:
     update_user_xp(user_id, new_xp, new_level)
     
     if leveled_up:
-        # Async notification — does not block XP award response
+        # Async notification; does not block XP award response
         send_notification_async(
             user_id,
             f"Level Up! You reached Level {new_level}!"
@@ -1105,7 +1105,7 @@ def award_experience_points(user_id: int, activity_type: str) -> dict:
     }
 ```
 
-The level check is O(1) — a single multiplication and comparison. The alternative of storing cumulative XP thresholds in a lookup table would require either a table scan or an indexed lookup on every XP award; the formula approach requires no database access beyond the user record update already required.
+The level check is O(1): a single multiplication and comparison. The alternative of storing cumulative XP thresholds in a lookup table would require either a table scan or an indexed lookup on every XP award; the formula approach requires no database access beyond the user record update already required.
 
 **Table 4.6.3.1: XP Reward Values by Activity Type**
 
@@ -1195,7 +1195,7 @@ END ALGORITHM
 
 The algorithm uses a single-pass loop that calculates individual performance and accumulates portfolio totals simultaneously, rather than separate passes for each operation. For 20 investments, this reduces execution time by approximately 60% compared to a three-pass approach (30ms vs. 75ms), with improved cache locality on ARM processors.
 
-All monetary calculations use Python's `Decimal` type rather than floating-point arithmetic. The `Decimal` type is 10–20× slower than float arithmetic but eliminates rounding errors that would otherwise cause displayed portfolio values to drift from the correct figures — a trust-critical issue for financial applications.
+All monetary calculations use Python's `Decimal` type rather than floating-point arithmetic. The `Decimal` type is 10–20× slower than float arithmetic but eliminates rounding errors that would otherwise cause displayed portfolio values to drift from the correct figures, which is a trust-critical issue for financial applications.
 
 For portfolios exceeding 30 investments, the algorithm paginates the database query, loading the first 30 holdings for immediate display with remaining holdings loaded progressively on scroll. This ensures initial screen load completes within 100ms regardless of portfolio size.
 
@@ -1389,7 +1389,7 @@ END ALGORITHM
 Rather than evaluating all achievements on every transaction, the algorithm maintains a mapping from trigger event types to relevant achievement subsets:
 
 ```python
-# Naive approach — avoided
+# Naive approach (avoided)
 def on_transaction_created(user_id):
     evaluate_all_achievements(user_id)  # 50 achievements × 50ms = 2.5 seconds
 
@@ -1435,7 +1435,7 @@ The application follows a data minimisation principle: only information necessar
 
 Users retain full control over their data. The CSV export endpoint (`/api/reports/user/<id>/export/transactions`) allows users to download their complete transaction history. The account deletion endpoint (`/api/security/account/delete`) triggers a cascading delete removing all associated records across all fourteen tables.
 
-The database user account for the application is granted only the specific permissions required for normal operation — SELECT, INSERT, UPDATE on most tables, with DELETE restricted to tables where user-initiated deletion is permitted. DROP, TRUNCATE, and ALTER permissions are not granted, reducing the impact of a compromised application credential:
+The database user account for the application is granted only the specific permissions required for normal operation: SELECT, INSERT, UPDATE on most tables, with DELETE restricted to tables where user-initiated deletion is permitted. DROP, TRUNCATE, and ALTER permissions are not granted, reducing the impact of a compromised application credential:
 
 ```sql
 CREATE USER 'smartfinance_app'@'localhost' IDENTIFIED BY 'strong_password';
@@ -1493,7 +1493,7 @@ The seven-day expiry balances security (limited token lifespan) with convenience
 
 The login endpoint's primary defence against automated password-guessing is bcrypt's computational cost. At cost factor 12, each verification attempt takes approximately 250ms. This means an attacker can test at most four candidate passwords per second per thread, making large-scale brute-force attacks impractical within a realistic time window even without explicit IP-level rate limiting.
 
-Failed login attempts are written to the `SecurityLogs` table, so unusual patterns — repeated failures from the same IP address or against the same account — are visible in the user's security activity log. Automated application-layer rate limiting is a planned enhancement for a production deployment but is not implemented in the current version.
+Failed login attempts are written to the `SecurityLogs` table, so unusual patterns such as repeated failures from the same IP address or against the same account are visible in the user's security activity log. Automated application-layer rate limiting is a planned enhancement for a production deployment but is not implemented in the current version.
 
 #### 4.7.2.4 Two-Factor Authentication
 
@@ -1527,7 +1527,7 @@ The score is displayed as a filled progress bar colour-coded by level: red below
 
 Every successful login creates a `UserSessions` record capturing the session identifier, user ID, device name, device type, IP address, user agent string, login timestamp, and last-active timestamp. The device name and type are derived from the `User-Agent` header, enabling users to identify entries such as *Samsung Galaxy S24 (mobile)* or *Chrome on Windows 11 (web)* in the session list.
 
-The Security Settings screen displays all currently active sessions. Users may revoke any individual session — logging out a device they no longer possess — by selecting it from the list. Revoking a session sets `IsActive = FALSE` on the session record and writes a `session_terminated` event to the security log.
+The Security Settings screen displays all currently active sessions. Users may revoke any individual session (logging out a device they no longer possess) by selecting it from the list. Revoking a session sets `IsActive = FALSE` on the session record and writes a `session_terminated` event to the security log.
 
 #### 4.7.2.7 Security Activity Log
 
@@ -1596,7 +1596,7 @@ While SmartFinance implements several layers of protection, the FYP scope impose
 
 Encryption at rest is not implemented in the current version. Sensitive fields (email, full name, transaction descriptions) are stored as plaintext in the MySQL database. A production deployment would encrypt sensitive columns using AES-256 with keys managed by a dedicated secrets management service (such as AWS Secrets Manager). The data minimisation principle described in Section 4.7.1 reduces the exposure risk, but field-level encryption remains a planned future enhancement.
 
-Application-layer rate limiting is not implemented. The login endpoint relies on bcrypt's computational cost as its primary defence against brute-force attempts. Explicit per-IP rate limiting — for example via Nginx configuration or a middleware library — would provide an additional protection layer and is recommended before any public deployment.
+Application-layer rate limiting is not implemented. The login endpoint relies on bcrypt's computational cost as its primary defence against brute-force attempts. Explicit per-IP rate limiting, for example via Nginx configuration or a middleware library, would provide an additional protection layer and is recommended before any public deployment.
 
 All communication currently operates over HTTP in the development environment. HTTPS with TLS is required before the application handles real financial data from live users. This transition is straightforward (reverse-proxy TLS termination) but falls outside the academic project scope.
 
@@ -1606,7 +1606,7 @@ Biometric authentication (fingerprint and facial recognition) is not implemented
 
 ## 4.8 Chapter Summary
 
-This chapter has presented the complete system design for SmartFinance. The three-tier client-server architecture separates the Flutter presentation layer, Flask application layer, and MySQL data layer into independently testable and deployable tiers. The fourteen-table database schema covers all domain entities — Users, Transactions, Budgets, BudgetCategories, Investments, Goals, Achievements, UserAchievements, HabitStreaks, RecurringTransactions, UserSettings, TwoFactorAuths, usersessions, and securitylogs — with referential integrity enforced through foreign key constraints and a deliberate denormalisation in `BudgetCategories.SpentAmount` for sub-20ms budget status queries. The RESTful API is organised into twelve Blueprint modules covering authentication, transactions, budgets, goals, investments, gamification, analytics, settings, 2FA, security, recurring transactions, and financial insights.
+This chapter has presented the complete system design for SmartFinance. The three-tier client-server architecture separates the Flutter presentation layer, Flask application layer, and MySQL data layer into independently testable and deployable tiers. The fourteen-table database schema covers all domain entities, namely Users, Transactions, Budgets, BudgetCategories, Investments, Goals, Achievements, UserAchievements, HabitStreaks, RecurringTransactions, UserSettings, TwoFactorAuths, usersessions, and securitylogs, with referential integrity enforced through foreign key constraints and a deliberate denormalisation in `BudgetCategories.SpentAmount` for sub-20ms budget status queries. The RESTful API is organised into twelve Blueprint modules covering authentication, transactions, budgets, goals, investments, gamification, analytics, settings, 2FA, security, recurring transactions, and financial insights.
 
 Six computational algorithms address the specific performance constraints of mid-range Android devices: intelligent categorisation achieves 85% accuracy in under 5ms using in-memory keyword matching and bounded user history; budget alerting completes in under 20ms through denormalised caching; XP progression uses a linear formula for O(1) level calculations; portfolio performance uses single-pass aggregation to complete in under 100ms for typical holdings; streak tracking uses a `MAX()` indexed query for O(1) streak checks; and achievement evaluation uses trigger-based selective checking to reduce evaluation time from 2.5 seconds to under 220ms. Security is implemented across authentication (bcrypt hashing at cost factor 12, JWT token management, TOTP-based 2FA with backup codes), session management (per-device session records with user-initiated revocation), and audit logging (a persistent SecurityLogs record for every security-relevant event), providing layered protection while complying with PDPA 2010 data minimisation requirements.
 

@@ -25,7 +25,7 @@ The SmartFinance system was developed using a combination of industry-standard t
 | Database | MySQL | 8.x | Relational data persistence |
 | ORM | SQLAlchemy (Flask-SQLAlchemy) | 3.x | Database model definition and queries |
 | Authentication | Flask-JWT-Extended | 4.x | JWT token generation and verification |
-| Password Hashing | bcrypt (via Flask-Bcrypt) | — | Secure password storage |
+| Password Hashing | bcrypt (via Flask-Bcrypt) | N/A | Secure password storage |
 | 2FA Library | pyotp | 2.x | Time-based One-Time Password (TOTP) generation |
 | QR Code Generation | qrcode | 7.x | 2FA QR code generation for authenticator apps |
 | HTTP Client (Flutter) | http package | 1.x | API calls from Flutter to Flask backend |
@@ -33,11 +33,11 @@ The SmartFinance system was developed using a combination of industry-standard t
 | Shared Preferences | shared_preferences | 2.x | Local storage of user session data |
 | File Sharing | share_plus | 7.x | CSV and PDF sharing via system share sheet |
 | State Management | Provider | 6.x | Theme (dark/light mode) state management |
-| Financial Insights Engine | Custom Flask analytics module | — | Financial health score computation and personalised insight generation |
-| API Testing | Postman | — | Manual backend endpoint testing |
-| IDE (Frontend) | Android Studio / VS Code | — | Flutter development |
-| IDE (Backend) | Visual Studio Code | — | Python/Flask development |
-| Version Control | Git / GitHub | — | Source code management and collaboration |
+| Financial Insights Engine | Custom Flask analytics module | N/A | Financial health score computation and personalised insight generation |
+| API Testing | Postman | N/A | Manual backend endpoint testing |
+| IDE (Frontend) | Android Studio / VS Code | N/A | Flutter development |
+| IDE (Backend) | Visual Studio Code | N/A | Python/Flask development |
+| Version Control | Git / GitHub | N/A | Source code management and collaboration |
 
 The development process followed an incremental approach, implementing and testing one module at a time. The Flutter frontend and Flask backend were developed in parallel, with Postman used extensively to verify backend endpoints before integration with the mobile app.
 
@@ -53,49 +53,49 @@ The Flutter codebase is organised into logical layers that separate concerns:
 
 ```
 lib/
-├── main.dart                  — App entry point, theme setup, routing
-├── screens/                   — 26 feature screens grouped by module
-│   ├── auth/                  — Login, Register, Verify Email, Forgot/Reset Password
-│   ├── onboarding/            — 3-page onboarding introduction
-│   ├── dashboard/             — Main dashboard (home screen)
-│   ├── transactions/          — Add, History, Recurring transactions screens
-│   ├── budgets/               — Create Budget, Budget Overview
-│   ├── goals/                 — Add Goal, Goals Overview
-│   ├── investments/           — Add Investment, Portfolio Overview
-│   ├── analytics/             — Spending analytics with charts
-│   ├── reports/               — Tabbed reports with export
-│   ├── insights/              — Financial health score and personalised insight cards
-│   ├── gamification/          — Achievements screen
-│   └── settings/              — Settings, Profile Edit, Security, 2FA, Backup Codes
-├── services/                  — API calls, analytics logic, export, notifications, financial insights
-├── models/                    — Typed Dart data models (TransactionModel, BudgetModel, etc.)
-├── widgets/                   — Reusable UI components and chart widgets
-├── providers/                 — ThemeProvider for dark/light mode
-└── utils/                     — AppColors, categories, investment types, gradients
+├── main.dart                  : App entry point, theme setup, routing
+├── screens/                   : 26 feature screens grouped by module
+│   ├── auth/                  : Login, Register, Verify Email, Forgot/Reset Password
+│   ├── onboarding/            : 6-page onboarding introduction
+│   ├── dashboard/             : Main dashboard (home screen)
+│   ├── transactions/          : Add, History, Recurring transactions screens
+│   ├── budgets/               : Create Budget, Budget Overview
+│   ├── goals/                 : Add Goal, Goals Overview
+│   ├── investments/           : Add Investment, Portfolio Overview
+│   ├── analytics/             : Spending analytics with charts
+│   ├── reports/               : Tabbed reports with export
+│   ├── insights/              : Financial health score and personalised insight cards
+│   ├── gamification/          : Achievements screen
+│   └── settings/              : Settings, Profile Edit, Security, 2FA, Backup Codes
+├── services/                  : API calls, analytics logic, export, notifications, financial insights
+├── models/                    : Typed Dart data models (TransactionModel, BudgetModel, etc.)
+├── widgets/                   : Reusable UI components and chart widgets
+├── providers/                 : ThemeProvider for dark/light mode
+└── utils/                     : AppColors, categories, investment types, gradients
 ```
 
 **Backend Structure (`backend/`)**
 
 ```
 backend/
-├── run.py                     — Application entry point
-├── config.py                  — Database URI, JWT secret, mail settings
+├── run.py                     : Application entry point
+├── config.py                  : Database URI, JWT secret, mail settings
 └── app/
-    ├── __init__.py            — Flask app factory, blueprint registration
-    ├── models/                — SQLAlchemy ORM models
-    └── routes/                — 12 blueprint route modules
-        ├── auth.py            — Registration, login, email verification, password reset
-        ├── transactions.py    — Transaction CRUD, summary
-        ├── budgets.py         — Budget creation, status per category
-        ├── investments.py     — Portfolio CRUD
-        ├── goals.py           — Savings goals and contributions
-        ├── gamification.py    — Achievements, XP, levels, streaks, leaderboard
-        ├── settings.py        — User preferences, currency, notifications
-        ├── two_factor_auth.py — TOTP 2FA setup, verification, disable
-        ├── security.py        — Session management, security log, account deletion
-        ├── recurring_transactions.py — Recurring transaction CRUD and execution
-        ├── reports.py         — Spending analytics, category breakdown, CSV/PDF export
-        └── financial_insights.py — Financial health score and personalised insight generation
+    ├── __init__.py            : Flask app factory, blueprint registration
+    ├── models/                : SQLAlchemy ORM models
+    └── routes/                : 12 blueprint route modules
+        ├── auth.py            : Registration, login, email verification, password reset
+        ├── transactions.py    : Transaction CRUD, summary
+        ├── budgets.py         : Budget creation, status per category
+        ├── investments.py     : Portfolio CRUD
+        ├── goals.py           : Savings goals and contributions
+        ├── gamification.py    : Achievements, XP, levels, streaks, leaderboard
+        ├── settings.py        : User preferences, currency, notifications
+        ├── two_factor_auth.py : TOTP 2FA setup, verification, disable
+        ├── security.py        : Session management, security log, account deletion
+        ├── recurring_transactions.py : Recurring transaction CRUD and execution
+        ├── reports.py         : Spending analytics, category breakdown, CSV/PDF export
+        └── financial_insights.py : Financial health score and personalised insight generation
 ```
 
 All Flask blueprints are registered with a consistent URL prefix (e.g., `/api/auth`, `/api/transactions`) in `app/__init__.py`. This design enforces clean separation of concerns and makes individual modules independently testable via Postman.
@@ -137,7 +137,7 @@ This function uses Python's `re` module to apply four regular-expression checks.
 ```python
 @two_factor_bp.route('/2fa/setup', methods=['POST'])
 def setup_2fa():
-    """Initialise 2FA setup — returns QR code, secret, and backup codes."""
+    """Initialise 2FA setup and return QR code, secret, and backup codes."""
     data = request.get_json()
     user_id = data.get('userId')
     user = User.query.get(user_id)
@@ -170,7 +170,7 @@ Each successful login creates a `UserSession` record in the database containing 
 
 **Security Score**
 
-A composite security score is computed on the Flutter side and takes one of three values: 30 (account not email-verified), 60 (email verified, 2FA not enabled), or 100 (email verified and 2FA enabled). The score is displayed as a colour-coded progress bar on the Security Settings screen — red below 50, amber at 50–79, and green at 80 and above — to encourage users to improve their account security posture by completing email verification and enabling 2FA.
+A composite security score is computed on the Flutter side and takes one of three values: 30 (account not email-verified), 60 (email verified, 2FA not enabled), or 100 (email verified and 2FA enabled). The score is displayed as a colour-coded progress bar on the Security Settings screen, using red below 50, amber at 50–79, and green at 80 and above, to encourage users to improve their account security posture by completing email verification and enabling 2FA.
 
 ---
 
@@ -224,12 +224,7 @@ The analytics and reports module provides visualisation and data export capabili
 
 **Analytics Screen**
 
-The `AnalyticsScreen` fetches all transactions and the current budget, then delegates computation to the `AnalyticsService` utility class. The screen renders four chart types using the `fl_chart` package:
-
-- **Spending Trend Line Chart** — monthly cumulative or total expenses plotted over time.
-- **Income vs Expense Bar Chart** — grouped bars for each month in the selected range.
-- **Category Pie Chart** — proportional expense breakdown by category; tapping a segment highlights it and shows a tooltip with the exact amount.
-- **Budget vs Actual Comparison** — horizontal bars contrasting allocated budget against actual spending per category.
+The `AnalyticsScreen` fetches all transactions and the current budget, then delegates computation to the `AnalyticsService` utility class. The screen renders four chart types using the `fl_chart` package. A Spending Trend Line Chart plots monthly cumulative or total expenses over time. An Income vs Expense Bar Chart shows grouped bars for each month in the selected range. A Category Pie Chart provides a proportional expense breakdown by category, with tapping a segment highlighting it and showing a tooltip with the exact amount. A Budget vs Actual Comparison chart renders horizontal bars contrasting allocated budget against actual spending per category.
 
 A segmented time-range selector (1M, 3M, 6M, 1Y, ALL) is positioned at the top of the screen. Changing the selection triggers `_loadData()`, which recalculates `_startDate` and `_endDate` using `AnalyticsService.getTimeRange()` and rebuilds all charts. The following snippet illustrates the parallel data loading pattern used throughout the analytics screen:
 
@@ -297,7 +292,7 @@ def calculate_level(total_xp):
     return level - 1, xp_needed  # Return current level and total XP needed for next level
 ```
 
-This design deliberately slows progression at higher levels, mirroring the mechanics found in popular games and ensuring long-term engagement. The function returns both the current level and the cumulative XP threshold required to reach the next level. The loop exits one step past the user's current level (`level - 1` corrects this overshoot), and `xp_needed` at that point holds the total XP target for the next level boundary — enabling the frontend to render an accurate progress bar showing how close the user is to levelling up.
+This design deliberately slows progression at higher levels, mirroring the mechanics found in popular games and ensuring long-term engagement. The function returns both the current level and the cumulative XP threshold required to reach the next level. The loop exits one step past the user's current level (`level - 1` corrects this overshoot), and `xp_needed` at that point holds the total XP target for the next level boundary, enabling the frontend to render an accurate progress bar showing how close the user is to levelling up.
 
 **Habit Streaks**
 
@@ -315,18 +310,13 @@ The Financial Insights module provides users with a personalised financial healt
 
 **Financial Health Score**
 
-The `GET /api/insights/user/<id>` endpoint computes a Financial Health Score on a 0–100 scale by evaluating four equally-weighted pillars, each contributing up to 25 points:
-
-- **Savings Rate** — the proportion of income saved this month relative to a 20% savings rate target.
-- **Budget Adherence** — how closely total spending aligns with the user's configured budget limit.
-- **Spending Consistency** — the stability of spending patterns compared to the previous calendar month.
-- **Goal Progress** — the proportion of active savings goals that are on track relative to their deadlines.
+The `GET /api/insights/user/<id>` endpoint computes a Financial Health Score on a 0–100 scale by evaluating four equally-weighted pillars, each contributing up to 25 points. The Savings Rate pillar measures the proportion of income saved this month relative to a 20% savings rate target. Budget Adherence measures how closely total spending aligns with the user's configured budget limit. Spending Consistency captures the stability of spending patterns compared to the previous calendar month. Goal Progress reflects the proportion of active savings goals that are on track relative to their deadlines.
 
 The sum of the four pillar scores (0–25 each) produces the final health score. The backend also assigns a qualitative label: *Needs Work* (0–49), *Fair* (50–69), *Good* (70–89), or *Excellent* (90–100).
 
 **Personalised Insight Cards**
 
-In addition to the score, the endpoint generates 4–6 ranked insight messages derived from the same data. Each insight carries a type (`positive`, `info`, `warning`, or `danger`), a short title, a one-sentence explanation, and an icon name. The Flutter client renders each card with a colour-coded left-accent border — green for positive, blue for informational, amber for warning, and red for danger — providing an at-a-glance prioritisation of the user's most important financial actions.
+In addition to the score, the endpoint generates 4–6 ranked insight messages derived from the same data. Each insight carries a type (`positive`, `info`, `warning`, or `danger`), a short title, a one-sentence explanation, and an icon name. The Flutter client renders each card with a colour-coded left-accent border (green for positive, blue for informational, amber for warning, and red for danger), providing an at-a-glance prioritisation of the user's most important financial actions.
 
 **Monthly Summary**
 
@@ -340,7 +330,7 @@ Testing for SmartFinance was conducted across four complementary strategies, eac
 
 Functional testing verifies that each feature behaves according to its specification. Test cases are derived directly from the use cases and functional requirements defined in earlier chapters. Each test case specifies a precondition, a sequence of steps, the expected result, and the actual result recorded during execution. A module-by-module structure is adopted to maintain traceability between requirements and test outcomes.
 
-Usability testing evaluates the ease with which target users — Malaysian young adults with varying levels of financial literacy — can accomplish representative tasks. Participants are recruited from the target demographic and asked to complete six predefined tasks without guidance. Evaluators record task completion rates, time-on-task, and error counts, and collect post-session questionnaire responses using a SUS-inspired Likert scale instrument. This strategy validates the user experience design decisions made during the prototyping phase.
+Usability testing evaluates the ease with which target users from the Malaysian young adult demographic, with varying levels of financial literacy, can accomplish representative tasks. Participants are recruited from the target demographic and asked to complete six predefined tasks without guidance. Evaluators record task completion rates, time-on-task, and error counts, and collect post-session questionnaire responses using a SUS-inspired Likert scale instrument. This strategy validates the user experience design decisions made during the prototyping phase.
 
 Security testing examines the system's resistance to common web application attacks and authentication bypass attempts. Test cases cover unauthenticated API access, JWT token expiry enforcement, cross-user data isolation, SQL injection inputs, brute-force login resistance, 2FA bypass attempts, and remote session revocation. These tests are conducted manually using Postman by crafting adversarial HTTP requests.
 
@@ -386,7 +376,7 @@ The following sub-sections enumerate the planned test cases for each module.
 |---|---|---|---|---|
 | AUTH-01 | Successful User Registration | No existing account with test email | 1. Open Register screen. 2. Enter valid name, email, password meeting all rules. 3. Tap Register. | Account created; verification email sent; user redirected to Verify Email screen. |
 | AUTH-02 | Duplicate Email Registration | Account exists with test email | 1. Attempt to register with an already-registered email. | Error message "Email already registered" displayed; no duplicate account created. |
-| AUTH-03 | Weak Password Rejection | — | 1. Enter password without uppercase letter. 2. Tap Register. | Validation error shown; registration blocked. |
+| AUTH-03 | Weak Password Rejection | N/A | 1. Enter password without uppercase letter. 2. Tap Register. | Validation error shown; registration blocked. |
 | AUTH-04 | Successful Login | Verified account exists | 1. Enter correct email and password. 2. Tap Login. | JWT tokens issued; user navigated to Dashboard screen. |
 | AUTH-05 | Login with Wrong Password | Account exists | 1. Enter correct email, incorrect password. 2. Tap Login. | Error message displayed; access denied. |
 | AUTH-06 | Email Verification | Account created but unverified | 1. Open verification link from email. | Account marked as verified; email verification banner removed from dashboard. |
@@ -408,7 +398,7 @@ The following sub-sections enumerate the planned test cases for each module.
 |---|---|---|---|---|
 | TXN-01 | Add Expense Transaction | User logged in | 1. Tap + on dashboard. 2. Select Expense type. 3. Enter amount, category, date. 4. Tap Save. | Transaction saved; dashboard balance and recent transactions updated. |
 | TXN-02 | Add Income Transaction | User logged in | 1. Repeat TXN-01 with Income type. | Income recorded; balance increases accordingly. |
-| TXN-03 | Amount Validation (Zero) | — | 1. Enter 0 as amount. 2. Tap Save. | Error "Amount must be greater than 0" shown; transaction not saved. |
+| TXN-03 | Amount Validation (Zero) | N/A | 1. Enter 0 as amount. 2. Tap Save. | Error "Amount must be greater than 0" shown; transaction not saved. |
 | TXN-04 | View Transaction History | At least 1 transaction exists | 1. Open Transaction History screen. | All transactions listed in chronological order. |
 | TXN-05 | Filter by Category | Multiple transactions exist | 1. Select a category filter. | Only transactions in selected category displayed. |
 | TXN-06 | Filter by Date Range | Multiple transactions exist | 1. Set start and end date. 2. Apply filter. | Only transactions within date range displayed. |
@@ -469,10 +459,10 @@ The following sub-sections enumerate the planned test cases for each module.
 | ANA-01 | View Spending Trend Chart | Transactions exist | 1. Open Analytics screen. | Line chart renders with correct data points for selected period. |
 | ANA-02 | View Income vs Expense Chart | Transactions exist | 1. Scroll to bar chart section. | Grouped bars shown for each month in selected range. |
 | ANA-03 | View Category Pie Chart | Expense transactions exist | 1. Scroll to pie chart. 2. Tap a segment. | Segment highlights; tooltip displays category name and amount. |
-| ANA-04 | Change Time Range | — | 1. Tap a different time range chip (e.g., 1Y). | All charts update to reflect new period. |
+| ANA-04 | Change Time Range | N/A | 1. Tap a different time range chip (e.g., 1Y). | All charts update to reflect new period. |
 | ANA-05 | Export Transactions CSV | Transactions exist | 1. Open Reports screen. 2. Tap CSV export. | CSV file generated; system share sheet appears. |
 | ANA-06 | Export Spending Report PDF | Transactions exist | 1. Open Reports screen. 2. Tap PDF export. | PDF document generated; system share sheet appears. |
-| ANA-07 | Switch Report Tabs | — | 1. Tap each tab (Spending, Budget, Categories). | Correct data rendered for each tab without errors. |
+| ANA-07 | Switch Report Tabs | N/A | 1. Tap each tab (Spending, Budget, Categories). | Correct data rendered for each tab without errors. |
 
 ---
 
@@ -483,7 +473,7 @@ The following sub-sections enumerate the planned test cases for each module.
 | Test Case ID | Test Case Name | Precondition | Test Steps | Expected Result |
 |---|---|---|---|---|
 | GAM-01 | Unlock Achievement | Achievement condition not yet met | 1. Perform the action required (e.g., add first transaction). | Achievement unlocked; XP awarded; notification or visual indicator shown. |
-| GAM-02 | View Achievement List | — | 1. Open Achievements screen. | All achievements displayed with locked/unlocked state and progress. |
+| GAM-02 | View Achievement List | N/A | 1. Open Achievements screen. | All achievements displayed with locked/unlocked state and progress. |
 | GAM-03 | Filter Achievements by Difficulty | Achievements loaded | 1. Select "Hard" filter chip. | Only Hard-difficulty achievements displayed. |
 | GAM-04 | Level Up | Sufficient XP accumulated | 1. Unlock achievements until XP threshold crossed. | Level indicator increments; dashboard card reflects new level. |
 | GAM-05 | View Daily Streak | Streak > 0 | 1. Open dashboard gamification card. | Correct consecutive-day count displayed. |
@@ -533,7 +523,7 @@ Participants rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree
 
 ### 5.4.3 Security Testing
 
-Security testing is conducted by the developer acting as an adversarial tester, using Postman to send crafted HTTP requests directly to the Flask API. The pass criterion is that all seven security test cases are handled correctly — either the malicious request is rejected or the system does not expose unintended data.
+Security testing is conducted by the developer acting as an adversarial tester, using Postman to send crafted HTTP requests directly to the Flask API. The pass criterion is that all seven security test cases are handled correctly, meaning either the malicious request is rejected or the system does not expose unintended data.
 
 **Table 5.4.3.1: Security Test Plan**
 
@@ -580,7 +570,7 @@ Realistic, representative test data is prepared prior to test execution to ensur
 | Income Transactions | Salary RM 3,500.00 / 2026-03-01; Freelance RM 800.00 / 2026-03-10 | Balance and analytics accuracy |
 | Budget Data | Total RM 2,000; Food RM 600; Transport RM 300; Entertainment RM 200 | Budget monitoring and over-budget detection |
 | Goal Data | Name: New Laptop; Target: RM 3,000; Deadline: 2026-12-31; Priority: High | Goal creation, contribution, and completion |
-| Investment Data | Stocks — Maybank, 100 units, purchase RM 8.50, current RM 9.20 | Portfolio value and profit/loss calculation |
+| Investment Data | Stocks (Maybank), 100 units, purchase RM 8.50, current RM 9.20 | Portfolio value and profit/loss calculation |
 | Adversarial Inputs | `' OR 1=1 --`, `<script>alert(1)</script>`, 20 rapid login attempts | Security test cases |
 | Large Dataset | 200 expense transactions spread over 6 months | Performance test cases |
 | 2FA Test Data | Valid TOTP code from Google Authenticator; invalid code `000000`; used backup code | 2FA setup, login, and bypass tests |
@@ -595,7 +585,7 @@ This section presents the detailed test case results recorded during test execut
 
 ### 5.6.1 Functional Test Results
 
-**Table 5.6.1.1: Authentication Module — Functional Test Results**
+**Table 5.6.1.1: Authentication Module: Functional Test Results**
 
 | Test Case ID | Test Case Name | Steps Performed | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
@@ -613,7 +603,7 @@ This section presents the detailed test case results recorded during test execut
 | AUTH-12 | Disable 2FA | Entered account password; tapped Disable 2FA. | 2FA removed; score updated. | 2FA disabled; security score reduced from 100 to 60. | Pass |
 | AUTH-13 | Session Revocation | Revoked a session from Active Sessions list. | Session deactivated; security log updated. | Session revoked; entry added to security log; revoked device returned 401. | Pass |
 
-**Table 5.6.1.2: Transaction Module — Functional Test Results**
+**Table 5.6.1.2: Transaction Module: Functional Test Results**
 
 | Test Case ID | Test Case Name | Steps Performed | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
@@ -628,7 +618,7 @@ This section presents the detailed test case results recorded during test execut
 | TXN-09 | Pause Recurring Transaction | Tapped Pause on the rent recurring transaction. | Status changes to Paused. | Status updated to Paused; next execution indicator hidden. | Pass |
 | TXN-10 | Execute Recurring Manually | Tapped Execute Now on rent recurring transaction. | Transaction created immediately; date advanced. | New transaction created for RM 1,200; NextExecutionDate advanced to 2026-05-01. | Pass |
 
-**Table 5.6.1.3: Budget Module — Functional Test Results**
+**Table 5.6.1.3: Budget Module: Functional Test Results**
 
 | Test Case ID | Test Case Name | Steps Performed | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
@@ -638,7 +628,7 @@ This section presents the detailed test case results recorded during test execut
 | BUD-04 | Edit Budget | Changed Food allocation from RM 600 to RM 700. | Updated values reflected. | Budget updated; progress bar recalculated to show within budget. | Pass |
 | BUD-05 | Delete Budget | Tapped Delete; confirmed. | Budget removed; empty state shown. | Budget deleted; empty state message displayed. | Pass |
 
-**Table 5.6.1.4: Goals Module — Functional Test Results**
+**Table 5.6.1.4: Goals Module: Functional Test Results**
 
 | Test Case ID | Test Case Name | Steps Performed | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
@@ -648,7 +638,7 @@ This section presents the detailed test case results recorded during test execut
 | GOAL-04 | Complete Goal | Contributed remaining RM 2,500. | Goal marked Completed. | Goal status changed to Completed; achievement notification shown. | Pass |
 | GOAL-05 | Delete Goal (Swipe) | Swiped goal card; confirmed deletion. | Goal removed. | Goal removed from list; empty state shown. | Pass |
 
-**Table 5.6.1.5: Investment Module — Functional Test Results**
+**Table 5.6.1.5: Investment Module: Functional Test Results**
 
 | Test Case ID | Test Case Name | Steps Performed | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
@@ -657,19 +647,19 @@ This section presents the detailed test case results recorded during test execut
 | INV-03 | Edit Investment | Changed current price from RM 9.20 to RM 8.00. | Portfolio recalculated. | Loss of RM 50.00 (-5.88%) reflected immediately after edit. | Pass |
 | INV-04 | Delete Investment | Swiped investment; confirmed deletion. | Investment removed; totals updated. | Investment removed; portfolio showed empty state. | Pass |
 
-**Table 5.6.1.6: Analytics and Reports — Functional Test Results**
+**Table 5.6.1.6: Analytics and Reports: Functional Test Results**
 
 | Test Case ID | Test Case Name | Steps Performed | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
 | ANA-01 | View Spending Trend Chart | Opened Analytics screen with 3 months of data. | Line chart renders correctly. | Line chart rendered with correct data points per month. | Pass |
 | ANA-02 | View Income vs Expense Chart | Scrolled to bar chart section. | Grouped bars per month shown. | Grouped bars rendered for each month in range. | Pass |
-| ANA-03 | View Category Pie Chart | Tapped Food slice on pie chart. | Slice highlighted; tooltip shown. | Slice expanded; tooltip displayed "Food — RM 615.00". | Pass |
+| ANA-03 | View Category Pie Chart | Tapped Food slice on pie chart. | Slice highlighted; tooltip shown. | Slice expanded; tooltip displayed "Food: RM 615.00". | Pass |
 | ANA-04 | Change Time Range | Tapped "1Y" range chip. | All charts updated. | All charts refreshed with one year of data. | Pass |
 | ANA-05 | Export Transactions CSV | Tapped CSV export in Reports screen. | System share sheet appears. | Share sheet appeared with CSV file for download. | Pass |
 | ANA-06 | Export Spending Report PDF | Tapped PDF export in Reports screen. | PDF generated; share sheet appears. | PDF document generated and share sheet displayed. | Pass |
 | ANA-07 | Switch Report Tabs | Tapped each of three report tabs. | Correct data per tab. | Each tab rendered its correct report without errors. | Pass |
 
-**Table 5.6.1.7: Gamification Module — Functional Test Results**
+**Table 5.6.1.7: Gamification Module: Functional Test Results**
 
 | Test Case ID | Test Case Name | Steps Performed | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
@@ -684,7 +674,7 @@ This section presents the detailed test case results recorded during test execut
 
 ### 5.6.2 Security Test Results
 
-**Table 5.6.2.1: Security Module — Test Results**
+**Table 5.6.2.1: Security Module: Test Results**
 
 | Test Case ID | Test Case Name | Action Performed | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
@@ -720,12 +710,12 @@ Usability testing was conducted with six participants aged 19–27, comprising f
 
 | Task | P1 | P2 | P3 | P4 | P5 | P6 | Completion Rate |
 |---|---|---|---|---|---|---|---|
-| Task 1 — Register & Verify | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
-| Task 2 — Add 3 Transactions | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
-| Task 3 — Create Budget | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ | 83% |
-| Task 4 — Add Goal & Contribute | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | 83% |
-| Task 5 — View Analytics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
-| Task 6 — Export PDF | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | 83% |
+| Task 1: Register & Verify | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
+| Task 2: Add 3 Transactions | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
+| Task 3: Create Budget | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ | 83% |
+| Task 4: Add Goal & Contribute | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | 83% |
+| Task 5: View Analytics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 100% |
+| Task 6: Export PDF | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | 83% |
 
 Note: ✓ = completed without assistance; ✗ = required evaluator guidance or failed to complete.
 
@@ -740,11 +730,11 @@ Observations from sessions where tasks were not completed independently:
 
 | Statement | P1 | P2 | P3 | P4 | P5 | P6 | Average |
 |---|---|---|---|---|---|---|---|
-| Q1 — Easy to use overall | 5 | 4 | 4 | 3 | 5 | 4 | **4.17** |
-| Q2 — Navigation without confusion | 4 | 3 | 4 | 3 | 5 | 4 | **3.83** |
-| Q3 — Feedback was clear | 5 | 4 | 5 | 4 | 5 | 5 | **4.67** |
-| Q4 — Would use for personal finances | 5 | 4 | 4 | 4 | 5 | 5 | **4.50** |
-| Q5 — Confident after short time | 5 | 4 | 4 | 4 | 5 | 4 | **4.33** |
+| Q1: Easy to use overall | 5 | 4 | 4 | 3 | 5 | 4 | **4.17** |
+| Q2: Navigation without confusion | 4 | 3 | 4 | 3 | 5 | 4 | **3.83** |
+| Q3: Feedback was clear | 5 | 4 | 5 | 4 | 5 | 5 | **4.67** |
+| Q4: Would use for personal finances | 5 | 4 | 4 | 4 | 5 | 5 | **4.50** |
+| Q5: Confident after short time | 5 | 4 | 4 | 4 | 5 | 4 | **4.33** |
 | **Overall Average** | | | | | | | **4.30** |
 
 The overall satisfaction average of **4.30 / 5.00** exceeds the pass threshold of 3.5 / 5. All individual statement averages are above the threshold. The lowest-scoring statement is Q2 (Navigation, 3.83), consistent with the navigation discoverability observations recorded during tasks.
@@ -753,7 +743,7 @@ The overall satisfaction average of **4.30 / 5.00** exceeds the pass threshold o
 
 ## 5.7 Chapter Summary and Evaluation
 
-This chapter has presented the complete implementation and testing phases of the SmartFinance system. The implementation covered eight functional modules — authentication and account security, transaction management, budget monitoring, financial goals, investment tracking, analytics and reports, gamification, and financial insights — each realised through a combination of Flutter screens, Flask API endpoints, and SQLAlchemy database models. Key technical implementations discussed in detail include JWT-based stateless authentication, TOTP two-factor authentication with backup code generation, session management with revocation, parallel API loading via `Future.wait`, a financial health scoring engine with four-pillar breakdown and personalised insight generation, a `fl_chart`-powered analytics suite, and an exponential XP-levelling gamification engine.
+This chapter has presented the complete implementation and testing phases of the SmartFinance system. The implementation covered eight functional modules: authentication and account security, transaction management, budget monitoring, financial goals, investment tracking, analytics and reports, gamification, and financial insights. Each was realised through a combination of Flutter screens, Flask API endpoints, and SQLAlchemy database models. Key technical implementations discussed in detail include JWT-based stateless authentication, TOTP two-factor authentication with backup code generation, session management with revocation, parallel API loading via `Future.wait`, a financial health scoring engine with four-pillar breakdown and personalised insight generation, a `fl_chart`-powered analytics suite, and an exponential XP-levelling gamification engine.
 
 The testing phase applied four complementary strategies. Functional testing produced a 100% pass rate across 50 test cases spanning all seven modules, confirming that every feature behaves in accordance with its specification. Security testing achieved a 100% pass rate across seven adversarial test cases, demonstrating that the system correctly enforces authentication, resists common injection attacks, isolates user data, and enforces 2FA and session revocation. Performance testing confirmed that all measured metrics fell well within the defined thresholds: the dashboard loaded in approximately 1.8 seconds against a 3-second target, and all API endpoints responded within 45–210 milliseconds against a 500-millisecond target. Usability testing with six participants yielded a task completion rate of 91.7% and a mean satisfaction score of 4.30 / 5.00, both exceeding their respective pass criteria.
 
