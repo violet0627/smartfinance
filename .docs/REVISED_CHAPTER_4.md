@@ -892,7 +892,9 @@ The streak algorithm (Section 4.6.5) is called whenever a transaction is saved. 
 
 ### 4.5.6 Financial Health Score Generation Process
 
-The Financial Health Score generation process is initiated whenever the user opens or refreshes the Financial Insights screen. The process is read-only and does not modify any database records.
+The Financial Health Score generation process is initiated whenever the user opens or refreshes the Financial Insights screen. The process is read-only and does not modify any database records. Figure 4.5.6.1 illustrates the complete workflow.
+
+*[See Figure 4.5.6.1: Financial Health Score Generation Workflow (resources/new_diagrams/Figure_4.5.6.1_Financial_Health_Score_Workflow.html)]*
 
 1. The Flutter client calls `GET /api/insights/user/<userId>` with the user's JWT in the Authorization header.
 2. The Flask endpoint determines the current calendar month and the immediately preceding month.

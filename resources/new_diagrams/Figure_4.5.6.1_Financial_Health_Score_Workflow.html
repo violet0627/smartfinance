@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Figure 4.5.6.1 — Financial Health Score Generation Workflow</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 30px; background: white; }
+    h2 { color: #6C63FF; font-size: 16px; margin-bottom: 16px; text-align: center; }
+    .mermaid { max-width: 100%; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h2>Figure 4.5.6.1 — Financial Health Score Generation Workflow</h2>
+  <div class="mermaid">
+flowchart TD
+    START([Start: User Opens Financial Insights Screen]) --> AUTH[Flutter Calls GET /api/insights/user/userId with JWT]
+    AUTH --> AUTHCK{JWT Valid?}
+    AUTHCK -- No --> UNAUTH[Return 401 Unauthorized]
+    UNAUTH --> ERRD[Display Error and Redirect to Login]
+    ERRD --> DONE([End])
+    AUTHCK -- Yes --> DATES[Determine Current Month and Previous Month]
+    DATES --> CURTXN[Fetch Current Month Transactions from TRANSACTIONS]
+    CURTXN --> PREVTXN[Fetch Previous Month Transactions from TRANSACTIONS]
+    PREVTXN --> AGG[Aggregate Each Set: Total Income, Total Expense, Per-Category Expense]
+    AGG --> BUDGET[Fetch Active Budget from BUDGETS for Current Month]
+    BUDGET --> BUDGETCK{Budget Found?}
+    BUDGETCK -- Yes --> BUDGETLIM[Use TotalBudget as Budget Limit]
+    BUDGETCK -- No --> BUDGETNEUTRAL[Budget Pillar Defaults to Neutral: 12.5 pts]
+    BUDGETLIM --> GOALS
+    BUDGETNEUTRAL --> GOALS[Fetch All Goals from GOALS - Count Completed]
+    GOALS --> PILLARA[Pillar A: Savings Rate - 0 to 25 pts]
+    PILLARA --> PILLARB[Pillar B: Budget Adherence - 0 to 25 pts]
+    PILLARB --> PILLARC[Pillar C: Spending Consistency - 0 to 25 pts]
+    PILLARC --> PILLARD[Pillar D: Goal Progress - 0 to 25 pts]
+    PILLARD --> SCORE[Sum Pillars and Clamp to 0-100]
+    SCORE --> LABEL{Score Range?}
+    LABEL -- 80-100 --> EXCELLENT[Label: Excellent - Green]
+    LABEL -- 60-79 --> GOOD[Label: Good - Teal]
+    LABEL -- 40-59 --> FAIR[Label: Fair - Orange]
+    LABEL -- 0-39 --> NEEDS[Label: Needs Work - Red]
+    EXCELLENT --> INSIGHTS
+    GOOD --> INSIGHTS
+    FAIR --> INSIGHTS
+    NEEDS --> INSIGHTS[Generate 4-6 Ranked Insight Cards]
+    INSIGHTS --> RESP[Return JSON: Score, Label, Pillars, Summary, Insight Cards]
+    RESP --> TXNCK{Transactions Exist This Month?}
+    TXNCK -- No --> EMPTY[Display Empty State Prompt]
+    EMPTY --> DONE
+    TXNCK -- Yes --> RENDER[Flutter Renders Score Gauge, Pillar Bars, Summary Row, Insight Cards]
+    RENDER --> REFRESH{User Pull-to-Refresh?}
+    REFRESH -- Yes --> AUTH
+    REFRESH -- No --> DONE
+
+    style PILLARA fill:#E8F4FD,stroke:#3B82F6
+    style PILLARB fill:#E8F4FD,stroke:#3B82F6
+    style PILLARC fill:#E8F4FD,stroke:#3B82F6
+    style PILLARD fill:#E8F4FD,stroke:#3B82F6
+    style EXCELLENT fill:#D1FAE5,stroke:#10B981
+    style GOOD fill:#CCFBF1,stroke:#14B8A6
+    style FAIR fill:#FEF3C7,stroke:#F59E0B
+    style NEEDS fill:#FEE2E2,stroke:#EF4444
+    style SCORE fill:#FFF3CD,stroke:#F59E0B
+    style LABEL fill:#FFF3CD,stroke:#F59E0B
+  </div>
+  <script>mermaid.initialize({startOnLoad: true, theme: 'default'});</script>
+</body>
+</html>
