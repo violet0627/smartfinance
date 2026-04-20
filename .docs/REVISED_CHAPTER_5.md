@@ -6,7 +6,7 @@
 
 This chapter documents the implementation and testing phases of the SmartFinance system. It bridges the design decisions established in the preceding chapters with the working software artefacts produced during development. The chapter first describes the development environment, project architecture, and the key technical implementations across each functional module. It then presents the testing strategies adopted, including functional, usability, security, and performance testing, followed by a detailed test plan, test data, and a comprehensive set of test cases with recorded outcomes. The chapter concludes with a summary and evaluation of the system's readiness against the stated requirements and project objectives.
 
-SmartFinance is a gamified personal finance management application targeting Malaysian young adults. The system comprises a Flutter-based cross-platform mobile frontend, a Python Flask RESTful backend, and a MySQL relational database. The implementation spans 25 Flutter screens, 12 Flask route modules, and a rich supporting layer of models, services, utilities, and reusable widgets. Together these components realise the core objectives of helping users track income and expenses, plan budgets, manage financial goals, monitor investments, and stay motivated through gamification.
+SmartFinance is a gamified personal finance management application targeting Malaysian young adults. The system comprises a Flutter-based cross-platform mobile frontend, a Python Flask RESTful backend, and a MySQL relational database. The implementation spans 26 Flutter screens, 12 Flask route modules, and a rich supporting layer of models, services, utilities, and reusable widgets. Together these components realise the core objectives of helping users track income and expenses, plan budgets, manage financial goals, monitor investments, and stay motivated through gamification.
 
 ---
 
@@ -212,7 +212,7 @@ Progress is expressed as a percentage (`CurrentAmount / TargetAmount * 100`) and
 
 ### 5.2.7 Investment Tracking Module
 
-The investment module supports six asset classes: stocks, unit trusts, bonds, cryptocurrency, ETFs, and commodities. Each investment record stores the asset name, type, units held, purchase price, and current price. The portfolio overview aggregates all holdings to present total portfolio value, total cost, overall profit or loss, and percentage return.
+The investment module supports ten asset classes: Stocks, Cryptocurrency, Bonds, Mutual Funds, ETFs, Real Estate, Commodities, Fixed Deposit, Unit Trust, and Other. Each investment record stores the asset name, type, units held, purchase price, and current price. The portfolio overview aggregates all holdings to present total portfolio value, total cost, overall profit or loss, and percentage return.
 
 The `GET /api/investments/user/<id>/portfolio` endpoint performs the aggregation on the backend, returning pre-computed `totalValue`, `totalCost`, `totalProfitLoss`, and `totalReturnPercentage` fields. Individual holdings are presented in a scrollable list on the `PortfolioOverviewScreen`, each showing a type-specific icon (drawn from the `InvestmentTypes` utility), the asset name, the value, and a colour-coded profit/loss indicator.
 
@@ -312,7 +312,7 @@ The Financial Insights module provides users with a personalised financial healt
 
 The `GET /api/insights/user/<id>` endpoint computes a Financial Health Score on a 0–100 scale by evaluating four equally-weighted pillars, each contributing up to 25 points. The Savings Rate pillar measures the proportion of income saved this month relative to a 20% savings rate target. Budget Adherence measures how closely total spending aligns with the user's configured budget limit. Spending Consistency captures the stability of spending patterns compared to the previous calendar month. Goal Progress reflects the proportion of active savings goals that are on track relative to their deadlines.
 
-The sum of the four pillar scores (0–25 each) produces the final health score. The backend also assigns a qualitative label: *Needs Work* (0–49), *Fair* (50–69), *Good* (70–89), or *Excellent* (90–100).
+The sum of the four pillar scores (0–25 each) produces the final health score. The backend also assigns a qualitative label: *Needs Work* (0–39), *Fair* (40–59), *Good* (60–79), or *Excellent* (80–100).
 
 **Personalised Insight Cards**
 

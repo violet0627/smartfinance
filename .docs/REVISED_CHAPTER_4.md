@@ -39,7 +39,7 @@ The presentation layer is built with Flutter (Dart), which compiles to native AR
 
 The application layer is a Python Flask server exposing a RESTful API. Flask handles routing, request parsing, JWT verification, and response serialisation. SQLAlchemy provides an object-relational mapping layer between Python objects and MySQL tables, isolating raw SQL from business logic. All authentication, authorisation, and data integrity checks are enforced at this layer before any database operation is performed.
 
-The data layer is a MySQL 8.0 database providing ACID-compliant storage for all user, transaction, budget, investment, gamification, security, and settings data. The InnoDB storage engine is used throughout for its row-level locking and foreign key support. The schema implements fourteen tables connected by foreign key constraints with `ON DELETE CASCADE` to maintain referential integrity automatically when parent records are removed.
+The data layer is a MySQL 8.0 database providing ACID-compliant storage for all user, transaction, budget, investment, gamification, security, and settings data. The InnoDB storage engine is used throughout for its row-level locking and foreign key support. The schema implements sixteen tables connected by foreign key constraints with `ON DELETE CASCADE` to maintain referential integrity automatically when parent records are removed.
 
 ---
 
@@ -305,11 +305,11 @@ Financial data imposes strict integrity requirements that ruled out MongoDB, who
 
 ### 4.3.2 Entity Relationship Design
 
-The SmartFinance data model comprises fourteen entities. Figure 4.3.2.1 shows the complete entity-relationship diagram.
+The SmartFinance data model comprises sixteen entities. Figure 4.3.2.1 shows the complete entity-relationship diagram.
 
 *[See Figure 4.3.2.1: Entity Relationship Diagram (resources/new_diagrams/Figure_4.3.2.1_ERD.html)]*
 
-The core domain entities are USERS, TRANSACTIONS, BUDGETS, BUDGETCATEGORIES, INVESTMENTS, GOALS, ACHIEVEMENTS, USERACHIEVEMENTS, HABITSTREAKS, RECURRINGTRANSACTIONS, and USERSETTINGS. Three additional tables (TWOFACTORAUTHS, USERSESSIONS, and SECURITYLOGS) support authentication security and audit trail requirements.
+The core domain entities are USERS, TRANSACTIONS, BUDGETS, BUDGETCATEGORIES, INVESTMENTS, GOALS, ACHIEVEMENTS, USERACHIEVEMENTS, HABITSTREAKS, RECURRINGTRANSACTIONS, and USERSETTINGS. Three tables (TWOFACTORAUTHS, USERSESSIONS, and SECURITYLOGS) support authentication security and audit trail requirements. Two further auxiliary tables (EMAILVERIFICATIONTOKENS and PASSWORDRESETS) store the short-lived tokens used during email verification and password reset flows respectively.
 
 **USERS to TRANSACTIONS (one-to-many).** Each user may have zero or more transaction records. The `UserId` foreign key in TRANSACTIONS references USERS with `ON DELETE CASCADE`, so that deleting a user account automatically removes all associated transaction history without requiring explicit multi-step deletion in application code.
 
@@ -643,6 +643,38 @@ CREATE TABLE UserSettings (
 The three threshold columns (`BudgetWarningThreshold`, `BudgetDangerThreshold`, `BudgetCriticalThreshold`) allow each user to configure the percentage at which budget alerts fire. The defaults of 80%, 90%, and 100% reflect practical spending awareness needs while remaining adjustable for users who prefer earlier or later warnings.
 
 The `ON DELETE CASCADE` clause is applied across tables where account deletion should propagate automatically. Wherever it is omitted (UserAchievements, HabitStreaks, UserSettings), the SQLAlchemy relationship cascade configuration in application code handles the removal order to maintain referential integrity.
+
+#### EmailVerificationTokens Table
+
+The `EmailVerificationTokens` table stores the short-lived tokens generated during user registration. When a new account is created, a JWT verification token is issued and its record is written to this table. The Flutter client presents a token (either from the email link or manual entry) to the `/api/auth/verify-email` endpoint, which validates the record before marking the user's email as verified. Tokens expire after 24 hours.
+
+```sql
+CREATE TABLE emailverificationtokens (
+    Id          INT          NOT NULL AUTO_INCREMENT,
+    UserId      INT          NOT NULL,
+    Token       VARCHAR(512) NOT NULL,
+    ExpiresAt   DATETIME     NOT NULL,
+    PRIMARY KEY (Id),
+    CONSTRAINT fk_emailverif_user
+        FOREIGN KEY (UserId) REFERENCES Users (UserId) ON DELETE CASCADE
+);
+```
+
+#### PasswordResets Table
+
+The `PasswordResets` table records active password-reset requests. When a user submits a forgotten-password request, a signed JWT reset token is generated and stored here. The `/api/auth/reset-password` endpoint validates the token, enforces a 1-hour expiry, and clears the record once the password is successfully changed.
+
+```sql
+CREATE TABLE PasswordResets (
+    Id          INT          NOT NULL AUTO_INCREMENT,
+    UserId      INT          NOT NULL,
+    Token       VARCHAR(512) NOT NULL,
+    ExpiresAt   DATETIME     NOT NULL,
+    PRIMARY KEY (Id),
+    CONSTRAINT fk_passwordreset_user
+        FOREIGN KEY (UserId) REFERENCES Users (UserId) ON DELETE CASCADE
+);
+```
 
 ---
 
@@ -1539,7 +1571,7 @@ The SmartFinance application handles sensitive financial data including transact
 
 The application follows a data minimisation principle: only information necessary for account authentication and financial feature delivery is collected. Email address, password hash, and full name are required. IC number, physical address, bank account numbers, and credit card details are not collected. This reduces the impact of a hypothetical breach and simplifies PDPA compliance by limiting the categories of personal data the application processes.
 
-Users retain full control over their data. The CSV export endpoint (`/api/reports/user/<id>/export/transactions`) allows users to download their complete transaction history. The account deletion endpoint (`/api/security/account/delete`) triggers a cascading delete removing all associated records across all fourteen tables.
+Users retain full control over their data. The CSV export endpoint (`/api/reports/user/<id>/export/transactions`) allows users to download their complete transaction history. The account deletion endpoint (`/api/security/account/delete`) triggers a cascading delete removing all associated records across all sixteen tables.
 
 The database user account for the application is granted only the specific permissions required for normal operation: SELECT, INSERT, UPDATE on most tables, with DELETE restricted to tables where user-initiated deletion is permitted. DROP, TRUNCATE, and ALTER permissions are not granted, reducing the impact of a compromised application credential:
 
@@ -1712,7 +1744,7 @@ Biometric authentication (fingerprint and facial recognition) is not implemented
 
 ## 4.8 Chapter Summary
 
-This chapter has presented the complete system design for SmartFinance. The three-tier client-server architecture separates the Flutter presentation layer, Flask application layer, and MySQL data layer into independently testable and deployable tiers. The fourteen-table database schema covers all domain entities, namely Users, Transactions, Budgets, BudgetCategories, Investments, Goals, Achievements, UserAchievements, HabitStreaks, RecurringTransactions, UserSettings, TwoFactorAuths, usersessions, and securitylogs, with referential integrity enforced through foreign key constraints and a deliberate denormalisation in `BudgetCategories.SpentAmount` for sub-20ms budget status queries. The RESTful API is organised into twelve Blueprint modules covering authentication, transactions, budgets, goals, investments, gamification, analytics, settings, 2FA, security, recurring transactions, and financial insights.
+This chapter has presented the complete system design for SmartFinance. The three-tier client-server architecture separates the Flutter presentation layer, Flask application layer, and MySQL data layer into independently testable and deployable tiers. The sixteen-table database schema covers all domain entities, namely Users, Transactions, Budgets, BudgetCategories, Investments, Goals, Achievements, UserAchievements, HabitStreaks, RecurringTransactions, UserSettings, TwoFactorAuths, UserSessions, SecurityLogs, EmailVerificationTokens, and PasswordResets, with referential integrity enforced through foreign key constraints and a deliberate denormalisation in `BudgetCategories.SpentAmount` for sub-20ms budget status queries. The RESTful API is organised into twelve Blueprint modules covering authentication, transactions, budgets, goals, investments, gamification, analytics, settings, 2FA, security, recurring transactions, and financial insights.
 
 Six computational algorithms address the specific performance constraints of mid-range Android devices: intelligent categorisation achieves 85% accuracy in under 5ms using in-memory keyword matching and bounded user history; budget alerting completes in under 20ms through denormalised caching; XP progression uses a linear formula for O(1) level calculations; portfolio performance uses single-pass aggregation to complete in under 100ms for typical holdings; streak tracking uses a `MAX()` indexed query for O(1) streak checks; and achievement evaluation uses trigger-based selective checking to reduce evaluation time from 2.5 seconds to under 220ms. Security is implemented across authentication (bcrypt hashing at cost factor 12, JWT token management, TOTP-based 2FA with backup codes), session management (per-device session records with user-initiated revocation), and audit logging (a persistent SecurityLogs record for every security-relevant event), providing layered protection while complying with PDPA 2010 data minimisation requirements.
 

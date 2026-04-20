@@ -1,4 +1,4 @@
-# Chapter 3 — Methodology and Requirements Analysis (Revised)
+# Chapter 3: Methodology and Requirements Analysis (Revised)
 
 ## What was changed
 
@@ -30,7 +30,7 @@ This diagram illustrates how Agile sprints incorporate User-Centered Design acti
 
 ### 3.1.2 Development Phases and Sprint Structure
 
-**Phase 1: Foundation (FYP1 — Semester 202509)**
+**Phase 1: Foundation (FYP1, Semester 202509)**
 
 This phase focuses on establishing project foundations, conducting user research, and developing core functionality through three primary sprints:
 
@@ -38,7 +38,7 @@ This phase focuses on establishing project foundations, conducting user research
 - **Sprint 2 (Weeks 3–4):** Core expense tracking module development and initial testing. This represents the heart of the application's functionality, the primary feature users will interact with daily.
 - **Sprint 3 (Week 5):** Budget management module implementation and integration testing. This sprint ensures these two core modules work together seamlessly, establishing the foundation for financial tracking functionality.
 
-**Phase 2: Enhancement (FYP2 — Semester 202601)**
+**Phase 2: Enhancement (FYP2, Semester 202601)**
 
 This phase builds upon the foundation with advanced features and comprehensive testing through four development sprints:
 
@@ -115,7 +115,7 @@ Rahman represents the slightly more advanced user segment, someone who has moved
 
 **FR001: User Authentication and Profile Management**
 
-The system must provide secure user registration and login functionality that meets modern security standards without creating friction for users. Users should be able to create and manage personal profiles with financial preferences, allowing customisation of their experience. The implementation uses JWT token authentication with 7-day expiry, balancing security with convenience for daily use. Profile customisation and privacy settings give users control over their data and experience. The 7-day token expiry accommodates Siti's frequent, short application sessions while the JWT security meets Rahman's professional expectations for financial application security.
+The system must provide secure user registration and login functionality that meets modern security standards without creating friction for users. Users should be able to create and manage personal profiles with financial preferences, allowing customisation of their experience. The implementation uses JWT token authentication with short-lived access tokens (1-hour expiry) and long-lived refresh tokens (30-day expiry), balancing security with convenience for daily use. Profile customisation and privacy settings give users control over their data and experience. The automatic token refresh mechanism ensures that active sessions are maintained transparently without requiring the user to log in again, while the 1-hour access token limit bounds the window of exposure if a token were intercepted.
 
 ---
 
@@ -133,7 +133,7 @@ Users can view expense history with filtering and search capabilities, making it
 
 Users should be able to create monthly and weekly budgets with category-specific allocations. This flexibility accommodates different planning styles: some users might prefer weekly budgets that align with their allowance schedule, while others might think in monthly terms.
 
-The system provides real-time budget tracking with visual progress indicators. Rather than simply showing numbers, progress bars and colour coding (green for on-track, yellow for warning, red for exceeded) provide immediate, at-a-glance understanding of budget status. Users receive notifications when approaching or exceeding budget limits, but these notifications are designed to motivate rather than shame. The system also offers budget adjustment recommendations based on spending patterns — for instance, if a user consistently exceeds their dining budget but underspends on entertainment, the system might suggest reallocating funds to better match actual behaviour.
+The system provides real-time budget tracking with visual progress indicators. Rather than simply showing numbers, progress bars and colour coding (green for on-track, yellow for warning, red for exceeded) provide immediate, at-a-glance understanding of budget status. Users receive notifications when approaching or exceeding budget limits, but these notifications are designed to motivate rather than shame. The system also offers budget adjustment recommendations based on spending patterns; for instance, if a user consistently exceeds their dining budget but underspends on entertainment, the system might suggest reallocating funds to better match actual behaviour.
 
 ---
 
@@ -173,7 +173,7 @@ The user interface should adapt appropriately to different screen sizes and orie
 
 **NFR003: Data Security and Privacy**
 
-All user financial data must be encrypted using AES-256 encryption standards. Financial data is sensitive, and encryption protects it both in transit and at rest. This level of encryption meets banking industry standards and builds user confidence. User authentication implements secure password policies with bcrypt hashing: rather than storing passwords directly, the system stores only hashed versions, protecting users even if the database were compromised.
+User financial data must be protected against unauthorised access. User authentication implements secure password policies with bcrypt hashing at cost factor 12: rather than storing passwords directly, the system stores only hashed values, protecting users even if the database were compromised. Data in transit between the Flutter client and the Flask API is secured over HTTPS. Application-layer encryption of stored data records (such as AES-256 field-level encryption) is a security enhancement identified for a future production deployment but was not implemented in the current version due to scope and time constraints.
 
 The system must comply with Malaysian Personal Data Protection Act requirements (PDPA, 2010). Compliance is not optional; it is a legal requirement and also demonstrates respect for user privacy. The privacy policy clearly explains what data is collected, how it is used, and how users can control their information. These security standards address both personas' concerns about trusting a financial application with sensitive data, while the clear privacy explanations address Siti's potential hesitation as a first-time financial application user.
 
