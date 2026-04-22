@@ -194,6 +194,25 @@ The API surface across the twelve modules above covers all functional domains of
 
 ---
 
+### 4.1.5 Use Case Design
+
+Use case modelling identifies the actors who interact with SmartFinance and the discrete actions the system must support for each actor. Three actors are recognised.
+
+**Guest** is any unauthenticated visitor who has not yet logged in. The guest can register a new account, attempt to log in, and request a password reset via email. All other functionality is gated behind successful authentication.
+
+**Registered User** is an authenticated account holder. Once logged in, the registered user can perform all transaction, budget, investment, goal, gamification, financial insight, recurring transaction, and settings operations exposed by the application.
+
+**System** represents automated background processes that execute without direct user initiation. These include sending budget alert push notifications when spending crosses defined thresholds, evaluating achievement criteria after each transaction or streak update, processing recurring transaction rules on their scheduled dates, and recalculating the financial health score on demand.
+
+Figure 4.1.5.1 presents the full use case diagram for SmartFinance, grouped by functional domain within the system boundary.
+
+**Figure 4.1.5.1: SmartFinance System Use Case Diagram**
+*(Source: resources/new_diagrams/Figure_4.1.5.1_Use_Case_Diagram.html)*
+
+The twenty-eight use cases are distributed across ten functional domains: Authentication (UC01 to UC04), Transaction Management (UC05 to UC08), Budget Management (UC09 to UC10), Investment Tracking (UC11 to UC12), Goal Tracking (UC13 to UC14), Financial Insights (UC15 to UC16), Gamification (UC17 to UC19), Recurring Transactions (UC20 to UC21), Profile and Settings (UC22 to UC24), and Automated System Processes (UC25 to UC28). The registered user has access to twenty-one of the twenty-eight use cases; the remaining three are accessible to guests only or are system-initiated. This distribution reflects the design intent that SmartFinance's value is delivered primarily to authenticated, returning users who engage with the full feature set over time.
+
+---
+
 ## 4.2 User Interface Design
 
 ### 4.2.1 UX Design Principles

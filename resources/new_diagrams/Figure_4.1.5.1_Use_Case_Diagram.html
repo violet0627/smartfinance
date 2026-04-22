@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Figure 4.1.5.1 — SmartFinance System Use Case Diagram</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 30px; background: white; }
+    h2 { color: #6C63FF; font-size: 16px; margin-bottom: 16px; text-align: center; }
+    .mermaid { max-width: 100%; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h2>Figure 4.1.5.1 — SmartFinance System Use Case Diagram</h2>
+  <div class="mermaid">
+flowchart LR
+    GUEST(["Actor: Guest"])
+    USER(["Actor: Registered User"])
+    SYS(["Actor: System"])
+
+    subgraph BOUND["SmartFinance System Boundary"]
+        direction TB
+
+        subgraph AUTH["Authentication"]
+            UC01("UC01: Register Account")
+            UC02("UC02: Login")
+            UC03("UC03: Enable Two-Factor Authentication")
+            UC04("UC04: Reset Password via Email")
+        end
+
+        subgraph TXN["Transaction Management"]
+            UC05("UC05: Add Transaction")
+            UC06("UC06: View Transaction History")
+            UC07("UC07: Edit or Delete Transaction")
+            UC08("UC08: Scan Receipt")
+        end
+
+        subgraph BUD["Budget Management"]
+            UC09("UC09: Set Monthly Budget")
+            UC10("UC10: View Budget Status")
+        end
+
+        subgraph INV["Investment Tracking"]
+            UC11("UC11: Add Investment Entry")
+            UC12("UC12: View Portfolio Performance")
+        end
+
+        subgraph GOAL["Goal Tracking"]
+            UC13("UC13: Create Savings Goal")
+            UC14("UC14: View Goal Progress")
+        end
+
+        subgraph INSIGHT["Financial Insights"]
+            UC15("UC15: View Financial Health Score")
+            UC16("UC16: View Insight Cards")
+        end
+
+        subgraph GAME["Gamification"]
+            UC17("UC17: View XP and Level")
+            UC18("UC18: View Achievements")
+            UC19("UC19: View Habit Streak")
+        end
+
+        subgraph RECUR["Recurring Transactions"]
+            UC20("UC20: Set Recurring Transaction Rule")
+            UC21("UC21: Toggle or Delete Rule")
+        end
+
+        subgraph SETTINGS["Profile and Settings"]
+            UC22("UC22: Update Profile")
+            UC23("UC23: Manage Notification Settings")
+            UC24("UC24: Manage Active Sessions")
+        end
+
+        subgraph AUTO["Automated Processes"]
+            UC25("UC25: Send Budget Alert Notification")
+            UC26("UC26: Evaluate Achievement Criteria")
+            UC27("UC27: Execute Recurring Transaction")
+            UC28("UC28: Calculate Financial Health Score")
+        end
+    end
+
+    GUEST --> UC01
+    GUEST --> UC02
+    GUEST --> UC04
+
+    USER --> UC02
+    USER --> UC03
+    USER --> UC05
+    USER --> UC06
+    USER --> UC07
+    USER --> UC08
+    USER --> UC09
+    USER --> UC10
+    USER --> UC11
+    USER --> UC12
+    USER --> UC13
+    USER --> UC14
+    USER --> UC15
+    USER --> UC16
+    USER --> UC17
+    USER --> UC18
+    USER --> UC19
+    USER --> UC20
+    USER --> UC21
+    USER --> UC22
+    USER --> UC23
+    USER --> UC24
+
+    SYS --> UC25
+    SYS --> UC26
+    SYS --> UC27
+    SYS --> UC28
+
+    style GUEST fill:#FEF3C7,stroke:#F59E0B
+    style USER fill:#D1FAE5,stroke:#10B981
+    style SYS fill:#E8F4FD,stroke:#3B82F6
+    style BOUND fill:#F9FAFB,stroke:#6C63FF,stroke-width:2px
+    style AUTH fill:#EDE9FE,stroke:#7C3AED
+    style TXN fill:#EDE9FE,stroke:#7C3AED
+    style BUD fill:#EDE9FE,stroke:#7C3AED
+    style INV fill:#EDE9FE,stroke:#7C3AED
+    style GOAL fill:#EDE9FE,stroke:#7C3AED
+    style INSIGHT fill:#EDE9FE,stroke:#7C3AED
+    style GAME fill:#EDE9FE,stroke:#7C3AED
+    style RECUR fill:#EDE9FE,stroke:#7C3AED
+    style SETTINGS fill:#EDE9FE,stroke:#7C3AED
+    style AUTO fill:#E8F4FD,stroke:#3B82F6
+  </div>
+  <script>mermaid.initialize({startOnLoad: true, theme: 'default'});</script>
+</body>
+</html>
