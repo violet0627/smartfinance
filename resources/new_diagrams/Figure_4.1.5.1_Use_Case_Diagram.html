@@ -3,130 +3,234 @@
 <head>
   <meta charset="utf-8">
   <title>Figure 4.1.5.1 — SmartFinance System Use Case Diagram</title>
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 30px; background: white; }
-    h2 { color: #6C63FF; font-size: 16px; margin-bottom: 16px; text-align: center; }
-    .mermaid { max-width: 100%; overflow: auto; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: white; }
+    h2   { color: #6C63FF; font-size: 15px; text-align: center; margin-bottom: 14px; }
   </style>
 </head>
 <body>
   <h2>Figure 4.1.5.1 — SmartFinance System Use Case Diagram</h2>
-  <div class="mermaid">
-flowchart LR
-    GUEST(["Actor: Guest"])
-    USER(["Actor: Registered User"])
-    SYS(["Actor: System"])
 
-    subgraph BOUND["SmartFinance System Boundary"]
-        direction TB
+  <svg width="1100" height="590"
+       xmlns="http://www.w3.org/2000/svg"
+       font-family="Arial, sans-serif">
 
-        subgraph AUTH["Authentication"]
-            UC01("UC01: Register Account")
-            UC02("UC02: Login")
-            UC03("UC03: Enable Two-Factor Authentication")
-            UC04("UC04: Reset Password via Email")
-        end
+    <!-- ══════════════════════════════════════════
+         SYSTEM BOUNDARY
+    ══════════════════════════════════════════ -->
+    <rect x="178" y="28" width="820" height="540"
+          rx="10" fill="#F9FAFB" stroke="#6C63FF" stroke-width="2.5"/>
+    <text x="588" y="50" text-anchor="middle"
+          font-size="13" font-weight="bold" fill="#6C63FF">
+      SmartFinance System
+    </text>
 
-        subgraph TXN["Transaction Management"]
-            UC05("UC05: Add Transaction")
-            UC06("UC06: View Transaction History")
-            UC07("UC07: Edit or Delete Transaction")
-            UC08("UC08: Scan Receipt")
-        end
+    <!-- ══════════════════════════════════════════
+         ROW 1 — Authentication | Transactions | Budget | Investments
+    ══════════════════════════════════════════ -->
 
-        subgraph BUD["Budget Management"]
-            UC09("UC09: Set Monthly Budget")
-            UC10("UC10: View Budget Status")
-        end
+    <!-- Authentication -->
+    <rect x="186" y="60" width="188" height="135"
+          rx="5" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1" stroke-dasharray="5,3"/>
+    <text x="280" y="75" text-anchor="middle"
+          font-size="10" font-weight="bold" font-style="italic" fill="#5B21B6">Authentication</text>
+    <ellipse cx="280" cy="94"  rx="82" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="280" y="97"  text-anchor="middle" font-size="9" fill="#111827">Register Account</text>
+    <ellipse cx="280" cy="118" rx="82" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="280" y="121" text-anchor="middle" font-size="9" fill="#111827">Login</text>
+    <ellipse cx="280" cy="142" rx="82" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="280" y="145" text-anchor="middle" font-size="9" fill="#111827">Enable Two-Factor Auth</text>
+    <ellipse cx="280" cy="166" rx="82" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="280" y="169" text-anchor="middle" font-size="9" fill="#111827">Reset Password via Email</text>
 
-        subgraph INV["Investment Tracking"]
-            UC11("UC11: Add Investment Entry")
-            UC12("UC12: View Portfolio Performance")
-        end
+    <!-- Transactions -->
+    <rect x="382" y="60" width="188" height="110"
+          rx="5" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1" stroke-dasharray="5,3"/>
+    <text x="476" y="75" text-anchor="middle"
+          font-size="10" font-weight="bold" font-style="italic" fill="#5B21B6">Transactions</text>
+    <ellipse cx="476" cy="94"  rx="82" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="476" y="97"  text-anchor="middle" font-size="9" fill="#111827">Add Transaction</text>
+    <ellipse cx="476" cy="118" rx="82" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="476" y="121" text-anchor="middle" font-size="9" fill="#111827">View Transaction History</text>
+    <ellipse cx="476" cy="142" rx="82" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="476" y="145" text-anchor="middle" font-size="9" fill="#111827">Scan Receipt</text>
 
-        subgraph GOAL["Goal Tracking"]
-            UC13("UC13: Create Savings Goal")
-            UC14("UC14: View Goal Progress")
-        end
+    <!-- Budget -->
+    <rect x="578" y="60" width="185" height="87"
+          rx="5" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1" stroke-dasharray="5,3"/>
+    <text x="670" y="75" text-anchor="middle"
+          font-size="10" font-weight="bold" font-style="italic" fill="#5B21B6">Budget</text>
+    <ellipse cx="670" cy="94"  rx="80" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="670" y="97"  text-anchor="middle" font-size="9" fill="#111827">Set Monthly Budget</text>
+    <ellipse cx="670" cy="118" rx="80" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="670" y="121" text-anchor="middle" font-size="9" fill="#111827">View Budget Status</text>
 
-        subgraph INSIGHT["Financial Insights"]
-            UC15("UC15: View Financial Health Score")
-            UC16("UC16: View Insight Cards")
-        end
+    <!-- Investment Tracking -->
+    <rect x="771" y="60" width="219" height="87"
+          rx="5" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1" stroke-dasharray="5,3"/>
+    <text x="880" y="75" text-anchor="middle"
+          font-size="10" font-weight="bold" font-style="italic" fill="#5B21B6">Investment Tracking</text>
+    <ellipse cx="880" cy="94"  rx="95" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="880" y="97"  text-anchor="middle" font-size="9" fill="#111827">Add Investment Entry</text>
+    <ellipse cx="880" cy="118" rx="95" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="880" y="121" text-anchor="middle" font-size="9" fill="#111827">View Portfolio Performance</text>
 
-        subgraph GAME["Gamification"]
-            UC17("UC17: View XP and Level")
-            UC18("UC18: View Achievements")
-            UC19("UC19: View Habit Streak")
-        end
+    <!-- ══════════════════════════════════════════
+         ROW 2 — Goals | Insights | Gamification | Settings
+    ══════════════════════════════════════════ -->
 
-        subgraph RECUR["Recurring Transactions"]
-            UC20("UC20: Set Recurring Transaction Rule")
-            UC21("UC21: Toggle or Delete Rule")
-        end
+    <!-- Savings Goals -->
+    <rect x="186" y="214" width="188" height="87"
+          rx="5" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1" stroke-dasharray="5,3"/>
+    <text x="280" y="229" text-anchor="middle"
+          font-size="10" font-weight="bold" font-style="italic" fill="#5B21B6">Savings Goals</text>
+    <ellipse cx="280" cy="248" rx="82" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="280" y="251" text-anchor="middle" font-size="9" fill="#111827">Create Savings Goal</text>
+    <ellipse cx="280" cy="272" rx="82" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="280" y="275" text-anchor="middle" font-size="9" fill="#111827">View Goal Progress</text>
 
-        subgraph SETTINGS["Profile and Settings"]
-            UC22("UC22: Update Profile")
-            UC23("UC23: Manage Notification Settings")
-            UC24("UC24: Manage Active Sessions")
-        end
+    <!-- Financial Insights -->
+    <rect x="382" y="214" width="188" height="87"
+          rx="5" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1" stroke-dasharray="5,3"/>
+    <text x="476" y="229" text-anchor="middle"
+          font-size="10" font-weight="bold" font-style="italic" fill="#5B21B6">Financial Insights</text>
+    <ellipse cx="476" cy="248" rx="82" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="476" y="251" text-anchor="middle" font-size="9" fill="#111827">View Financial Health Score</text>
+    <ellipse cx="476" cy="272" rx="82" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="476" y="275" text-anchor="middle" font-size="9" fill="#111827">View Insight Cards</text>
 
-        subgraph AUTO["Automated Processes"]
-            UC25("UC25: Send Budget Alert Notification")
-            UC26("UC26: Evaluate Achievement Criteria")
-            UC27("UC27: Execute Recurring Transaction")
-            UC28("UC28: Calculate Financial Health Score")
-        end
-    end
+    <!-- Gamification -->
+    <rect x="578" y="214" width="185" height="110"
+          rx="5" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1" stroke-dasharray="5,3"/>
+    <text x="670" y="229" text-anchor="middle"
+          font-size="10" font-weight="bold" font-style="italic" fill="#5B21B6">Gamification</text>
+    <ellipse cx="670" cy="248" rx="80" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="670" y="251" text-anchor="middle" font-size="9" fill="#111827">View XP and Level</text>
+    <ellipse cx="670" cy="272" rx="80" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="670" y="275" text-anchor="middle" font-size="9" fill="#111827">View Achievements</text>
+    <ellipse cx="670" cy="296" rx="80" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="670" y="299" text-anchor="middle" font-size="9" fill="#111827">View Habit Streak</text>
 
-    GUEST --> UC01
-    GUEST --> UC02
-    GUEST --> UC04
+    <!-- Profile and Settings -->
+    <rect x="771" y="214" width="219" height="110"
+          rx="5" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1" stroke-dasharray="5,3"/>
+    <text x="880" y="229" text-anchor="middle"
+          font-size="10" font-weight="bold" font-style="italic" fill="#5B21B6">Profile and Settings</text>
+    <ellipse cx="880" cy="248" rx="95" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="880" y="251" text-anchor="middle" font-size="9" fill="#111827">Manage Profile and Avatar</text>
+    <ellipse cx="880" cy="272" rx="95" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="880" y="275" text-anchor="middle" font-size="9" fill="#111827">Notification Settings</text>
+    <ellipse cx="880" cy="296" rx="95" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="880" y="299" text-anchor="middle" font-size="9" fill="#111827">Manage Active Sessions</text>
 
-    USER --> UC02
-    USER --> UC03
-    USER --> UC05
-    USER --> UC06
-    USER --> UC07
-    USER --> UC08
-    USER --> UC09
-    USER --> UC10
-    USER --> UC11
-    USER --> UC12
-    USER --> UC13
-    USER --> UC14
-    USER --> UC15
-    USER --> UC16
-    USER --> UC17
-    USER --> UC18
-    USER --> UC19
-    USER --> UC20
-    USER --> UC21
-    USER --> UC22
-    USER --> UC23
-    USER --> UC24
+    <!-- ══════════════════════════════════════════
+         ROW 3 — Recurring | Automated Processes
+    ══════════════════════════════════════════ -->
 
-    SYS --> UC25
-    SYS --> UC26
-    SYS --> UC27
-    SYS --> UC28
+    <!-- Recurring Transactions -->
+    <rect x="186" y="342" width="188" height="87"
+          rx="5" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1" stroke-dasharray="5,3"/>
+    <text x="280" y="357" text-anchor="middle"
+          font-size="10" font-weight="bold" font-style="italic" fill="#5B21B6">Recurring Transactions</text>
+    <ellipse cx="280" cy="376" rx="82" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="280" y="379" text-anchor="middle" font-size="9" fill="#111827">Set Recurring Transaction</text>
+    <ellipse cx="280" cy="400" rx="82" ry="12" fill="white" stroke="#7C3AED" stroke-width="1"/>
+    <text    x="280" y="403" text-anchor="middle" font-size="9" fill="#111827">Toggle or Delete Rule</text>
 
-    style GUEST fill:#FEF3C7,stroke:#F59E0B
-    style USER fill:#D1FAE5,stroke:#10B981
-    style SYS fill:#E8F4FD,stroke:#3B82F6
-    style BOUND fill:#F9FAFB,stroke:#6C63FF,stroke-width:2px
-    style AUTH fill:#EDE9FE,stroke:#7C3AED
-    style TXN fill:#EDE9FE,stroke:#7C3AED
-    style BUD fill:#EDE9FE,stroke:#7C3AED
-    style INV fill:#EDE9FE,stroke:#7C3AED
-    style GOAL fill:#EDE9FE,stroke:#7C3AED
-    style INSIGHT fill:#EDE9FE,stroke:#7C3AED
-    style GAME fill:#EDE9FE,stroke:#7C3AED
-    style RECUR fill:#EDE9FE,stroke:#7C3AED
-    style SETTINGS fill:#EDE9FE,stroke:#7C3AED
-    style AUTO fill:#E8F4FD,stroke:#3B82F6
-  </div>
-  <script>mermaid.initialize({startOnLoad: true, theme: 'default'});</script>
+    <!-- Automated Processes (blue — System actor) -->
+    <rect x="382" y="342" width="608" height="110"
+          rx="5" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <text x="686" y="357" text-anchor="middle"
+          font-size="10" font-weight="bold" font-style="italic" fill="#1D4ED8">
+      Automated Processes (System-Initiated)
+    </text>
+    <!-- 4 ellipses in 2×2 grid -->
+    <ellipse cx="492" cy="378" rx="102" ry="12" fill="white" stroke="#3B82F6" stroke-width="1"/>
+    <text    x="492" y="381" text-anchor="middle" font-size="9" fill="#111827">Send Budget Alert Notification</text>
+    <ellipse cx="878" cy="378" rx="102" ry="12" fill="white" stroke="#3B82F6" stroke-width="1"/>
+    <text    x="878" y="381" text-anchor="middle" font-size="9" fill="#111827">Evaluate Achievement Criteria</text>
+    <ellipse cx="492" cy="408" rx="102" ry="12" fill="white" stroke="#3B82F6" stroke-width="1"/>
+    <text    x="492" y="411" text-anchor="middle" font-size="9" fill="#111827">Execute Recurring Transaction</text>
+    <ellipse cx="878" cy="408" rx="102" ry="12" fill="white" stroke="#3B82F6" stroke-width="1"/>
+    <text    x="878" y="411" text-anchor="middle" font-size="9" fill="#111827">Calculate Financial Health Score</text>
+
+    <!-- ══════════════════════════════════════════
+         LEGEND
+    ══════════════════════════════════════════ -->
+    <text x="186" y="480" font-size="9" fill="#6B7280" font-style="italic">
+      Note: Registered User inherits Login access. Guest access is restricted to Authentication use cases only.
+    </text>
+
+    <!-- ══════════════════════════════════════════
+         ACTOR BOXES  (outside system boundary)
+    ══════════════════════════════════════════ -->
+
+    <!-- Guest (left, upper) -->
+    <rect x="22" y="92" width="132" height="42" rx="6"
+          fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.5"/>
+    <text x="88" y="118" text-anchor="middle"
+          font-size="12" font-weight="bold" fill="#92400E">Guest</text>
+
+    <!-- Registered User (left, lower) -->
+    <rect x="12" y="272" width="150" height="42" rx="6"
+          fill="#D1FAE5" stroke="#10B981" stroke-width="1.5"/>
+    <text x="87" y="298" text-anchor="middle"
+          font-size="12" font-weight="bold" fill="#065F46">Registered User</text>
+
+    <!-- System actor (right, beside automated) -->
+    <rect x="1003" y="382" width="85" height="42" rx="6"
+          fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+    <text x="1045" y="408" text-anchor="middle"
+          font-size="12" font-weight="bold" fill="#1E40AF">System</text>
+
+    <!-- ══════════════════════════════════════════
+         CONNECTION LINES
+    ══════════════════════════════════════════ -->
+
+    <!-- Guest → Authentication (upper) -->
+    <line x1="154" y1="110" x2="186" y2="100"
+          stroke="#B45309" stroke-width="1.3"/>
+
+    <!-- Registered User → Authentication (lower entry — Login) -->
+    <line x1="162" y1="290" x2="186" y2="165"
+          stroke="#059669" stroke-width="1.2" stroke-dasharray="3,2"/>
+
+    <!-- Registered User → Transactions -->
+    <line x1="162" y1="290" x2="382" y2="118"
+          stroke="#059669" stroke-width="1.2" stroke-dasharray="3,2"/>
+
+    <!-- Registered User → Budget -->
+    <line x1="162" y1="290" x2="578" y2="104"
+          stroke="#059669" stroke-width="1.2" stroke-dasharray="3,2"/>
+
+    <!-- Registered User → Investments -->
+    <line x1="162" y1="290" x2="771" y2="104"
+          stroke="#059669" stroke-width="1.2" stroke-dasharray="3,2"/>
+
+    <!-- Registered User → Goals -->
+    <line x1="162" y1="290" x2="186" y2="260"
+          stroke="#059669" stroke-width="1.2" stroke-dasharray="3,2"/>
+
+    <!-- Registered User → Financial Insights -->
+    <line x1="162" y1="290" x2="382" y2="260"
+          stroke="#059669" stroke-width="1.2" stroke-dasharray="3,2"/>
+
+    <!-- Registered User → Gamification -->
+    <line x1="162" y1="290" x2="578" y2="272"
+          stroke="#059669" stroke-width="1.2" stroke-dasharray="3,2"/>
+
+    <!-- Registered User → Settings -->
+    <line x1="162" y1="290" x2="771" y2="272"
+          stroke="#059669" stroke-width="1.2" stroke-dasharray="3,2"/>
+
+    <!-- Registered User → Recurring -->
+    <line x1="162" y1="290" x2="186" y2="376"
+          stroke="#059669" stroke-width="1.2" stroke-dasharray="3,2"/>
+
+    <!-- System → Automated Processes -->
+    <line x1="1003" y1="403" x2="990" y2="403"
+          stroke="#1D4ED8" stroke-width="1.5"/>
+
+  </svg>
 </body>
 </html>
