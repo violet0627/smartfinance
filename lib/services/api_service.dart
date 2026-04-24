@@ -1,46 +1,121 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-import '../models/user_model.dart';
-import '../config.dart';
+// ==============================================================================
+// api_service.dart - Central API Communication Service
+// ==============================================================================
+// This is the MAIN service file that handles ALL communication between the
+// Flutter app and the Python Flask backend server.
+//
+// Every API call in the app goes through this file. It contains static methods
+// for each API endpoint (authentication, transactions, budgets, investments,
+// goals, gamification, settings, reports, 2FA, recurring transactions, security).
+//
+// Pattern used in every method:
+// 1. Build the HTTP request (GET/POST/PUT/DELETE)
+// 2. Send it to the backend server
+// 3. Parse the JSON response
+// 4. Return a Map with 'success': true/false and the relevant data
+//
+// Key concepts:
+// - "static" methods: Can be called without creating an ApiService instance
+//   Usage: ApiService.login(...) instead of ApiService().login(...)
+// - "async/await": These methods are asynchronous (non-blocking)
+//   They wait for the server response without freezing the UI
+// - "Future<>": Return type for async methods (a promise of a future value)
+// - "json.encode/decode": Converts between Dart objects and JSON strings
+// ==============================================================================
+
+import 'dart:convert';                                    // For json.encode() and json.decode()
+import 'package:http/http.dart' as http;                  // HTTP client for making API requests
+import 'package:shared_preferences/shared_preferences.dart'; // Local device storage for tokens/user data
+import '../models/user_model.dart';                       // User data model
+import '../config.dart';                                  // App configuration — update IP in config.dart on demo day
 
 class ApiService {
-  static const String baseUrl = AppConfig.baseUrl;
+  // ==============================================================================
+  // Base URL Configuration
+  // ==============================================================================
+  // This is the root URL for ALL API calls. Every endpoint URL is built from this.
+  //
+  // HOW TO FIND YOUR IP (Windows): Open Command Prompt → type "ipconfig"
+  //                                Look for "IPv4 Address" under your Wi-Fi adapter
+  // HOW TO FIND YOUR IP (Mac/Linux): Open Terminal → type "ifconfig" or "ip addr"
+  //
+  // - For Android emulator: use 10.0.2.2 (maps to host machine localhost)
+  // - For physical device:  use your computer's local IP (e.g., 192.168.x.x)
+  //                         *** Device and computer must be on the SAME Wi-Fi ***
+  // - For iOS simulator:    use localhost or 127.0.0.1
+  //
+  // ⚠️  To change the server IP, edit lib/config.dart — change _serverIp there.
+  //     Do NOT change this line directly.
+  // ==============================================================================
+  static const String baseUrl = AppConfig.baseUrl; // Reads from lib/config.dart
 
+  // ============================================================================
+  // AUTHENTICATION ENDPOINTS
+  // ============================================================================
+  // These methods handle user registration, login, logout, and session management.
+  // ============================================================================
+
+  // ==============================================================================
+  // register - Create a New User Account
+  // ==============================================================================
+  // Sends user registration data to POST /api/auth/register
+  // On success (201): Returns the new user object
+  // On failure: Returns the error message from the server
+  //
+  // Note: Does NOT auto-login after registration - user must login manually
+  // .timeout() cancels the request if the server doesn't respond within 10 seconds
+  // ==============================================================================
   static Future<Map<String, dynamic>> register({
     required String email,
     required String password,
     required String fullName,
-    String? phoneNumber,
+    String? phoneNumber,             // Optional phone number
   }) async {
     try {
+      // Send POST request to the register endpoint
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        Uri.parse('$baseUrl/auth/register'),                // Build full URL: http://...//api/auth/register
+        headers: {'Content-Type': 'application/json'},      // Tell server we're sending JSON
+        body: json.encode({                                 // Convert Dart Map to JSON string
           'email': email,
           'password': password,
           'fullName': fullName,
           'phoneNumber': phoneNumber,
         }),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 10));               // Cancel if no response in 10 seconds
 
-      final data = json.decode(response.body);
+      final data = json.decode(response.body);              // Parse JSON response string to Dart Map
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201) {                     // 201 = Created (success)
+        // Return verificationToken alongside user so the register screen
+        // can pass it to VerifyEmailScreen for auto-fill (dev mode convenience)
         return {
           'success': true,
           'user': UserModel.fromJson(data['user']),
-          'verificationToken': data['verificationToken'], // null in production, token string in dev
+          'verificationToken': data['verificationToken'],   // null in production, token string in dev
         };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Registration failed'};
       }
     } catch (e) {
+      // Network errors (no internet, server down, timeout, etc.)
       return {'success': false, 'error': 'Network error: $e'};
     }
   }
 
+  // ==============================================================================
+  // login - Authenticate User and Get Tokens
+  // ==============================================================================
+  // Sends credentials to POST /api/auth/login
+  // On success (200): Saves user data and JWT tokens to SharedPreferences,
+  //   then returns the user object
+  // On failure: Returns the error message
+  //
+  // SharedPreferences stores:
+  // - userId, userEmail, userFullName: User identity info
+  // - accessToken: Short-lived JWT for API authentication (expires in 1 hour)
+  // - refreshToken: Long-lived JWT for getting new access tokens (expires in 30 days)
+  // ==============================================================================
   static Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -49,18 +124,22 @@ class ApiService {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/login'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'email': email, 'password': password}),
+        body: json.encode({
+          'email': email,
+          'password': password,
+        }),
       ).timeout(const Duration(seconds: 10));
 
       final data = json.decode(response.body);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200) {                     // 200 = OK (success)
+        // Save user data and tokens to device storage for future use
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('userId', data['user']['userId']);
-        await prefs.setString('userEmail', data['user']['email']);
-        await prefs.setString('userFullName', data['user']['fullName']);
-        await prefs.setString('accessToken', data['accessToken']);
-        await prefs.setString('refreshToken', data['refreshToken']);
+        await prefs.setInt('userId', data['user']['userId']);        // Save user ID
+        await prefs.setString('userEmail', data['user']['email']);   // Save email
+        await prefs.setString('userFullName', data['user']['fullName']); // Save name
+        await prefs.setString('accessToken', data['accessToken']);   // Save access token
+        await prefs.setString('refreshToken', data['refreshToken']); // Save refresh token
 
         return {'success': true, 'user': UserModel.fromJson(data['user'])};
       } else {
@@ -71,43 +150,76 @@ class ApiService {
     }
   }
 
+  // ==============================================================================
+  // Session Management Methods
+  // ==============================================================================
+  // These check login status, get user ID, and handle logout.
+  // All use SharedPreferences (local device storage) to check saved data.
+  // ==============================================================================
+
+  // Check if user is currently logged in (has a saved userId)
   static Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey('userId');
+    return prefs.containsKey('userId');  // Returns true if userId key exists
   }
 
+  // Get the current user's ID from device storage (returns null if not logged in)
   static Future<int?> getCurrentUserId() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt('userId');
+    return prefs.getInt('userId');       // Returns null if key doesn't exist
   }
 
+  // Logout by clearing ALL saved data (user info, tokens, everything)
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await prefs.clear();                // Removes all key-value pairs from storage
   }
 
+  // ============================================================================
+  // JWT TOKEN MANAGEMENT
+  // ============================================================================
+  // These methods manage JWT (JSON Web Token) authentication tokens.
+  // - Access Token: Sent with each API request to prove identity (short-lived)
+  // - Refresh Token: Used to get a new access token when the old one expires
+  // - Auth Headers: Builds the HTTP headers needed for authenticated requests
+  // ============================================================================
+
+  // Get the saved access token from device storage
   static Future<String?> getAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('accessToken');
   }
 
+  // Get the saved refresh token from device storage
   static Future<String?> getRefreshToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('refreshToken');
   }
 
+  // Build HTTP headers with the access token for authenticated API requests
+  // The "Bearer" format is a standard way to send JWT tokens:
+  // Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
   static Future<Map<String, String>> getAuthHeaders() async {
     final token = await getAccessToken();
     return {
       'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
+      if (token != null) 'Authorization': 'Bearer $token',  // Only add if token exists
+      // This uses "collection if" - the key-value pair is only included when condition is true
     };
   }
 
+  // ==============================================================================
+  // refreshAccessToken - Get a New Access Token Using the Refresh Token
+  // ==============================================================================
+  // When the access token expires (after 1 hour), this method sends the
+  // refresh token to get a new access token without requiring the user to
+  // login again. Returns true if successful, false if refresh token is also
+  // expired (user must login again).
+  // ==============================================================================
   static Future<bool> refreshAccessToken() async {
     try {
       final refreshToken = await getRefreshToken();
-      if (refreshToken == null) return false;
+      if (refreshToken == null) return false;    // No refresh token = can't refresh
 
       final response = await http.post(
         Uri.parse('$baseUrl/auth/refresh'),
@@ -118,17 +230,29 @@ class ApiService {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
+        // Save the new access token
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('accessToken', data['accessToken']);
-        return true;
+        return true;                             // Successfully refreshed
       }
 
-      return false;
+      return false;                              // Server rejected the refresh token
     } catch (e) {
-      return false;
+      return false;                              // Network error
     }
   }
 
+  // ============================================================================
+  // PASSWORD RESET ENDPOINTS
+  // ============================================================================
+  // These handle the "forgot password" flow:
+  // 1. User enters email -> forgotPassword() sends reset email
+  // 2. User gets token from email -> verifyResetToken() checks it's valid
+  // 3. User enters new password -> resetPassword() changes it
+  // ============================================================================
+
+  // Step 1: Request a password reset email
+  // Sends POST /api/auth/forgot-password with the user's email
   static Future<Map<String, dynamic>> forgotPassword(String email) async {
     try {
       final response = await http.post(
@@ -143,7 +267,7 @@ class ApiService {
         return {
           'success': true,
           'message': data['message'],
-          'resetToken': data['resetToken'], // For development only
+          'resetToken': data['resetToken'], // For development only (wouldn't be in production)
         };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to send reset email'};
@@ -153,12 +277,17 @@ class ApiService {
     }
   }
 
+  // Step 3: Reset the password using the token from the email
+  // Sends POST /api/auth/reset-password with the token and new password
   static Future<Map<String, dynamic>> resetPassword(String token, String newPassword) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/reset-password'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'token': token, 'newPassword': newPassword}),
+        body: json.encode({
+          'token': token,
+          'newPassword': newPassword,
+        }),
       );
 
       final data = json.decode(response.body);
@@ -173,6 +302,8 @@ class ApiService {
     }
   }
 
+  // Step 2: Verify that the reset token is valid (not expired, not used)
+  // Sends POST /api/auth/verify-reset-token
   static Future<Map<String, dynamic>> verifyResetToken(String token) async {
     try {
       final response = await http.post(
@@ -185,8 +316,8 @@ class ApiService {
 
       if (response.statusCode == 200) {
         return {
-          'success': data['valid'] ?? false,
-          'email': data['email'],
+          'success': data['valid'] ?? false,    // Whether token is valid
+          'email': data['email'],                // Email associated with the token
           'error': data['error'],
         };
       } else {
@@ -197,6 +328,16 @@ class ApiService {
     }
   }
 
+  // ============================================================================
+  // EMAIL VERIFICATION ENDPOINTS
+  // ============================================================================
+  // These handle verifying the user's email address after registration:
+  // 1. verifyEmail() - Verify using token from email
+  // 2. resendVerification() - Resend the verification email
+  // 3. checkVerificationStatus() - Check if email is already verified
+  // ============================================================================
+
+  // Verify email using the token sent to the user's email
   static Future<Map<String, dynamic>> verifyEmail(String token) async {
     try {
       final response = await http.post(
@@ -217,6 +358,7 @@ class ApiService {
     }
   }
 
+  // Resend the verification email to the user's email address
   static Future<Map<String, dynamic>> resendVerification(String email) async {
     try {
       final response = await http.post(
@@ -241,10 +383,12 @@ class ApiService {
     }
   }
 
+  // Check if a user's email is verified (GET request with userId in URL)
   static Future<Map<String, dynamic>> checkVerificationStatus(int userId) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/auth/check-verification/$userId'),
+        // No body needed for GET requests - userId is in the URL path
       );
 
       final data = json.decode(response.body);
@@ -252,7 +396,7 @@ class ApiService {
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'emailVerified': data['emailVerified'],
+          'emailVerified': data['emailVerified'],  // true or false
           'email': data['email'],
         };
       } else {
@@ -263,6 +407,19 @@ class ApiService {
     }
   }
 
+  // ============================================================================
+  // TRANSACTION ENDPOINTS
+  // ============================================================================
+  // CRUD operations for financial transactions (income and expenses).
+  // - Create: POST /api/transactions/
+  // - Read:   GET /api/transactions/user/{userId}
+  // - Update: PUT /api/transactions/{transactionId}
+  // - Delete: DELETE /api/transactions/{transactionId}
+  // - Summary: GET /api/transactions/user/{userId}/summary
+  // ============================================================================
+
+  // Create a new transaction (POST)
+  // transactionData is a Map with: amount, category, transactionType, transactionDate, userId, etc.
   static Future<Map<String, dynamic>> createTransaction(Map<String, dynamic> transactionData) async {
     try {
       final response = await http.post(
@@ -273,7 +430,7 @@ class ApiService {
 
       final data = json.decode(response.body);
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201) {          // 201 = Created
         return {'success': true, 'transaction': data['transaction']};
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to create transaction'};
@@ -283,10 +440,12 @@ class ApiService {
     }
   }
 
+  // Update an existing transaction (PUT)
+  // transactionId identifies which transaction to update
   static Future<Map<String, dynamic>> updateTransaction(int transactionId, Map<String, dynamic> transactionData) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/transactions/$transactionId'),
+        Uri.parse('$baseUrl/transactions/$transactionId'),   // ID in URL path
         headers: {'Content-Type': 'application/json'},
         body: json.encode(transactionData),
       );
@@ -303,23 +462,39 @@ class ApiService {
     }
   }
 
+  // ==============================================================================
+  // getUserTransactions - Get All Transactions for a User (with Optional Filters)
+  // ==============================================================================
+  // Sends GET /api/transactions/user/{userId}?type=expense&category=Food&...
+  //
+  // Query parameters are optional filters:
+  // - type: "income" or "expense"
+  // - category: Filter by category name (e.g., "Food")
+  // - startDate/endDate: Date range filter (YYYY-MM-DD)
+  // - limit: Maximum number of results
+  //
+  // Uri.replace(queryParameters: ...) builds the URL with query string:
+  // /api/transactions/user/1?type=expense&category=Food
+  // ==============================================================================
   static Future<Map<String, dynamic>> getUserTransactions(int userId, {
-    String? type,
-    String? category,
-    String? startDate,
-    String? endDate,
-    int? limit,
+    String? type,           // Optional: filter by "income" or "expense"
+    String? category,       // Optional: filter by category name
+    String? startDate,      // Optional: start of date range
+    String? endDate,        // Optional: end of date range
+    int? limit,             // Optional: max number of results
   }) async {
     try {
+      // Build query parameters map (only include non-null values)
       final queryParams = <String, String>{};
       if (type != null) queryParams['type'] = type;
       if (category != null) queryParams['category'] = category;
       if (startDate != null) queryParams['startDate'] = startDate;
       if (endDate != null) queryParams['endDate'] = endDate;
-      if (limit != null) queryParams['limit'] = limit.toString();
+      if (limit != null) queryParams['limit'] = limit.toString();  // Convert int to String for URL
 
+      // Build URL with query parameters
       final uri = Uri.parse('$baseUrl/transactions/user/$userId').replace(queryParameters: queryParams);
-      final response = await http.get(uri);
+      final response = await http.get(uri);                        // GET request (no body needed)
 
       final data = json.decode(response.body);
 
@@ -333,6 +508,8 @@ class ApiService {
     }
   }
 
+  // Get transaction summary (totals for income, expense, by category)
+  // Similar to getUserTransactions but returns aggregated data instead of individual transactions
   static Future<Map<String, dynamic>> getTransactionSummary(int userId, {
     String? startDate,
     String? endDate,
@@ -348,7 +525,8 @@ class ApiService {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, ...data};
+        return {'success': true, ...data};   // Spread operator: merge all data fields into result
+        // ...data adds all key-value pairs from data into this map
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to fetch summary'};
       }
@@ -357,6 +535,7 @@ class ApiService {
     }
   }
 
+  // Delete a transaction (DELETE request)
   static Future<Map<String, dynamic>> deleteTransaction(int transactionId) async {
     try {
       final response = await http.delete(
@@ -375,6 +554,19 @@ class ApiService {
     }
   }
 
+  // ============================================================================
+  // BUDGET ENDPOINTS
+  // ============================================================================
+  // CRUD operations for monthly budgets.
+  // - Create: POST /api/budgets/
+  // - Read all: GET /api/budgets/user/{userId}
+  // - Read current: GET /api/budgets/user/{userId}/current
+  // - Update: PUT /api/budgets/{budgetId}
+  // - Delete: DELETE /api/budgets/{budgetId}
+  // - Refresh spending: POST /api/budgets/{budgetId}/refresh
+  // ============================================================================
+
+  // Create a new budget
   static Future<Map<String, dynamic>> createBudget(Map<String, dynamic> budgetData) async {
     try {
       final response = await http.post(
@@ -395,9 +587,12 @@ class ApiService {
     }
   }
 
+  // Get all budgets for a user (all months)
   static Future<Map<String, dynamic>> getUserBudgets(int userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/budgets/user/$userId'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/budgets/user/$userId'),
+      );
 
       final data = json.decode(response.body);
 
@@ -411,9 +606,12 @@ class ApiService {
     }
   }
 
+  // Get the budget for the current month
   static Future<Map<String, dynamic>> getCurrentBudget(int userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/budgets/user/$userId/current'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/budgets/user/$userId/current'),
+      );
 
       final data = json.decode(response.body);
 
@@ -427,6 +625,7 @@ class ApiService {
     }
   }
 
+  // Update an existing budget
   static Future<Map<String, dynamic>> updateBudget(int budgetId, Map<String, dynamic> budgetData) async {
     try {
       final response = await http.put(
@@ -447,9 +646,12 @@ class ApiService {
     }
   }
 
+  // Delete a budget
   static Future<Map<String, dynamic>> deleteBudget(int budgetId) async {
     try {
-      final response = await http.delete(Uri.parse('$baseUrl/budgets/$budgetId'));
+      final response = await http.delete(
+        Uri.parse('$baseUrl/budgets/$budgetId'),
+      );
 
       final data = json.decode(response.body);
 
@@ -463,9 +665,13 @@ class ApiService {
     }
   }
 
+  // Refresh budget spending amounts by recalculating from actual transactions
+  // This recalculates how much has been spent in each budget category
   static Future<Map<String, dynamic>> refreshBudgetSpending(int budgetId) async {
     try {
-      final response = await http.post(Uri.parse('$baseUrl/budgets/$budgetId/refresh'));
+      final response = await http.post(
+        Uri.parse('$baseUrl/budgets/$budgetId/refresh'),
+      );
 
       final data = json.decode(response.body);
 
@@ -479,6 +685,20 @@ class ApiService {
     }
   }
 
+  // ============================================================================
+  // INVESTMENT ENDPOINTS
+  // ============================================================================
+  // CRUD operations for investment portfolio management.
+  // - Create: POST /api/investments/
+  // - Read all: GET /api/investments/user/{userId}
+  // - Read one: GET /api/investments/{investmentId}
+  // - Update: PUT /api/investments/{investmentId}
+  // - Delete: DELETE /api/investments/{investmentId}
+  // - Portfolio: GET /api/investments/user/{userId}/portfolio
+  // - Update price: POST /api/investments/{investmentId}/update-price
+  // ============================================================================
+
+  // Create a new investment
   static Future<Map<String, dynamic>> createInvestment(Map<String, dynamic> investmentData) async {
     try {
       final response = await http.post(
@@ -499,10 +719,11 @@ class ApiService {
     }
   }
 
+  // Get all investments for a user, optionally filtered by asset type
   static Future<Map<String, dynamic>> getUserInvestments(int userId, {String? type}) async {
     try {
       final queryParams = <String, String>{};
-      if (type != null) queryParams['type'] = type;
+      if (type != null) queryParams['type'] = type;        // Filter by asset type (e.g., "stocks")
 
       final uri = Uri.parse('$baseUrl/investments/user/$userId').replace(queryParameters: queryParams);
       final response = await http.get(uri);
@@ -519,9 +740,12 @@ class ApiService {
     }
   }
 
+  // Get a single investment by ID
   static Future<Map<String, dynamic>> getInvestment(int investmentId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/investments/$investmentId'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/investments/$investmentId'),
+      );
 
       final data = json.decode(response.body);
 
@@ -535,6 +759,7 @@ class ApiService {
     }
   }
 
+  // Update an existing investment
   static Future<Map<String, dynamic>> updateInvestment(
     int investmentId,
     Map<String, dynamic> investmentData,
@@ -558,9 +783,12 @@ class ApiService {
     }
   }
 
+  // Delete an investment
   static Future<Map<String, dynamic>> deleteInvestment(int investmentId) async {
     try {
-      final response = await http.delete(Uri.parse('$baseUrl/investments/$investmentId'));
+      final response = await http.delete(
+        Uri.parse('$baseUrl/investments/$investmentId'),
+      );
 
       final data = json.decode(response.body);
 
@@ -574,14 +802,17 @@ class ApiService {
     }
   }
 
+  // Get portfolio summary (total invested, current value, profit/loss, top/bottom performers)
   static Future<Map<String, dynamic>> getPortfolioSummary(int userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/investments/user/$userId/portfolio'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/investments/user/$userId/portfolio'),
+      );
 
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'portfolio': data};
+        return {'success': true, 'portfolio': data};  // Entire response IS the portfolio data
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to fetch portfolio'};
       }
@@ -590,6 +821,8 @@ class ApiService {
     }
   }
 
+  // Update the current market price of an investment
+  // Returns updated profit/loss calculations
   static Future<Map<String, dynamic>> updateInvestmentPrice(
     int investmentId,
     double currentPrice,
@@ -607,8 +840,8 @@ class ApiService {
         return {
           'success': true,
           'investment': data['investment'],
-          'profitLoss': data['profitLoss'],
-          'percentageChange': data['percentageChange'],
+          'profitLoss': data['profitLoss'],                // Updated profit/loss amount
+          'percentageChange': data['percentageChange'],    // Updated percentage change
         };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to update price'};
@@ -618,17 +851,31 @@ class ApiService {
     }
   }
 
+  // ============================================================================
+  // GAMIFICATION ENDPOINTS
+  // ============================================================================
+  // These manage the rewards system: achievements, XP, levels, streaks, leaderboard.
+  // - Achievements: GET /api/gamification/user/{userId}/achievements
+  // - Stats: GET /api/gamification/user/{userId}/stats
+  // - Check achievements: POST /api/gamification/user/{userId}/check-achievements
+  // - Streaks: GET/POST /api/gamification/user/{userId}/streaks
+  // - Leaderboard: GET /api/gamification/leaderboard
+  // ============================================================================
+
+  // Get all achievements and their unlock status for a user
   static Future<Map<String, dynamic>> getUserAchievements(int userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/gamification/user/$userId/achievements'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/gamification/user/$userId/achievements'),
+      );
 
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'userAchievements': data['userAchievements'],
-          'count': data['count'],
+          'userAchievements': data['userAchievements'],   // List of achievement progress
+          'count': data['count']
         };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to fetch achievements'};
@@ -638,14 +885,17 @@ class ApiService {
     }
   }
 
+  // Get gamification stats (XP, level, streaks, achievement counts)
   static Future<Map<String, dynamic>> getUserStats(int userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/gamification/user/$userId/stats'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/gamification/user/$userId/stats'),
+      );
 
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'stats': data};
+        return {'success': true, 'stats': data};   // Entire response IS the stats
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to fetch stats'};
       }
@@ -654,6 +904,8 @@ class ApiService {
     }
   }
 
+  // Trigger achievement checking (called after user actions like adding transactions)
+  // The backend evaluates all achievement criteria and returns any newly unlocked ones
   static Future<Map<String, dynamic>> checkAchievements(int userId) async {
     try {
       final response = await http.post(
@@ -666,8 +918,8 @@ class ApiService {
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'newlyUnlocked': data['newlyUnlocked'],
-          'count': data['count'],
+          'newlyUnlocked': data['newlyUnlocked'],   // List of newly unlocked achievements
+          'count': data['count']                      // How many new achievements
         };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to check achievements'};
@@ -677,14 +929,21 @@ class ApiService {
     }
   }
 
+  // Get all streaks for a user (daily tracking, budget adherence, etc.)
   static Future<Map<String, dynamic>> getUserStreaks(int userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/gamification/user/$userId/streaks'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/gamification/user/$userId/streaks'),
+      );
 
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'streaks': data['streaks'], 'count': data['count']};
+        return {
+          'success': true,
+          'streaks': data['streaks'],
+          'count': data['count']
+        };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to fetch streaks'};
       }
@@ -693,6 +952,8 @@ class ApiService {
     }
   }
 
+  // Update (increment) a streak for the user
+  // Default streak type is "daily_tracking" (logging transactions daily)
   static Future<Map<String, dynamic>> updateStreak(int userId, {String streakType = 'daily_tracking'}) async {
     try {
       final response = await http.post(
@@ -704,7 +965,11 @@ class ApiService {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'message': data['message'], 'streak': data['streak']};
+        return {
+          'success': true,
+          'message': data['message'],
+          'streak': data['streak']
+        };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to update streak'};
       }
@@ -713,14 +978,21 @@ class ApiService {
     }
   }
 
+  // Get the XP leaderboard (all users ranked by XP)
   static Future<Map<String, dynamic>> getLeaderboard() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/gamification/leaderboard'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/gamification/leaderboard'),
+      );
 
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'leaderboard': data['leaderboard'], 'count': data['count']};
+        return {
+          'success': true,
+          'leaderboard': data['leaderboard'],  // List of users with XP/level
+          'count': data['count']
+        };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to fetch leaderboard'};
       }
@@ -729,10 +1001,22 @@ class ApiService {
     }
   }
 
+  // ============================================================================
+  // REPORTS ENDPOINTS
+  // ============================================================================
+  // These generate financial reports and CSV exports.
+  // - Spending report: GET /api/reports/user/{userId}/spending-report
+  // - Budget report: GET /api/reports/user/{userId}/budget-report
+  // - Category analysis: GET /api/reports/user/{userId}/category-analysis
+  // - Export URLs: Build URLs for CSV download (opened in browser/WebView)
+  // ============================================================================
+
+  // Get spending report (total income/expense, category breakdown, daily averages)
+  // period: "this_month", "last_month", "3_months", "6_months", "1_year", "custom"
   static Future<Map<String, dynamic>> getSpendingReport(
     int userId, {
-    String period = 'this_month',
-    String? startDate,
+    String period = 'this_month',    // Default: current month
+    String? startDate,                // For custom date range
     String? endDate,
   }) async {
     try {
@@ -756,6 +1040,7 @@ class ApiService {
     }
   }
 
+  // Get budget adherence report (how well the user stuck to their budget)
   static Future<Map<String, dynamic>> getBudgetReport(
     int userId, {
     String period = 'this_month',
@@ -783,6 +1068,7 @@ class ApiService {
     }
   }
 
+  // Get detailed category analysis (spending per category with percentages)
   static Future<Map<String, dynamic>> getCategoryAnalysis(
     int userId, {
     String period = 'this_month',
@@ -810,6 +1096,15 @@ class ApiService {
     }
   }
 
+  // ==============================================================================
+  // Export URL Builders
+  // ==============================================================================
+  // These don't make API calls - they just build URLs for CSV download.
+  // The URLs are used to open the export endpoint in a browser or WebView,
+  // which triggers a file download from the backend.
+  // ==============================================================================
+
+  // Build URL for exporting transactions as CSV
   static String getExportTransactionsUrl(
     int userId, {
     String period = 'this_month',
@@ -822,9 +1117,10 @@ class ApiService {
 
     return Uri.parse('$baseUrl/reports/user/$userId/export/transactions')
         .replace(queryParameters: queryParams)
-        .toString();
+        .toString();    // Convert Uri object to URL string
   }
 
+  // Build URL for exporting spending report as CSV
   static String getExportSpendingReportUrl(
     int userId, {
     String period = 'this_month',
@@ -840,9 +1136,24 @@ class ApiService {
         .toString();
   }
 
+  // ============================================================================
+  // SETTINGS ENDPOINTS
+  // ============================================================================
+  // User settings, profile management, and password changes.
+  // - Get settings: GET /api/settings/user/{userId}
+  // - Update settings: PUT /api/settings/user/{userId}
+  // - Get profile: GET /api/settings/user/{userId}/profile
+  // - Update profile: PUT /api/settings/user/{userId}/profile
+  // - Change password: POST /api/settings/user/{userId}/change-password
+  // - Get currencies/languages: GET /api/settings/currencies, /languages
+  // ============================================================================
+
+  // Get user settings (currency, language, notification preferences, etc.)
   static Future<Map<String, dynamic>> getUserSettings(int userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/settings/user/$userId'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/settings/user/$userId'),
+      );
 
       final data = json.decode(response.body);
 
@@ -856,6 +1167,7 @@ class ApiService {
     }
   }
 
+  // Update user settings
   static Future<Map<String, dynamic>> updateUserSettings(
     int userId,
     Map<String, dynamic> settings,
@@ -879,9 +1191,12 @@ class ApiService {
     }
   }
 
+  // Get user profile (name, email, phone, etc.)
   static Future<Map<String, dynamic>> getUserProfile(int userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/settings/user/$userId/profile'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/settings/user/$userId/profile'),
+      );
 
       final data = json.decode(response.body);
 
@@ -895,6 +1210,7 @@ class ApiService {
     }
   }
 
+  // Update user profile (name, phone number, etc.)
   static Future<Map<String, dynamic>> updateUserProfile(
     int userId,
     Map<String, dynamic> profileData,
@@ -918,6 +1234,7 @@ class ApiService {
     }
   }
 
+  // Change user password (requires current password for verification)
   static Future<Map<String, dynamic>> changePassword(
     int userId,
     String currentPassword,
@@ -945,11 +1262,28 @@ class ApiService {
     }
   }
 
-  // Note: getAvailableCurrencies() and getAvailableLanguages() removed.
-  // SmartFinance is Malaysia-only — currency is always RM and language is English.
+  // Note: getAvailableCurrencies() and getAvailableLanguages() have been removed.
+  // SmartFinance is a Malaysia-only app — currency is always RM and language is English.
 
+  // ============================================================================
+  // GOALS ENDPOINTS
+  // ============================================================================
+  // CRUD operations for savings goals + contribute and summary.
+  // - Get all: GET /api/goals/user/{userId}
+  // - Create: POST /api/goals/user/{userId}
+  // - Get one: GET /api/goals/{goalId}
+  // - Update: PUT /api/goals/{goalId}
+  // - Delete: DELETE /api/goals/{goalId}
+  // - Contribute: POST /api/goals/{goalId}/contribute
+  // - Summary: GET /api/goals/user/{userId}/summary
+  // - Categories: GET /api/goals/categories
+  // ============================================================================
+
+  // Get all goals for a user, optionally filtered by status
+  // status can be: "active", "completed", "cancelled"
   static Future<Map<String, dynamic>> getUserGoals(int userId, {String? status}) async {
     try {
+      // Build URL with optional status query parameter
       final uri = status != null
           ? Uri.parse('$baseUrl/goals/user/$userId?status=$status')
           : Uri.parse('$baseUrl/goals/user/$userId');
@@ -967,6 +1301,7 @@ class ApiService {
     }
   }
 
+  // Create a new savings goal
   static Future<Map<String, dynamic>> createGoal(int userId, Map<String, dynamic> goalData) async {
     try {
       final response = await http.post(
@@ -987,9 +1322,12 @@ class ApiService {
     }
   }
 
+  // Get a single goal by ID
   static Future<Map<String, dynamic>> getGoal(int goalId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/goals/$goalId'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/goals/$goalId'),
+      );
 
       final data = json.decode(response.body);
 
@@ -1003,6 +1341,7 @@ class ApiService {
     }
   }
 
+  // Update an existing goal
   static Future<Map<String, dynamic>> updateGoal(int goalId, Map<String, dynamic> goalData) async {
     try {
       final response = await http.put(
@@ -1023,9 +1362,12 @@ class ApiService {
     }
   }
 
+  // Delete a goal
   static Future<Map<String, dynamic>> deleteGoal(int goalId) async {
     try {
-      final response = await http.delete(Uri.parse('$baseUrl/goals/$goalId'));
+      final response = await http.delete(
+        Uri.parse('$baseUrl/goals/$goalId'),
+      );
 
       final data = json.decode(response.body);
 
@@ -1039,6 +1381,8 @@ class ApiService {
     }
   }
 
+  // Contribute money toward a savings goal
+  // Adds the specified amount to the goal's current savings
   static Future<Map<String, dynamic>> contributeToGoal(int goalId, double amount) async {
     try {
       final response = await http.post(
@@ -1059,9 +1403,12 @@ class ApiService {
     }
   }
 
+  // Get goals summary (active count, completed count, total saved, closest deadline)
   static Future<Map<String, dynamic>> getGoalsSummary(int userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/goals/user/$userId/summary'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/goals/user/$userId/summary'),
+      );
 
       final data = json.decode(response.body);
 
@@ -1075,9 +1422,12 @@ class ApiService {
     }
   }
 
+  // Get available goal categories (e.g., "Emergency Fund", "Vacation", "Education")
   static Future<Map<String, dynamic>> getGoalCategories() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/goals/categories'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/goals/categories'),
+      );
 
       final data = json.decode(response.body);
 
@@ -1091,6 +1441,15 @@ class ApiService {
     }
   }
 
+  // ============================================================================
+  // TWO-FACTOR AUTHENTICATION (2FA) ENDPOINTS
+  // ============================================================================
+  // These handle setting up and using 2FA with TOTP (Time-based One-Time Password).
+  // Flow: setup2FA -> scan QR code -> verify2FASetup -> 2FA is enabled
+  // Login flow with 2FA: login -> verify2FACode or verify2FABackupCode
+  // ============================================================================
+
+  // Step 1: Initialize 2FA setup (generates secret key and QR code)
   static Future<Map<String, dynamic>> setup2FA(int userId) async {
     try {
       final response = await http.post(
@@ -1104,10 +1463,10 @@ class ApiService {
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'qrCode': data['qrCode'],
-          'secret': data['secret'],
-          'backupCodes': data['backupCodes'],
-          'message': data['message'],
+          'qrCode': data['qrCode'],            // Base64-encoded QR code image
+          'secret': data['secret'],             // TOTP secret key (for manual entry)
+          'backupCodes': data['backupCodes'],   // One-time backup codes
+          'message': data['message']
         };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to setup 2FA'};
@@ -1117,6 +1476,8 @@ class ApiService {
     }
   }
 
+  // Step 2: Verify 2FA setup by entering a code from the authenticator app
+  // This confirms the user has correctly set up their authenticator app
   static Future<Map<String, dynamic>> verify2FASetup(int userId, String code) async {
     try {
       final response = await http.post(
@@ -1128,7 +1489,11 @@ class ApiService {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'message': data['message'], 'user': data['user']};
+        return {
+          'success': true,
+          'message': data['message'],
+          'user': data['user']
+        };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Invalid verification code'};
       }
@@ -1137,6 +1502,8 @@ class ApiService {
     }
   }
 
+  // Verify a 2FA code during login
+  // User enters the 6-digit code from their authenticator app
   static Future<Map<String, dynamic>> verify2FACode(int userId, String code) async {
     try {
       final response = await http.post(
@@ -1148,7 +1515,11 @@ class ApiService {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'verified': data['verified'], 'message': data['message']};
+        return {
+          'success': true,
+          'verified': data['verified'],    // true if code is correct
+          'message': data['message']
+        };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to verify code'};
       }
@@ -1157,6 +1528,8 @@ class ApiService {
     }
   }
 
+  // Verify using a backup code (when user can't access their authenticator app)
+  // Each backup code can only be used ONCE
   static Future<Map<String, dynamic>> verify2FABackupCode(int userId, String backupCode) async {
     try {
       final response = await http.post(
@@ -1168,7 +1541,11 @@ class ApiService {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'verified': data['verified'], 'message': data['message']};
+        return {
+          'success': true,
+          'verified': data['verified'],
+          'message': data['message']
+        };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Invalid backup code'};
       }
@@ -1177,6 +1554,7 @@ class ApiService {
     }
   }
 
+  // Disable 2FA (requires password confirmation for security)
   static Future<Map<String, dynamic>> disable2FA(int userId, String password) async {
     try {
       final response = await http.post(
@@ -1188,7 +1566,11 @@ class ApiService {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'message': data['message'], 'user': data['user']};
+        return {
+          'success': true,
+          'message': data['message'],
+          'user': data['user']
+        };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to disable 2FA'};
       }
@@ -1197,18 +1579,21 @@ class ApiService {
     }
   }
 
+  // Get the current 2FA status (enabled/disabled, has backup codes, last used)
   static Future<Map<String, dynamic>> get2FAStatus(int userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/auth/2fa/status/$userId'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/auth/2fa/status/$userId'),
+      );
 
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'twoFactorEnabled': data['twoFactorEnabled'],
-          'hasBackupCodes': data['hasBackupCodes'],
-          'lastUsedAt': data['lastUsedAt'],
+          'twoFactorEnabled': data['twoFactorEnabled'],   // Is 2FA currently on?
+          'hasBackupCodes': data['hasBackupCodes'],        // Are backup codes available?
+          'lastUsedAt': data['lastUsedAt']                 // When was 2FA last used?
         };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to get 2FA status'};
@@ -1218,6 +1603,7 @@ class ApiService {
     }
   }
 
+  // Generate new backup codes (invalidates old ones, requires password)
   static Future<Map<String, dynamic>> regenerateBackupCodes(int userId, String password) async {
     try {
       final response = await http.post(
@@ -1229,7 +1615,11 @@ class ApiService {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'backupCodes': data['backupCodes'], 'message': data['message']};
+        return {
+          'success': true,
+          'backupCodes': data['backupCodes'],   // New set of backup codes
+          'message': data['message']
+        };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to regenerate backup codes'};
       }
@@ -1238,16 +1628,31 @@ class ApiService {
     }
   }
 
+  // ============================================================================
+  // RECURRING TRANSACTIONS ENDPOINTS
+  // ============================================================================
+  // These manage recurring (repeating) transactions like monthly bills or salary.
+  // - Create: POST /api/recurring/user/{userId}
+  // - Get all: GET /api/recurring/user/{userId}
+  // - Update: PUT /api/recurring/{recurringId}
+  // - Delete: DELETE /api/recurring/{recurringId}
+  // - Toggle: POST /api/recurring/{recurringId}/toggle (activate/deactivate)
+  // - Execute one: POST /api/recurring/{recurringId}/execute
+  // - Execute due: POST /api/recurring/user/{userId}/execute-due
+  // ============================================================================
+
+  // Create a new recurring transaction template
+  // frequency: "daily", "weekly", "monthly", "yearly"
   static Future<Map<String, dynamic>> createRecurringTransaction({
     required int userId,
-    required String name,
-    required String transactionType,
-    required String category,
-    required double amount,
-    String? description,
-    required String frequency,
-    required String startDate,
-    String? endDate,
+    required String name,              // e.g., "Netflix Subscription"
+    required String transactionType,   // "income" or "expense"
+    required String category,          // e.g., "Entertainment"
+    required double amount,            // e.g., 49.90
+    String? description,               // Optional description
+    required String frequency,         // "daily", "weekly", "monthly", "yearly"
+    required String startDate,         // When to start (YYYY-MM-DD)
+    String? endDate,                   // Optional end date
   }) async {
     try {
       final response = await http.post(
@@ -1277,6 +1682,7 @@ class ApiService {
     }
   }
 
+  // Get all recurring transactions for a user
   static Future<Map<String, dynamic>> getRecurringTransactions(int userId) async {
     try {
       final response = await http.get(
@@ -1295,6 +1701,8 @@ class ApiService {
     }
   }
 
+  // Update a recurring transaction template
+  // Only non-null fields are sent (uses collection-if in the JSON body)
   static Future<Map<String, dynamic>> updateRecurringTransaction({
     required int recurringId,
     String? name,
@@ -1309,6 +1717,7 @@ class ApiService {
         Uri.parse('$baseUrl/recurring/$recurringId'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
+          // Only include fields that are not null (collection-if syntax)
           if (name != null) 'name': name,
           if (category != null) 'category': category,
           if (amount != null) 'amount': amount,
@@ -1330,6 +1739,7 @@ class ApiService {
     }
   }
 
+  // Delete a recurring transaction template
   static Future<Map<String, dynamic>> deleteRecurringTransaction(int recurringId) async {
     try {
       final response = await http.delete(
@@ -1348,6 +1758,8 @@ class ApiService {
     }
   }
 
+  // Toggle a recurring transaction active/inactive
+  // Returns the new active status
   static Future<Map<String, dynamic>> toggleRecurringTransaction(int recurringId) async {
     try {
       final response = await http.post(
@@ -1367,6 +1779,7 @@ class ApiService {
     }
   }
 
+  // Manually execute a single recurring transaction (creates a real transaction from template)
   static Future<Map<String, dynamic>> executeRecurringTransaction(int recurringId) async {
     try {
       final response = await http.post(
@@ -1376,12 +1789,12 @@ class ApiService {
 
       final data = json.decode(response.body);
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201) {       // 201 = transaction was created
         return {
           'success': true,
-          'transaction': data['transaction'],
-          'recurring': data['recurring'],
-          'message': data['message'],
+          'transaction': data['transaction'],  // The new transaction that was created
+          'recurring': data['recurring'],      // Updated recurring template
+          'message': data['message']
         };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to execute recurring transaction'};
@@ -1391,6 +1804,9 @@ class ApiService {
     }
   }
 
+  // Execute all due recurring transactions for a user
+  // Finds all active recurring transactions that are past their next execution date
+  // and creates the corresponding real transactions
   static Future<Map<String, dynamic>> executeDueRecurringTransactions(int userId) async {
     try {
       final response = await http.post(
@@ -1403,9 +1819,9 @@ class ApiService {
       if (response.statusCode == 201) {
         return {
           'success': true,
-          'executed': data['executed'],
-          'count': data['count'],
-          'message': data['message'],
+          'executed': data['executed'],    // List of transactions that were created
+          'count': data['count'],          // How many were executed
+          'message': data['message']
         };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to execute due transactions'};
@@ -1415,6 +1831,16 @@ class ApiService {
     }
   }
 
+  // ============================================================================
+  // SECURITY ENDPOINTS
+  // ============================================================================
+  // Session management, activity logging, and account deletion.
+  // - Sessions: GET/POST for viewing and revoking login sessions
+  // - Activity log: GET security activity history
+  // - Account deletion: POST with password confirmation
+  // ============================================================================
+
+  // Get all active login sessions for a user
   static Future<Map<String, dynamic>> getActiveSessions(int userId) async {
     try {
       final response = await http.get(
@@ -1433,6 +1859,7 @@ class ApiService {
     }
   }
 
+  // Revoke (end) a specific login session
   static Future<Map<String, dynamic>> revokeSession(int sessionId, int userId) async {
     try {
       final response = await http.post(
@@ -1453,6 +1880,7 @@ class ApiService {
     }
   }
 
+  // Revoke all login sessions except the current one
   static Future<Map<String, dynamic>> revokeAllSessions(int userId, int? currentSessionId) async {
     try {
       final response = await http.post(
@@ -1473,6 +1901,8 @@ class ApiService {
     }
   }
 
+  // Get security activity log (login attempts, password changes, 2FA usage, etc.)
+  // Supports pagination with limit and offset
   static Future<Map<String, dynamic>> getSecurityActivityLog(int userId, {int limit = 20, int offset = 0}) async {
     try {
       final response = await http.get(
@@ -1491,6 +1921,8 @@ class ApiService {
     }
   }
 
+  // Permanently delete user account (requires password confirmation)
+  // Also clears all local data from SharedPreferences
   static Future<Map<String, dynamic>> deleteAccount(int userId, String password) async {
     try {
       final response = await http.post(
@@ -1502,8 +1934,10 @@ class ApiService {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
+        // Clear all stored data from device after successful account deletion
         final prefs = await SharedPreferences.getInstance();
         await prefs.clear();
+
         return {'success': true, 'message': data['message']};
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to delete account'};
@@ -1513,6 +1947,12 @@ class ApiService {
     }
   }
 
+  // ==============================================================================
+  // getFinancialInsights — Fetch Financial Health Report
+  // ==============================================================================
+  // Calls the /api/insights/user/<userId> endpoint which analyses the user's
+  // transaction history and returns a health score + personalised insights.
+  // ==============================================================================
   static Future<Map<String, dynamic>> getFinancialInsights(int userId) async {
     try {
       final response = await http.get(
@@ -1522,7 +1962,7 @@ class ApiService {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'data': data};
+        return {'success': true, 'data': data}; // data contains score, pillars, insights list
       } else {
         return {'success': false, 'error': data['error'] ?? 'Failed to load insights'};
       }

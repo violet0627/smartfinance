@@ -1,16 +1,46 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
-import '../../utils/colors.dart';
+// ==============================================================================
+// backup_codes_screen.dart - 2FA Backup Codes Display Screen
+// ==============================================================================
+// Shows the one-time backup codes generated during 2FA setup (or regeneration).
+// These codes let the user log in if they ever lose access to their authenticator app.
+//
+// IMPORTANT: Each code can only be used ONCE — once used, it's deleted on the backend.
+//            The user MUST save these codes before leaving this screen.
+//
+// Save options provided:
+//   - Copy All: copies all 8 codes to the clipboard as a newline-separated string
+//   - Share: opens the system share sheet so the user can save via notes, email, etc.
+//
+// Back-button safety:
+//   - WillPopScope intercepts the hardware back button
+//   - If the user hasn't checked the acknowledgement checkbox, a warning dialog is shown
+//   - The "Done" button is disabled until the checkbox is ticked
+//
+// Parameters:
+//   - backupCodes: List<dynamic> — the codes returned by the API (shown as strings)
+//   - isRegeneration: bool — changes the title/description wording
+//                            (true = "New Backup Codes", false = "Save Your Backup Codes")
+// ==============================================================================
 
+import 'package:flutter/material.dart';     // Flutter UI toolkit
+import 'package:flutter/services.dart';     // Provides Clipboard for copy-to-clipboard functionality
+import 'package:share_plus/share_plus.dart'; // Allows sharing text/files via system share sheet
+import '../../utils/colors.dart';           // AppColors constants
+
+// ==============================================================================
+// BackupCodesScreen — StatefulWidget
+// ==============================================================================
+// StatefulWidget because it manages _acknowledged (the checkbox state).
+// When _acknowledged becomes true, the Done button is enabled.
+// ==============================================================================
 class BackupCodesScreen extends StatefulWidget {
-  final List<dynamic> backupCodes;
-  final bool isRegeneration;
+  final List<dynamic> backupCodes;   // The list of backup code strings from the API
+  final bool isRegeneration;         // True if this is a regeneration (not the initial setup)
 
   const BackupCodesScreen({
     super.key,
-    required this.backupCodes,
-    this.isRegeneration = false,
+    required this.backupCodes,       // 'required' means this parameter must be provided
+    this.isRegeneration = false,     // Defaults to false (initial setup)
   });
 
   @override
@@ -18,52 +48,66 @@ class BackupCodesScreen extends StatefulWidget {
 }
 
 class _BackupCodesScreenState extends State<BackupCodesScreen> {
+  // _acknowledged tracks whether the user checked the "I have saved my codes" checkbox
+  // The Done button stays disabled until this is true
   bool _acknowledged = false;
 
+  // _copyAllCodes joins all codes with newlines and copies them to the clipboard
   void _copyAllCodes() {
+    // .join('\n') connects all codes in the list with newline separators
     final codesText = widget.backupCodes.join('\n');
+    // Clipboard.setData places text on the system clipboard
     Clipboard.setData(ClipboardData(text: codesText));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('All backup codes copied to clipboard'),
         backgroundColor: AppColors.success,
-        duration: Duration(seconds: 2),
+        duration: Duration(seconds: 2), // Snackbar disappears after 2 seconds
       ),
     );
   }
 
+  // _copyCode copies a single backup code to the clipboard
   void _copyCode(String code) {
     Clipboard.setData(ClipboardData(text: code));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Code $code copied'),
+        content: Text('Code $code copied'), // Shows the actual code that was copied
         backgroundColor: AppColors.success,
-        duration: const Duration(seconds: 1),
+        duration: const Duration(seconds: 1), // Short duration for individual copies
       ),
     );
   }
 
+  // _handleDone processes the Done button press
+  // Requires the acknowledgment checkbox to be checked first
   void _handleDone() {
     if (!_acknowledged) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please acknowledge that you have saved your backup codes'),
-          backgroundColor: AppColors.warning,
+          backgroundColor: AppColors.warning, // Yellow/orange warning color
         ),
       );
-      return;
+      return; // Exit without navigating
     }
 
-    // Single pop works because TwoFactorSetupScreen used pushReplacement — the route
-    // beneath this screen is SecuritySettingsScreen, not the setup screen.
+    // Pop back to SecuritySettingsScreen and pass 'true' so it knows to reload data.
+    // Simple single pop works because TwoFactorSetupScreen used pushReplacement to
+    // get here, so the route beneath BackupCodesScreen is SecuritySettingsScreen.
+    // No named routes exist in this app, so popUntil with a route name never works.
     Navigator.of(context).pop(true);
   }
 
   @override
   Widget build(BuildContext context) {
+    // WillPopScope intercepts the device back button and hardware back gesture
+    // onWillPop is called when the user tries to go back
+    // Return true to allow navigation back, false to block it
     return WillPopScope(
       onWillPop: () async {
         if (!_acknowledged) {
+          // Show a confirmation dialog before allowing the user to leave without saving
           final shouldPop = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
@@ -74,10 +118,12 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
               ),
               actions: [
                 TextButton(
+                  // Returning false from Navigator.pop means "don't navigate back"
                   onPressed: () => Navigator.pop(context, false),
                   child: const Text('Stay'),
                 ),
                 ElevatedButton(
+                  // Returning true means "allow navigation back"
                   onPressed: () => Navigator.pop(context, true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.danger,
@@ -88,30 +134,34 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
               ],
             ),
           );
+          // shouldPop is the value passed to Navigator.pop in the dialog
+          // '?? false' means "use false if shouldPop is null" (user dismissed dialog)
           return shouldPop ?? false;
         }
-        return true;
+        return true; // User acknowledged, allow going back
       },
       child: Scaffold(
         appBar: AppBar(
+          // Different title for initial setup vs. regeneration
           title: Text(widget.isRegeneration ? 'New Backup Codes' : 'Save Backup Codes'),
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
-          // Back arrow hidden during initial setup — user must acknowledge and tap Done
+          // Hide the back arrow during the initial 2FA setup flow (force them to use Done button)
           automaticallyImplyLeading: !widget.isRegeneration,
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch children to full width
             children: [
+              // Success checkmark icon at the top
               Center(
                 child: Container(
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.1),
+                    color: AppColors.success.withOpacity(0.1), // Light green background
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -123,6 +173,7 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
               ),
               const SizedBox(height: 24),
 
+              // Success title
               const Text(
                 'Two-Factor Authentication Enabled!',
                 style: TextStyle(
@@ -133,6 +184,7 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
               ),
               const SizedBox(height: 12),
 
+              // Explanatory description
               Text(
                 'Save these backup codes in a secure place. You can use them to access your account if you lose your authenticator device.',
                 style: TextStyle(
@@ -143,10 +195,11 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
               ),
               const SizedBox(height: 32),
 
+              // Red warning box about codes being single-use
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: Colors.red.shade50,     // Light red background
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.red.shade200, width: 2),
                 ),
@@ -169,6 +222,7 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
               ),
               const SizedBox(height: 24),
 
+              // White card containing the backup codes list
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -178,13 +232,14 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
                     BoxShadow(
                       color: Colors.black.withOpacity(0.1),
                       blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      offset: const Offset(0, 4), // Shadow below the card
                     ),
                   ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Header row: "Backup Codes" title + "Copy All" button
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -206,16 +261,20 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
+                    // Build one row per backup code
+                    // .asMap() converts the list to a Map<index, value>
+                    // .entries gives MapEntry objects with .key (index) and .value (code)
                     ...widget.backupCodes.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final code = entry.value.toString();
-                      return _buildCodeItem(index + 1, code);
+                      final index = entry.key;    // 0-based index
+                      final code = entry.value.toString(); // Convert to String
+                      return _buildCodeItem(index + 1, code); // Display 1-based numbers
                     }).toList(),
                   ],
                 ),
               ),
               const SizedBox(height: 32),
 
+              // Blue info box with instructions on how to use backup codes
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -240,6 +299,7 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    // Each bullet point instruction
                     _buildInstruction('Save codes in a password manager'),
                     _buildInstruction('Print and store in a safe place'),
                     _buildInstruction('Use when you lose access to authenticator'),
@@ -249,6 +309,7 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
               ),
               const SizedBox(height: 32),
 
+              // Acknowledgment checkbox - must be checked to enable the Done button
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -256,27 +317,30 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: CheckboxListTile(
-                  value: _acknowledged,
+                  // CheckboxListTile combines a Checkbox with a label in a ListTile layout
+                  value: _acknowledged,         // Current checkbox state
                   onChanged: (value) {
-                    setState(() => _acknowledged = value ?? false);
+                    setState(() => _acknowledged = value ?? false); // Update state
                   },
                   title: const Text(
                     'I have saved my backup codes in a secure location',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   ),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  activeColor: AppColors.success,
-                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading, // Checkbox on the left
+                  activeColor: AppColors.success, // Green checkbox when checked
+                  contentPadding: EdgeInsets.zero, // Remove default padding
                 ),
               ),
               const SizedBox(height: 24),
 
+              // Done button - enabled only after acknowledgment
               SizedBox(
                 height: 50,
                 child: ElevatedButton(
+                  // null onPressed disables the button; only active when acknowledged
                   onPressed: _acknowledged ? _handleDone : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.success,
+                    backgroundColor: AppColors.success, // Green button
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -290,10 +354,12 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
               ),
               const SizedBox(height: 16),
 
+              // Download and Print buttons side by side
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
+                      // Currently uses copyAllCodes as a substitute for actual download
                       onPressed: _copyAllCodes,
                       icon: const Icon(Icons.download, size: 18),
                       label: const Text('Download'),
@@ -311,6 +377,8 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
+                        // Share the backup codes as formatted text via the system share sheet
+                        // Users can save to Notes, email themselves, print from another app, etc.
                         final codesText = widget.backupCodes
                             .asMap()
                             .entries
@@ -342,9 +410,12 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
     );
   }
 
+  // _buildCodeItem creates a single row for one backup code
+  // number: 1-based display number (1, 2, 3, ...)
+  // code: the actual backup code string
   Widget _buildCodeItem(int number, String code) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 12), // Space between code rows
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
@@ -353,6 +424,7 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
       ),
       child: Row(
         children: [
+          // Circular number badge on the left
           Container(
             width: 28,
             height: 28,
@@ -362,7 +434,7 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
             ),
             child: Center(
               child: Text(
-                '$number',
+                '$number', // Display the number (1, 2, 3...)
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -372,31 +444,33 @@ class _BackupCodesScreenState extends State<BackupCodesScreen> {
             ),
           ),
           const SizedBox(width: 16),
-          Expanded(
+          Expanded( // Expanded fills remaining space so the copy button stays at the right
             child: Text(
               code,
               style: const TextStyle(
                 fontSize: 18,
-                fontFamily: 'monospace',
+                fontFamily: 'monospace', // Monospace font makes codes easier to read
                 fontWeight: FontWeight.bold,
-                letterSpacing: 2,
+                letterSpacing: 2, // Extra space between characters for readability
               ),
             ),
           ),
+          // Copy button for individual code
           IconButton(
             icon: const Icon(Icons.copy, size: 20),
             onPressed: () => _copyCode(code),
             color: AppColors.primary,
-            tooltip: 'Copy code',
+            tooltip: 'Copy code', // Shown on long press
           ),
         ],
       ),
     );
   }
 
+  // _buildInstruction creates a bullet point row for the instructions box
   Widget _buildInstruction(String text) {
     return Padding(
-      padding: const EdgeInsets.only(left: 28, top: 4),
+      padding: const EdgeInsets.only(left: 28, top: 4), // Indent to align with title
       child: Row(
         children: [
           Icon(Icons.check_circle, size: 16, color: Colors.blue.shade700),
