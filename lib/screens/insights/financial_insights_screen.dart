@@ -1,33 +1,7 @@
-// ==============================================================================
-// financial_insights_screen.dart - Financial Health & Insights Screen
-// ==============================================================================
-// Replaces the old receipt scanner feature.
-// This screen shows the user a personalised financial health report based on
-// their actual transaction data — no camera or OCR required.
-//
-// What it displays:
-//   1. A circular Financial Health Score (0–100) with a colour-coded label
-//   2. A four-pillar breakdown bar (Savings / Budget / Consistency / Goals)
-//   3. A summary row (income, expense, savings for this month)
-//   4. 4–6 insight cards with icons, titles, and one-sentence explanations
-//
-// The data comes from GET /api/insights/user/<userId> (financial_insights.py).
-// Pull-to-refresh reloads the report.
-// ==============================================================================
-
-// Flutter's core UI package — gives us Scaffold, Column, Card, etc.
 import 'package:flutter/material.dart';
-
-// Our API service — contains getFinancialInsights() to call the backend
 import '../../services/api_service.dart';
-
-// App colour constants (AppColors.primary, AppColors.success, etc.)
 import '../../utils/colors.dart';
 
-
-// ==============================================================================
-// FinancialInsightsScreen — StatefulWidget (data loads asynchronously)
-// ==============================================================================
 class FinancialInsightsScreen extends StatefulWidget {
   const FinancialInsightsScreen({super.key});
 
@@ -35,21 +9,17 @@ class FinancialInsightsScreen extends StatefulWidget {
   State<FinancialInsightsScreen> createState() => _FinancialInsightsScreenState();
 }
 
-// ==============================================================================
-// _FinancialInsightsScreenState — holds the loaded report data
-// ==============================================================================
 class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
-  bool _isLoading = true;       // True while the API call is in-flight
-  String _error = '';           // Non-empty when the API call failed
-  Map<String, dynamic>? _data; // The full JSON response from the backend
+  bool _isLoading = true;
+  String _error = '';
+  Map<String, dynamic>? _data;
 
   @override
   void initState() {
     super.initState();
-    _loadInsights(); // Fetch on first open
+    _loadInsights();
   }
 
-  // _loadInsights calls the backend and updates state with the result
   Future<void> _loadInsights() async {
     setState(() {
       _isLoading = true;
@@ -82,44 +52,33 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
     }
   }
 
-  // ==============================================================================
-  // build — the root widget tree for this screen
-  // ==============================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // AppBar with gradient background matching the rest of the app
       appBar: AppBar(
         title: const Text('Financial Insights'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        // Refresh button in the top-right corner
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadInsights, // Re-fetch and rebuild
+            onPressed: _loadInsights,
             tooltip: 'Refresh insights',
           ),
         ],
       ),
-
-      backgroundColor: const Color(0xFFF5F6FA), // Light grey page background
-
-      // RefreshIndicator adds pull-to-refresh behaviour
+      backgroundColor: const Color(0xFFF5F6FA),
       body: RefreshIndicator(
         onRefresh: _loadInsights,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error.isNotEmpty
-                ? _buildError()           // Error state
-                : _buildContent(),        // Success state
+                ? _buildError()
+                : _buildContent(),
       ),
     );
   }
 
-  // ==============================================================================
-  // _buildError — shown when the API call fails
-  // ==============================================================================
   Widget _buildError() {
     return Center(
       child: Padding(
@@ -146,9 +105,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
     );
   }
 
-  // ==============================================================================
-  // _buildContent — the main scrollable report, shown when data is loaded
-  // ==============================================================================
   Widget _buildContent() {
     // _data is guaranteed non-null here (checked in build)
     final score = _data!['score'] as int;
@@ -164,35 +120,24 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
-        // 1. Health score circle
         _buildScoreCard(score, scoreLabel, scoreColor),
         const SizedBox(height: 16),
-
-        // 2. Four-pillar breakdown
         _buildPillarCard(pillars),
         const SizedBox(height: 16),
-
-        // 3. This-month summary numbers
         _buildSummaryCard(summary),
         const SizedBox(height: 16),
-
-        // 4. Insight cards (one per item in the insights list)
         const Text(
           'Personalised Insights',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-
         // If no insights returned, the user has no transactions yet this month.
         // Show an encouraging empty state instead of a blank section.
         if (insights.isEmpty)
           _buildEmptyInsights()
         else
           ...insights.map((insight) => _buildInsightCard(insight)),
-
         const SizedBox(height: 8),
-
-        // Footer note
         Center(
           child: Text(
             'Based on your transactions this calendar month',
@@ -204,9 +149,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
     );
   }
 
-  // ==============================================================================
-  // _buildScoreCard — large circular gauge showing the health score
-  // ==============================================================================
   Widget _buildScoreCard(int score, String label, Color color) {
     return Card(
       elevation: 3,
@@ -215,7 +157,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            // Title row
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -228,24 +169,19 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
               ],
             ),
             const SizedBox(height: 24),
-
-            // Circular progress gauge
-            // Stack lets us place the score number on top of the circle
             Stack(
               alignment: Alignment.center,
               children: [
-                // Outer ring: SizedBox constrains the circle to 140×140
                 SizedBox(
                   width: 140,
                   height: 140,
                   child: CircularProgressIndicator(
-                    value: score / 100,           // 0.0 – 1.0 (fraction of full circle)
-                    strokeWidth: 14,              // Thickness of the arc
-                    backgroundColor: Colors.grey[200], // Grey empty arc
-                    valueColor: AlwaysStoppedAnimation<Color>(color), // Coloured filled arc
+                    value: score / 100,
+                    strokeWidth: 14,
+                    backgroundColor: Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
                   ),
                 ),
-                // Inner label: score number + label stacked vertically
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -269,10 +205,7 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 16),
-
-            // Caption below the circle
             Text(
               _scoreCaption(label),
               textAlign: TextAlign.center,
@@ -284,11 +217,7 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
     );
   }
 
-  // ==============================================================================
-  // _buildPillarCard — four horizontal bars showing each score component
-  // ==============================================================================
   Widget _buildPillarCard(Map<String, dynamic> pillars) {
-    // Each pillar is 0–25. We convert to 0–100% for the bar display.
     final items = [
       {'label': 'Savings Rate',   'icon': Icons.savings,                'value': (pillars['savingsRate'] as num).toDouble()},
       {'label': 'Budget',         'icon': Icons.account_balance_wallet,  'value': (pillars['budgetAdherence'] as num).toDouble()},
@@ -309,12 +238,10 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            // Generate one row per pillar using the spread operator (...)
-            // The spread operator inserts all items from the list into the parent list
             ...items.map((item) => _buildPillarRow(
               label: item['label'] as String,
               icon: item['icon'] as IconData,
-              value: item['value'] as double, // 0–25
+              value: item['value'] as double,
             )),
           ],
         ),
@@ -322,11 +249,9 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
     );
   }
 
-  // _buildPillarRow — a single labelled progress bar (one of the four pillars)
   Widget _buildPillarRow({required String label, required IconData icon, required double value}) {
-    final fraction = value / 25.0; // Convert 0–25 range to 0.0–1.0 for LinearProgressIndicator
+    final fraction = value / 25.0; // Each pillar is scored 0–25 by the backend
 
-    // Choose bar colour based on how well this pillar is scoring
     final Color barColor;
     if (fraction >= 0.75) {
       barColor = Colors.green;
@@ -344,7 +269,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
         children: [
           Icon(icon, size: 18, color: barColor),
           const SizedBox(width: 8),
-          // Expanded makes the label + bar stretch to fill available width
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,7 +284,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                // ClipRRect rounds the ends of the LinearProgressIndicator bar
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
@@ -378,9 +301,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
     );
   }
 
-  // ==============================================================================
-  // _buildSummaryCard — three boxes: Income | Expense | Savings (this month)
-  // ==============================================================================
   Widget _buildSummaryCard(Map<String, dynamic> summary) {
     final income = (summary['currentMonthIncome'] as num).toDouble();
     final expense = (summary['currentMonthExpense'] as num).toDouble();
@@ -402,7 +322,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
             const SizedBox(height: 12),
             Row(
               children: [
-                // Income box
                 Expanded(
                   child: _buildSummaryBox(
                     label: 'Income',
@@ -412,7 +331,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Expense box
                 Expanded(
                   child: _buildSummaryBox(
                     label: 'Expenses',
@@ -422,7 +340,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Net savings box
                 Expanded(
                   child: _buildSummaryBox(
                     label: 'Saved (${rate.toStringAsFixed(0)}%)',
@@ -439,7 +356,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
     );
   }
 
-  // _buildSummaryBox — a single coloured stat box used in the summary row
   Widget _buildSummaryBox({
     required String label,
     required String value,
@@ -449,7 +365,7 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08), // Very light tinted background
+        color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withOpacity(0.25)),
       ),
@@ -476,16 +392,12 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
     );
   }
 
-  // ==============================================================================
-  // _buildInsightCard — a single insight card with coloured left border
-  // ==============================================================================
   Widget _buildInsightCard(Map<String, dynamic> insight) {
     final type = insight['type'] as String;     // 'positive' | 'info' | 'warning' | 'danger'
     final title = insight['title'] as String;
     final message = insight['message'] as String;
-    final iconName = insight['icon'] as String; // Material icon name string from backend
+    final iconName = insight['icon'] as String; // backend sends icon name as plain string
 
-    // Map insight type → colour for the left border and icon
     final Color typeColor;
     switch (type) {
       case 'positive':
@@ -497,7 +409,7 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
       case 'danger':
         typeColor = Colors.red;
         break;
-      default: // 'info'
+      default:
         typeColor = Colors.blue;
     }
 
@@ -509,7 +421,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            // Left accent border — the coloured stripe on the left of each card
             border: Border(
               left: BorderSide(color: typeColor, width: 4),
             ),
@@ -519,7 +430,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon column
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -527,14 +437,12 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    _iconFromName(iconName), // Convert backend string to Flutter IconData
+                    _iconFromName(iconName),
                     color: typeColor,
                     size: 22,
                   ),
                 ),
                 const SizedBox(width: 12),
-
-                // Text column — Expanded fills remaining width
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,7 +460,7 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.grey[700],
-                          height: 1.4, // Line-height multiplier for readability
+                          height: 1.4,
                         ),
                       ),
                     ],
@@ -566,13 +474,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
     );
   }
 
-  // ==============================================================================
-  // _buildEmptyInsights — shown when the user has no transactions yet this month
-  // ==============================================================================
-  // A new user (or someone who hasn't logged any transactions this month) will
-  // have no data for the insights engine to analyse. Instead of showing nothing,
-  // we show a friendly prompt encouraging them to start tracking.
-  // ==============================================================================
   Widget _buildEmptyInsights() {
     return Card(
       elevation: 1,
@@ -581,7 +482,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            // Lightbulb icon — implies "insights waiting to be discovered"
             Icon(Icons.lightbulb_outline, size: 48, color: Colors.grey[400]),
             const SizedBox(height: 12),
             Text(
@@ -605,9 +505,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
     );
   }
 
-  // ==============================================================================
-  // Helper: _scoreColor — returns a Flutter Color for the health score label
-  // ==============================================================================
   Color _scoreColor(String label) {
     switch (label) {
       case 'Excellent':
@@ -616,14 +513,11 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
         return Colors.teal;
       case 'Fair':
         return Colors.orange;
-      default: // 'Needs Work'
+      default:
         return Colors.red;
     }
   }
 
-  // ==============================================================================
-  // Helper: _scoreCaption — one-line encouragement shown below the circle
-  // ==============================================================================
   String _scoreCaption(String label) {
     switch (label) {
       case 'Excellent':
@@ -637,9 +531,6 @@ class _FinancialInsightsScreenState extends State<FinancialInsightsScreen> {
     }
   }
 
-  // ==============================================================================
-  // Helper: _iconFromName — maps icon name string (from backend) → Flutter IconData
-  // ==============================================================================
   // The backend sends icon names as plain strings (e.g., 'savings', 'flag').
   // Flutter's Icon widget needs an IconData object, not a string.
   // This function does the translation.

@@ -1,44 +1,8 @@
-// ==============================================================================
-// add_recurring_transaction_screen.dart - Add Recurring Transaction Screen
-// ==============================================================================
-// Lets users set up an automated recurring transaction — a transaction that the
-// backend creates on a schedule (daily / weekly / monthly / yearly).
-//
-// Examples:
-//   - Monthly expense: "Rent" RM 1,200 on the 1st of every month
-//   - Weekly income: "Part-time salary" RM 400 every Friday
-//   - Yearly expense: "Car insurance" RM 800 every January
-//
-// Fields:
-//   - Transaction Type: Expense or Income (toggle buttons)
-//   - Name (required): e.g., "Monthly Rent"
-//   - Amount (required): in RM
-//   - Category: drop-down from TransactionCategories (filtered by type)
-//   - Frequency: Daily / Weekly / Monthly / Yearly
-//   - Start Date: date picker — when the first transaction should be created
-//   - End Date (optional): toggle + date picker — when recurring should stop
-//   - Description (optional): extra notes
-//
-// On save, calls ApiService.createRecurringTransaction() and pops back with
-// result == true so the recurring transactions list refreshes.
-// ==============================================================================
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../../services/api_service.dart';
+import '../../utils/colors.dart';
 
-import 'package:flutter/material.dart';   // Flutter UI toolkit
-import 'package:intl/intl.dart';          // Date formatting (e.g., "Mar 15, 2025")
-import '../../services/api_service.dart'; // Backend API calls
-import '../../utils/colors.dart';         // AppColors constants
-
-// ==============================================================================
-// AddRecurringTransactionScreen — StatefulWidget
-// ==============================================================================
-// StatefulWidget because many pieces of state change as the user fills the form:
-//   - _transactionType: 'expense' or 'income' — also drives the category list
-//   - _selectedCategory: changes when type changes (expense vs income categories differ)
-//   - _selectedFrequency: 'daily', 'weekly', 'monthly', or 'yearly'
-//   - _startDate / _endDate: chosen via date pickers
-//   - _hasEndDate: toggles the end date section on/off
-//   - _isSubmitting: true while the API call runs (disables Save button)
-// ==============================================================================
 class AddRecurringTransactionScreen extends StatefulWidget {
   const AddRecurringTransactionScreen({super.key});
 
@@ -47,20 +11,19 @@ class AddRecurringTransactionScreen extends StatefulWidget {
 }
 
 class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionScreen> {
-  final _formKey = GlobalKey<FormState>(); // Enables form-wide validation
-  final _nameController = TextEditingController();        // e.g., "Monthly Rent"
-  final _amountController = TextEditingController();      // e.g., "1500"
-  final _descriptionController = TextEditingController(); // Optional notes
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _amountController = TextEditingController();
+  final _descriptionController = TextEditingController();
 
-  String _transactionType = 'expense';          // 'expense' or 'income'
-  String _selectedCategory = 'Food & Dining';   // Currently selected category
-  String _selectedFrequency = 'monthly';        // 'daily', 'weekly', 'monthly', 'yearly'
-  DateTime _startDate = DateTime.now();          // When the first transaction occurs
-  DateTime? _endDate;                            // Optional: when recurring stops (null = no end)
-  bool _hasEndDate = false;   // Whether the user wants to set an end date
-  bool _isSubmitting = false; // True while the API call is in progress
+  String _transactionType = 'expense';
+  String _selectedCategory = 'Food & Dining';
+  String _selectedFrequency = 'monthly';
+  DateTime _startDate = DateTime.now();
+  DateTime? _endDate;
+  bool _hasEndDate = false;
+  bool _isSubmitting = false;
 
-  // Expense categories: shown when transaction type is 'expense'
   final List<String> _expenseCategories = [
     'Food & Dining',
     'Transport',
@@ -75,7 +38,6 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
     'Other Expenses',
   ];
 
-  // Income categories: shown when transaction type is 'income'
   final List<String> _incomeCategories = [
     'Salary',
     'Freelance',
@@ -86,7 +48,6 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
     'Other Income',
   ];
 
-  // Available repeat frequencies - each has a 'value' (sent to API) and 'label' (shown to user)
   final List<Map<String, String>> _frequencies = [
     {'value': 'daily', 'label': 'Daily'},
     {'value': 'weekly', 'label': 'Weekly'},
@@ -96,27 +57,22 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
 
   @override
   void dispose() {
-    // Free memory for all controllers when the screen is removed
     _nameController.dispose();
     _amountController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
-  // _categories is a computed getter that returns the right category list based on transaction type
-  // 'get' keyword defines a getter - it's accessed like a property, not called like a method
   List<String> get _categories {
     return _transactionType == 'income' ? _incomeCategories : _expenseCategories;
   }
 
-  // _selectStartDate opens a date picker for the start date
-  // Start date must be today or in the future (can't set up a past recurring transaction)
   Future<void> _selectStartDate() async {
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: _startDate,
-      firstDate: DateTime.now(),   // Can't pick before today
-      lastDate: DateTime.now().add(const Duration(days: 365)), // Up to 1 year ahead
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
     if (pickedDate != null) {
@@ -126,15 +82,12 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
     }
   }
 
-  // _selectEndDate opens a date picker for the optional end date
-  // End date must be after the start date
   Future<void> _selectEndDate() async {
     final pickedDate = await showDatePicker(
       context: context,
-      // Default end date: 1 year after start date (if not already set)
       initialDate: _endDate ?? _startDate.add(const Duration(days: 365)),
-      firstDate: _startDate,   // End must be after start
-      lastDate: DateTime.now().add(const Duration(days: 3650)), // Up to 10 years
+      firstDate: _startDate,
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
     );
 
     if (pickedDate != null) {
@@ -144,12 +97,11 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
     }
   }
 
-  // _submitForm validates and sends the recurring transaction data to the backend
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) return; // Validate all form fields
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() {
-      _isSubmitting = true; // Show loading state
+      _isSubmitting = true;
     });
 
     try {
@@ -168,23 +120,19 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
         return;
       }
 
-      // Call the API to create the recurring transaction
       final result = await ApiService.createRecurringTransaction(
         userId: userId,
-        name: _nameController.text.trim(), // .trim() removes leading/trailing whitespace
+        name: _nameController.text.trim(),
         transactionType: _transactionType,
         category: _selectedCategory,
-        amount: double.parse(_amountController.text), // Convert String to double
-        // If description is empty, pass null (optional field)
+        amount: double.parse(_amountController.text),
         description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
         frequency: _selectedFrequency,
-        // DateFormat('yyyy-MM-dd') formats the date as "2024-03-15" (backend-friendly format)
         startDate: DateFormat('yyyy-MM-dd').format(_startDate),
-        // Only pass end date if the switch is on AND a date was picked
         endDate: _hasEndDate && _endDate != null ? DateFormat('yyyy-MM-dd').format(_endDate!) : null,
       );
 
-      if (!mounted) return; // Check widget is still in the tree after the await
+      if (!mounted) return;
 
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -193,7 +141,7 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
             backgroundColor: AppColors.success,
           ),
         );
-        Navigator.pop(context, true); // Go back and signal the list to refresh
+        Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -202,7 +150,7 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
           ),
         );
         setState(() {
-          _isSubmitting = false; // Re-enable the button so user can try again
+          _isSubmitting = false;
         });
       }
     } catch (e) {
@@ -228,14 +176,12 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
-        // SingleChildScrollView allows scrolling when the keyboard appears
         padding: const EdgeInsets.all(16),
         child: Form(
-          key: _formKey, // Attach key to enable form validation
+          key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Info banner reminding user to scroll down to fill all required fields
               Container(
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 16),
@@ -258,7 +204,6 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
                 ),
               ),
 
-              // Transaction Type: two ChoiceChips side by side (Expense / Income)
               const Text(
                 'Transaction Type',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -268,7 +213,6 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
                 children: [
                   Expanded(
                     child: ChoiceChip(
-                      // ChoiceChip is selectable; only one can be selected at a time
                       label: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: const [
@@ -277,15 +221,14 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
                           Text('Expense', style: TextStyle(color: Colors.white)),
                         ],
                       ),
-                      selected: _transactionType == 'expense', // True when expense is selected
+                      selected: _transactionType == 'expense',
                       onSelected: (selected) {
                         setState(() {
                           _transactionType = 'expense';
-                          // Reset category to first expense category when switching type
                           _selectedCategory = _expenseCategories[0];
                         });
                       },
-                      selectedColor: AppColors.expense, // Red when selected
+                      selectedColor: AppColors.expense,
                       backgroundColor: Colors.grey.shade200,
                     ),
                   ),
@@ -304,11 +247,10 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
                       onSelected: (selected) {
                         setState(() {
                           _transactionType = 'income';
-                          // Reset category to first income category when switching type
                           _selectedCategory = _incomeCategories[0];
                         });
                       },
-                      selectedColor: AppColors.income, // Green when selected
+                      selectedColor: AppColors.income,
                       backgroundColor: Colors.grey.shade200,
                     ),
                   ),
@@ -316,11 +258,10 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
               ),
               const SizedBox(height: 24),
 
-              // Name field - descriptive name for this recurring transaction
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  labelText: 'Name *', // '*' indicates required
+                  labelText: 'Name *',
                   hintText: 'e.g., Monthly Rent, Weekly Salary',
                   prefixIcon: const Icon(Icons.label),
                   border: OutlineInputBorder(
@@ -328,7 +269,6 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
                   ),
                 ),
                 validator: (value) {
-                  // .trim() removes whitespace; checks if result is empty
                   if (value == null || value.trim().isEmpty) {
                     return 'Please enter a name';
                   }
@@ -337,7 +277,6 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
               ),
               const SizedBox(height: 16),
 
-              // Amount field - how much each recurring transaction will be
               TextFormField(
                 controller: _amountController,
                 decoration: InputDecoration(
@@ -353,7 +292,7 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
                   if (value == null || value.trim().isEmpty) {
                     return 'Please enter an amount';
                   }
-                  final amount = double.tryParse(value); // Returns null if not a valid number
+                  final amount = double.tryParse(value);
                   if (amount == null || amount <= 0) {
                     return 'Please enter a valid amount';
                   }
@@ -362,10 +301,8 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
               ),
               const SizedBox(height: 16),
 
-              // Category dropdown - options depend on transaction type (income vs expense)
               DropdownButtonFormField<String>(
-                // DropdownButtonFormField shows a dropdown list of options
-                value: _selectedCategory, // Currently selected item
+                value: _selectedCategory,
                 decoration: InputDecoration(
                   labelText: 'Category *',
                   prefixIcon: const Icon(Icons.category),
@@ -373,22 +310,20 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                // .map() transforms each category string into a DropdownMenuItem widget
                 items: _categories.map((category) {
                   return DropdownMenuItem(
-                    value: category,     // Value sent to onChanged when selected
-                    child: Text(category), // Display text in the dropdown list
+                    value: category,
+                    child: Text(category),
                   );
                 }).toList(),
                 onChanged: (value) {
                   setState(() {
-                    _selectedCategory = value!; // '!' asserts non-null (dropdown always has a value)
+                    _selectedCategory = value!;
                   });
                 },
               ),
               const SizedBox(height: 16),
 
-              // Frequency dropdown - how often the transaction repeats
               DropdownButtonFormField<String>(
                 value: _selectedFrequency,
                 decoration: InputDecoration(
@@ -400,8 +335,8 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
                 ),
                 items: _frequencies.map((freq) {
                   return DropdownMenuItem(
-                    value: freq['value'],    // e.g., 'monthly'
-                    child: Text(freq['label']!), // e.g., 'Monthly'
+                    value: freq['value'],
+                    child: Text(freq['label']!),
                   );
                 }).toList(),
                 onChanged: (value) {
@@ -412,11 +347,9 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
               ),
               const SizedBox(height: 16),
 
-              // Start Date picker - when this recurring transaction first runs
               InkWell(
-                onTap: _selectStartDate, // Tapping opens the date picker
+                onTap: _selectStartDate,
                 child: InputDecorator(
-                  // InputDecorator gives a non-field widget the appearance of a form field
                   decoration: InputDecoration(
                     labelText: 'Start Date *',
                     prefixIcon: const Icon(Icons.calendar_today),
@@ -425,32 +358,28 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
                     ),
                   ),
                   child: Text(
-                    DateFormat('MMM dd, yyyy').format(_startDate), // e.g., "Mar 15, 2024"
+                    DateFormat('MMM dd, yyyy').format(_startDate),
                     style: const TextStyle(fontSize: 16),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
 
-              // End Date toggle switch - user can optionally set when the recurring stops
               SwitchListTile(
-                // SwitchListTile is a ListTile with a Switch widget on the right
                 title: const Text('Set End Date'),
                 subtitle: const Text('Leave off for no end date'),
-                value: _hasEndDate, // Current switch state
+                value: _hasEndDate,
                 onChanged: (value) {
                   setState(() {
                     _hasEndDate = value;
                     if (!value) {
-                      _endDate = null; // Clear end date when switch is turned off
+                      _endDate = null;
                     }
                   });
                 },
                 activeColor: AppColors.primary,
               ),
 
-              // End Date picker - only visible when _hasEndDate is true
-              // '...' spread operator inserts the items into the parent Column
               if (_hasEndDate) ...[
                 InkWell(
                   onTap: _selectEndDate,
@@ -463,7 +392,6 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
                       ),
                     ),
                     child: Text(
-                      // Show formatted date or placeholder text if no date chosen yet
                       _endDate != null ? DateFormat('MMM dd, yyyy').format(_endDate!) : 'Select end date',
                       style: TextStyle(
                         fontSize: 16,
@@ -475,7 +403,6 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
                 const SizedBox(height: 16),
               ],
 
-              // Description field - optional notes about this recurring transaction
               TextFormField(
                 controller: _descriptionController,
                 decoration: InputDecoration(
@@ -486,15 +413,14 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                maxLines: 3, // Allow multi-line input
+                maxLines: 3,
               ),
               const SizedBox(height: 24),
 
-              // Info box explaining automatic transaction creation
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.info.withOpacity(0.1), // Light blue background
+                  color: AppColors.info.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.info.withOpacity(0.3)),
                 ),
@@ -516,11 +442,10 @@ class _AddRecurringTransactionScreenState extends State<AddRecurringTransactionS
               ),
               const SizedBox(height: 24),
 
-              // Submit button - full width, shows spinner while submitting
               SizedBox(
-                width: double.infinity, // Stretch to full width
+                width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submitForm, // Disable while loading
+                  onPressed: _isSubmitting ? null : _submitForm,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,

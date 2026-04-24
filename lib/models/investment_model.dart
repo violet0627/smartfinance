@@ -1,34 +1,16 @@
-// ==============================================================================
-// investment_model.dart - Investment Data Models
-// ==============================================================================
-// This file defines FOUR related models for the investment portfolio feature:
-//
-// 1. InvestmentModel - A single investment (e.g., "100 shares of Maybank at RM9.50")
-// 2. PortfolioSummary - Overall portfolio overview (total invested, current value, P/L)
-// 3. AssetBreakdown - Performance grouped by asset type (stocks, crypto, etc.)
-// 4. InvestmentPerformance - Individual investment ranking data (top/bottom performers)
-// ==============================================================================
-
-// ==============================================================================
-// InvestmentModel - Represents a Single Investment
-// ==============================================================================
-// Tracks an individual investment holding with purchase info and current value.
-// Example: 100 shares of Maybank bought at RM9.50, now worth RM10.20
-// ==============================================================================
 class InvestmentModel {
-  final int? investmentId;       // Unique ID (null for new investments)
-  final String assetName;        // Name of the asset (e.g., "Maybank", "Bitcoin")
-  final String assetsType;       // Type of asset (e.g., "stocks", "crypto", "mutual_funds")
-  final String? stockSymbol;     // Optional stock ticker symbol (e.g., "MAYBANK", "BTC")
-  final double quantity;         // Number of units held (e.g., 100 shares, 0.5 BTC)
-  final double purchasePrice;    // Price per unit when purchased
-  final DateTime purchaseDate;   // When the investment was made
-  final double? currentPrice;    // Current market price per unit (may be null if not updated)
-  final DateTime? lastUpdated;   // When the price was last updated
-  final String? notes;           // Optional notes about this investment
-  final int userId;              // Which user owns this investment
+  final int? investmentId;
+  final String assetName;
+  final String assetsType;
+  final String? stockSymbol;
+  final double quantity;
+  final double purchasePrice;
+  final DateTime purchaseDate;
+  final double? currentPrice;
+  final DateTime? lastUpdated;
+  final String? notes;
+  final int userId;
 
-  // --- Constructor ---
   InvestmentModel({
     this.investmentId,
     required this.assetName,
@@ -43,7 +25,6 @@ class InvestmentModel {
     required this.userId,
   });
 
-  // --- fromJson ---
   factory InvestmentModel.fromJson(Map<String, dynamic> json) {
     return InvestmentModel(
       investmentId: json['investmentId'],
@@ -53,19 +34,13 @@ class InvestmentModel {
       quantity: (json['quantity'] as num).toDouble(),
       purchasePrice: (json['purchasePrice'] as num).toDouble(),
       purchaseDate: DateTime.parse(json['purchaseDate']),
-      currentPrice: json['currentPrice'] != null
-          ? (json['currentPrice'] as num).toDouble()
-          : null,
-      lastUpdated: json['lastUpdated'] != null
-          ? DateTime.parse(json['lastUpdated'])
-          : null,
+      currentPrice: json['currentPrice'] != null ? (json['currentPrice'] as num).toDouble() : null,
+      lastUpdated: json['lastUpdated'] != null ? DateTime.parse(json['lastUpdated']) : null,
       notes: json['notes'],
       userId: json['userId'],
     );
   }
 
-  // --- toJson ---
-  // .split('T')[0] extracts just the date part "YYYY-MM-DD" from the full ISO string
   Map<String, dynamic> toJson() {
     return {
       if (investmentId != null) 'investmentId': investmentId,
@@ -74,60 +49,31 @@ class InvestmentModel {
       if (stockSymbol != null) 'stockSymbol': stockSymbol,
       'quantity': quantity,
       'purchasePrice': purchasePrice,
-      'purchaseDate': purchaseDate.toIso8601String().split('T')[0],  // YYYY-MM-DD format
+      'purchaseDate': purchaseDate.toIso8601String().split('T')[0],
       if (currentPrice != null) 'currentPrice': currentPrice,
       if (notes != null) 'notes': notes,
       'userId': userId,
     };
   }
 
-  // --- Computed Properties for Investment Performance ---
-
-  // Total amount originally invested (quantity * purchase price)
-  // The => arrow syntax is shorthand for { return quantity * purchasePrice; }
   double get purchaseValue => quantity * purchasePrice;
-
-  // Total current market value (quantity * current price)
-  // Uses purchase price as fallback if current price hasn't been set
-  double get currentValue {
-    final price = currentPrice ?? purchasePrice;   // ?? = use purchasePrice if currentPrice is null
-    return quantity * price;
-  }
-
-  // Profit or loss amount (positive = profit, negative = loss)
+  double get currentValue => quantity * (currentPrice ?? purchasePrice);
   double get profitLoss => currentValue - purchaseValue;
-
-  // Profit/loss as a percentage (e.g., +5.2% or -3.1%)
-  double get percentageChange {
-    if (purchaseValue == 0) return 0.0;   // Avoid division by zero
-    return (profitLoss / purchaseValue) * 100;
-  }
-
-  // Quick boolean checks
-  bool get isProfit => profitLoss > 0;    // True if making money
-  bool get isLoss => profitLoss < 0;      // True if losing money
-
-  // How many days the investment has been held
-  int get daysHeld {
-    return DateTime.now().difference(purchaseDate).inDays;
-  }
+  double get percentageChange => purchaseValue == 0 ? 0.0 : (profitLoss / purchaseValue) * 100;
+  bool get isProfit => profitLoss > 0;
+  bool get isLoss => profitLoss < 0;
+  int get daysHeld => DateTime.now().difference(purchaseDate).inDays;
 }
 
-// ==============================================================================
-// PortfolioSummary - Overall Portfolio Overview
-// ==============================================================================
-// Contains aggregated data about the user's entire investment portfolio.
-// Returned by the /api/investments/user/<id>/portfolio endpoint.
-// ==============================================================================
 class PortfolioSummary {
-  final double totalInvested;                           // Total money put into all investments
-  final double currentValue;                            // Total current market value
-  final double totalProfitLoss;                         // Overall profit/loss
-  final double percentageChange;                        // Overall percentage change
-  final List<AssetBreakdown> assetBreakdown;            // Breakdown by asset type
-  final List<InvestmentPerformance> topPerformers;      // Best performing investments
-  final List<InvestmentPerformance> bottomPerformers;   // Worst performing investments
-  final int totalAssets;                                // Total number of investments
+  final double totalInvested;
+  final double currentValue;
+  final double totalProfitLoss;
+  final double percentageChange;
+  final List<AssetBreakdown> assetBreakdown;
+  final List<InvestmentPerformance> topPerformers;
+  final List<InvestmentPerformance> bottomPerformers;
+  final int totalAssets;
 
   PortfolioSummary({
     required this.totalInvested,
@@ -140,44 +86,37 @@ class PortfolioSummary {
     required this.totalAssets,
   });
 
-  // --- fromJson ---
-  // Parses nested lists of AssetBreakdown and InvestmentPerformance objects
   factory PortfolioSummary.fromJson(Map<String, dynamic> json) {
     return PortfolioSummary(
       totalInvested: (json['totalInvested'] as num).toDouble(),
       currentValue: (json['currentValue'] as num).toDouble(),
       totalProfitLoss: (json['totalProfitLoss'] as num).toDouble(),
       percentageChange: (json['percentageChange'] as num).toDouble(),
-      assetBreakdown: (json['assetBreakdown'] as List)        // Parse list of asset breakdowns
+      assetBreakdown: (json['assetBreakdown'] as List)
           .map((item) => AssetBreakdown.fromJson(item))
           .toList(),
-      topPerformers: (json['topPerformers'] as List)          // Parse list of top performers
+      topPerformers: (json['topPerformers'] as List)
           .map((item) => InvestmentPerformance.fromJson(item))
           .toList(),
-      bottomPerformers: (json['bottomPerformers'] as List)    // Parse list of bottom performers
+      bottomPerformers: (json['bottomPerformers'] as List)
           .map((item) => InvestmentPerformance.fromJson(item))
           .toList(),
-      totalAssets: (json['totalAssets'] as num?)?.toInt() ?? 0, // Default 0 if key missing (empty portfolio response)
+      // totalAssets may be missing from empty-portfolio response shape
+      totalAssets: (json['totalAssets'] as num?)?.toInt() ?? 0,
     );
   }
 
-  bool get isProfit => totalProfitLoss > 0;   // True if portfolio is profitable overall
-  bool get isEmpty => totalAssets == 0;        // True if user has no investments
+  bool get isProfit => totalProfitLoss > 0;
+  bool get isEmpty => totalAssets == 0;
 }
 
-// ==============================================================================
-// AssetBreakdown - Performance by Asset Type
-// ==============================================================================
-// Groups investments by type (stocks, crypto, etc.) with totals for each group.
-// Used to show pie charts and asset allocation in the portfolio screen.
-// ==============================================================================
 class AssetBreakdown {
-  final String type;               // Asset type (e.g., "stocks", "crypto")
-  final double invested;           // Total invested in this type
-  final double currentValue;       // Total current value of this type
-  final double profitLoss;         // Profit/loss for this type
-  final double percentageChange;   // Percentage change for this type
-  final int count;                 // Number of investments of this type
+  final String type;
+  final double invested;
+  final double currentValue;
+  final double profitLoss;
+  final double percentageChange;
+  final int count;
 
   AssetBreakdown({
     required this.type,
@@ -202,19 +141,13 @@ class AssetBreakdown {
   bool get isProfit => profitLoss > 0;
 }
 
-// ==============================================================================
-// InvestmentPerformance - Individual Investment Ranking Data
-// ==============================================================================
-// Used for the "Top Performers" and "Bottom Performers" lists.
-// Contains just the essential data needed for ranking display.
-// ==============================================================================
 class InvestmentPerformance {
-  final int investmentId;          // Which investment this is
-  final String assetName;          // Name of the asset
-  final String assetsType;         // Type of asset
-  final double profitLoss;         // Profit/loss amount
-  final double percentageChange;   // Percentage change
-  final double currentValue;       // Current market value
+  final int investmentId;
+  final String assetName;
+  final String assetsType;
+  final double profitLoss;
+  final double percentageChange;
+  final double currentValue;
 
   InvestmentPerformance({
     required this.investmentId,

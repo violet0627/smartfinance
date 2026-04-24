@@ -1,38 +1,13 @@
-// ==============================================================================
-// budget_overview_screen.dart - Monthly Budget Overview Screen
-// ==============================================================================
-// This screen shows the user's current month budget at a glance:
-//   - Large gradient summary card: total spent, remaining amount, progress bar
-//   - BudgetAlertCard: warnings for categories that are close to or over their limit
-//   - Category Breakdown: one card per expense category with progress bar and colours
-//
-// App bar has a 3-dot menu (Edit / Delete) and a "+" button to replace with a new budget.
-// If no budget is set for the month, _buildNoBudgetState() is shown instead.
-//
-// Budget status colours:
-//   Green  — under 80% used
-//   Orange — 80–99% used (warning)
-//   Red    — 100%+ used (over budget)
-// ==============================================================================
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../../models/budget_model.dart';
+import '../../services/api_service.dart';
+import '../../services/notification_service.dart';
+import '../../utils/categories.dart';
+import '../../utils/colors.dart';
+import '../../widgets/budget_alert_card.dart';
+import 'create_budget_screen.dart';
 
-import 'package:flutter/material.dart';                   // Flutter UI toolkit
-import 'package:intl/intl.dart';                          // DateFormat for formatting month/year strings
-import '../../models/budget_model.dart';                  // BudgetModel and BudgetCategoryModel data classes
-import '../../services/api_service.dart';                 // Backend API calls
-import '../../services/notification_service.dart';        // Push notifications for budget alerts
-import '../../utils/categories.dart';                     // TransactionCategories for category icons/colors
-import '../../utils/colors.dart';                         // AppColors constants
-import '../../widgets/budget_alert_card.dart';            // Widget that shows budget warning alerts
-import 'create_budget_screen.dart';                       // Screen for creating/editing budgets
-
-// ==============================================================================
-// BudgetOverviewScreen — StatefulWidget
-// ==============================================================================
-// StatefulWidget because it manages:
-//   - _currentBudget: the BudgetModel loaded from the API (null until fetched)
-//   - _isLoading: controls the loading spinner
-//   - _hasBudget: distinguishes "no budget set" from "loading"
-// ==============================================================================
 class BudgetOverviewScreen extends StatefulWidget {
   const BudgetOverviewScreen({super.key});
 
@@ -41,26 +16,16 @@ class BudgetOverviewScreen extends StatefulWidget {
 }
 
 class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
-  BudgetModel? _currentBudget; // The current month's budget data (null if no budget set)
-  bool _isLoading = true;      // True while fetching budget data
-  bool _hasBudget = false;     // False means no budget exists for this month
+  BudgetModel? _currentBudget;
+  bool _isLoading = true;
+  bool _hasBudget = false;
 
-  // ==============================================================================
-  // initState - Called Once When the Widget Is First Inserted into the Tree
-  // ==============================================================================
   @override
   void initState() {
-    super.initState();         // Always call super first — sets up Flutter internals
-    _loadCurrentBudget();      // Fetch this month's budget immediately on screen open
+    super.initState();
+    _loadCurrentBudget();
   }
 
-  // ==============================================================================
-  // _loadCurrentBudget - Fetch the Current Month's Budget from the Backend
-  // ==============================================================================
-  // Sets _isLoading = true (shows spinner), calls ApiService.getCurrentBudget(),
-  // converts the JSON result to a BudgetModel, then checks for budget alerts.
-  // The 'finally' block always runs (success or failure) to hide the spinner.
-  // ==============================================================================
   Future<void> _loadCurrentBudget() async {
     setState(() => _isLoading = true);
 
@@ -74,7 +39,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
       final result = await ApiService.getCurrentBudget(userId);
 
       if (result['success'] && result['budget'] != null) {
-        // BudgetModel.fromJson converts the API JSON response to a typed model object
         final budget = BudgetModel.fromJson(result['budget']);
 
         setState(() {
@@ -82,16 +46,14 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
           _hasBudget = true;
         });
 
-        // Check if any categories are over 80% used and send a push notification alert
-        // Wrapped in try/catch so a notification failure doesn't crash the whole screen
         try {
           await NotificationService.checkBudgetAndAlert(budget);
         } catch (e) {
-          debugPrint('Error checking budget alerts: $e'); // Debug log, not shown to user
+          debugPrint('Error checking budget alerts: $e');
         }
       } else {
         setState(() {
-          _hasBudget = false; // No budget found for this month
+          _hasBudget = false;
         });
       }
     } catch (e) {
@@ -100,28 +62,22 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
         _hasBudget = false;
       });
     } finally {
-      // 'finally' block always runs, whether the try succeeded or the catch ran
-      // Ensures loading spinner always stops even if there's an error
       setState(() => _isLoading = false);
     }
   }
 
-  // _getProgressColor returns a color based on how much budget has been used
-  // Green (<80%), orange (80-99%), red (100%+ = over budget)
   Color _getProgressColor(double percentage) {
-    if (percentage >= 100) return AppColors.danger;  // Over budget: red
-    if (percentage >= 80) return AppColors.warning;  // Almost over: orange
-    return AppColors.success;                        // Under 80%: green
+    if (percentage >= 100) return AppColors.danger;
+    if (percentage >= 80) return AppColors.warning;
+    return AppColors.success;
   }
 
-  // _showDeleteConfirmation asks for confirmation then deletes the current budget
   Future<void> _showDeleteConfirmation() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Budget?'),
         content: Text(
-          // Include the month name so the user knows exactly which budget is being deleted
           'Delete the ${_currentBudget != null ? DateFormat("MMMM yyyy").format(DateTime.parse("${_currentBudget!.monthYear}-01")) : "current"} budget? '
           'This cannot be undone.',
         ),
@@ -142,7 +98,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
       ),
     );
 
-    // Proceed only if confirmed, and budget data is loaded with a valid ID
     if (confirm == true && _currentBudget != null && _currentBudget!.budgetId != null) {
       try {
         final result = await ApiService.deleteBudget(_currentBudget!.budgetId!);
@@ -156,7 +111,7 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
               backgroundColor: AppColors.success,
             ),
           );
-          _loadCurrentBudget(); // Refresh to show the "no budget" state
+          _loadCurrentBudget();
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -177,16 +132,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
     }
   }
 
-  // ==============================================================================
-  // build - Assemble the Budget Overview Screen
-  // ==============================================================================
-  // Three possible states:
-  //   1. _isLoading == true       → show centered spinner
-  //   2. !_hasBudget              → show _buildNoBudgetState() (empty state with CTA)
-  //   3. Budget loaded            → show RefreshIndicator > scrollable column of cards
-  //
-  // App bar shows Edit/Delete menu and "+" button only when a budget exists.
-  // ==============================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -196,21 +141,18 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
-          // Only show menu and add button when a budget exists
           if (_hasBudget)
             PopupMenuButton<String>(
-              // PopupMenuButton shows a dropdown menu with options
-              icon: const Icon(Icons.more_vert), // Three-dot menu icon
+              icon: const Icon(Icons.more_vert),
               onSelected: (value) async {
                 if (value == 'edit') {
-                  // Navigate to edit screen, then refresh on return
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => CreateBudgetScreen(budget: _currentBudget), // Pass current budget
+                      builder: (_) => CreateBudgetScreen(budget: _currentBudget),
                     ),
                   );
-                  if (!mounted) return; // Widget may have been disposed while on the edit screen
+                  if (!mounted) return;
                   _loadCurrentBudget();
                 } else if (value == 'delete') {
                   _showDeleteConfirmation();
@@ -240,12 +182,10 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
               ],
             ),
           if (_hasBudget)
-            // "+" button to create a new budget (replaces current)
             IconButton(
               icon: const Icon(Icons.add),
               tooltip: 'Create New Budget',
               onPressed: () async {
-                // Warn user that creating a new budget replaces the current one
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -275,7 +215,7 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const CreateBudgetScreen(), // No budget = create new
+                      builder: (_) => const CreateBudgetScreen(),
                     ),
                   );
                   _loadCurrentBudget();
@@ -287,22 +227,18 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : !_hasBudget
-              ? _buildNoBudgetState() // Show "create budget" prompt
+              ? _buildNoBudgetState()
               : RefreshIndicator(
                   onRefresh: _loadCurrentBudget,
                   child: SingleChildScrollView(
-                    // AlwaysScrollableScrollPhysics ensures pull-to-refresh works
-                    // even when content doesn't fill the screen
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSummaryCard(), // Top gradient card with totals
+                        _buildSummaryCard(),
                         const SizedBox(height: 24),
-                        // Budget alert widget shows warnings for categories near/over limit
                         BudgetAlertCard(budget: _currentBudget!),
-                        // Add spacing after alerts only if there are alerts to show
                         if (_currentBudget!.percentageUsed >= 80 ||
                             _currentBudget!.categories.any((cat) => cat.percentageUsed >= 90))
                           const SizedBox(height: 24),
@@ -313,7 +249,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
                               ),
                         ),
                         const SizedBox(height: 16),
-                        // Build one card per budget category
                         ..._currentBudget!.categories.map((category) {
                           return _buildCategoryCard(category);
                         }).toList(),
@@ -321,7 +256,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
                     ),
                   ),
                 ),
-      // FAB: only shown when budget exists - refreshes the data
       floatingActionButton: !_hasBudget
           ? null
           : FloatingActionButton(
@@ -332,7 +266,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
     );
   }
 
-  // _buildNoBudgetState shows the empty state when no budget is set for this month
   Widget _buildNoBudgetState() {
     return Center(
       child: Padding(
@@ -363,7 +296,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            // Full-width "Create Budget" button
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -376,7 +308,7 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
                     ),
                   );
                   if (result == true) {
-                    _loadCurrentBudget(); // Refresh when returning from create screen
+                    _loadCurrentBudget();
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -399,10 +331,9 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
     );
   }
 
-  // _buildSummaryCard creates the large gradient card showing total spent/remaining/progress
   Widget _buildSummaryCard() {
-    final budget = _currentBudget!; // '!' asserts non-null (we know it's set when this is called)
-    final percentage = budget.percentageUsed; // e.g., 65.5 for 65.5% used
+    final budget = _currentBudget!;
+    final percentage = budget.percentageUsed;
     final progressColor = _getProgressColor(percentage);
 
     return Container(
@@ -418,7 +349,7 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
           BoxShadow(
             color: AppColors.primary.withOpacity(0.3),
             blurRadius: 10,
-            offset: const Offset(0, 4), // Shadow below
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -428,9 +359,7 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Month name and year (e.g., "March 2024")
               Text(
-                // budget.monthYear is "2024-03"; append "-01" to make a valid date, then format
                 DateFormat('MMMM yyyy').format(
                   DateTime.parse('${budget.monthYear}-01'),
                 ),
@@ -440,7 +369,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              // Days remaining pill badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
@@ -459,7 +387,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
             ],
           ),
           const SizedBox(height: 24),
-          // Spent and Remaining amounts side by side
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -484,11 +411,10 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          // Progress bar: shows percentage of total budget used
           LinearProgressIndicator(
-            value: (percentage / 100).clamp(0.0, 1.0), // .clamp prevents going above 1.0
-            backgroundColor: Colors.white.withOpacity(0.3), // Semi-transparent track
-            valueColor: AlwaysStoppedAnimation<Color>(progressColor), // Color by usage level
+            value: (percentage / 100).clamp(0.0, 1.0),
+            backgroundColor: Colors.white.withOpacity(0.3),
+            valueColor: AlwaysStoppedAnimation<Color>(progressColor),
             minHeight: 8,
             borderRadius: BorderRadius.circular(4),
           ),
@@ -514,7 +440,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
               ),
             ],
           ),
-          // Over-budget warning banner - only shown when over 100% used
           if (budget.isOverBudget) ...[
             const SizedBox(height: 16),
             Container(
@@ -529,8 +454,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      // '\\'' is an escaped apostrophe in string literals
-                      // -budget.totalRemaining gives positive over-amount
                       'You\'ve exceeded your budget by RM ${(-budget.totalRemaining).toStringAsFixed(2)}',
                       style: const TextStyle(
                         color: Colors.white,
@@ -548,7 +471,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
     );
   }
 
-  // _buildSummaryItem creates a label+amount pair in the summary card
   Widget _buildSummaryItem(String label, double amount, IconData icon) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -579,14 +501,12 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
     );
   }
 
-  // _buildCategoryCard creates one card per expense category showing spent vs allocated
   Widget _buildCategoryCard(BudgetCategoryModel category) {
-    // Get the icon and color for this category from our utility class
     final categoryInfo = TransactionCategories.getCategoryInfo(
       category.categoryName,
       'expense',
     );
-    final percentage = category.percentageUsed; // How much of this category's budget is used
+    final percentage = category.percentageUsed;
     final progressColor = _getProgressColor(percentage);
 
     return Container(
@@ -597,7 +517,7 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05), // Subtle shadow
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -607,7 +527,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
         children: [
           Row(
             children: [
-              // Category icon in a colored circle
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -621,7 +540,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Category name and "spent of allocated" text
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -644,7 +562,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
                   ],
                 ),
               ),
-              // Percentage on the right
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -653,7 +570,7 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: progressColor, // Color changes with usage level
+                      color: progressColor,
                     ),
                   ),
                   Text(
@@ -668,7 +585,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          // Progress bar for this category
           LinearProgressIndicator(
             value: (percentage / 100).clamp(0.0, 1.0),
             backgroundColor: Colors.grey[200],
@@ -676,7 +592,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
             minHeight: 6,
             borderRadius: BorderRadius.circular(3),
           ),
-          // Over-budget warning text - only shown when category is over limit
           if (category.isOverBudget) ...[
             const SizedBox(height: 8),
             Row(
@@ -684,7 +599,6 @@ class _BudgetOverviewScreenState extends State<BudgetOverviewScreen> {
                 Icon(Icons.warning_amber, color: AppColors.danger, size: 16),
                 const SizedBox(width: 4),
                 Text(
-                  // -category.remaining gives the positive over-budget amount
                   'Over budget by RM ${(-category.remaining).toStringAsFixed(2)}',
                   style: TextStyle(
                     color: AppColors.danger,

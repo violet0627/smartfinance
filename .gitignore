@@ -59,6 +59,7 @@ __pycache__/
 .Python
 env/
 venv/
+.env
 .env.local
 
 # Temp files
@@ -66,6 +67,11 @@ tmpclaude-*
 nul
 *.tmp
 *.temp
+
+# FYP documentation and submission files
+.docs/
+Latest/
+resources/
 
 # IDE
 .vscode/
