@@ -111,6 +111,26 @@ def create_app(config_name='development'):
             recurring_transaction,
         )
         db.create_all()
+        _seed_achievements(db)
 
     # Return the fully configured app, ready to handle incoming HTTP requests.
     return app
+
+
+def _seed_achievements(db):
+    """Insert default achievements if the table is empty. Safe to call on every startup."""
+    from app.models.achievement import Achievement
+    if Achievement.query.count() > 0:
+        return  # Already seeded, skip
+    achievements = [
+        Achievement(Name='First Step',          Description='Record your first transaction',    BadgeIcon='first_step.png',       XpReward=10,  UnlockCriteria='Record 1 transaction',         DifficultyLevel='easy'),
+        Achievement(Name='Budget Beginner',     Description='Create your first budget',         BadgeIcon='budget_beginner.png',  XpReward=20,  UnlockCriteria='Create 1 budget',              DifficultyLevel='easy'),
+        Achievement(Name='Investment Initiate', Description='Add your first investment',        BadgeIcon='investment_start.png', XpReward=30,  UnlockCriteria='Add 1 investment',             DifficultyLevel='easy'),
+        Achievement(Name='Week Warrior',        Description='Maintain a 7-day tracking streak', BadgeIcon='week_warrior.png',     XpReward=50,  UnlockCriteria='Track for 7 consecutive days', DifficultyLevel='medium'),
+        Achievement(Name='Expense Expert',      Description='Record 100 transactions',          BadgeIcon='expense_expert.png',   XpReward=75,  UnlockCriteria='Record 100 transactions',      DifficultyLevel='medium'),
+        Achievement(Name='Budget Master',       Description='Stay within budget for a month',   BadgeIcon='budget_master.png',    XpReward=100, UnlockCriteria='Complete a month within budget', DifficultyLevel='hard'),
+        Achievement(Name='Savings Star',        Description='Save 20% of your income',         BadgeIcon='savings_star.png',     XpReward=150, UnlockCriteria='Save 20% monthly income',      DifficultyLevel='hard'),
+        Achievement(Name='Habit Hero',          Description='Maintain a 30-day tracking streak', BadgeIcon='habit_hero.png',      XpReward=200, UnlockCriteria='Track for 30 consecutive days', DifficultyLevel='expert'),
+    ]
+    db.session.add_all(achievements)
+    db.session.commit()

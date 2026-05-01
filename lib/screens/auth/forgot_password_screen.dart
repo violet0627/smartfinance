@@ -93,68 +93,40 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 textAlign: TextAlign.center,
               ),
 
-              // --- Development Token Display ---
-              // In development mode, the API returns the token directly
-              // This section shows it for testing convenience
-              if (result['resetToken'] != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Development Token:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        result['resetToken'],          // The actual reset token
-                        style: const TextStyle(fontSize: 10),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              const SizedBox(height: 8),
+              const Text(
+                'Check your email for the reset token, then press "Enter Token" below.',
+                style: TextStyle(fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
           actions: [
-            // "Enter Token" button (only in development when token is available)
-            if (result['resetToken'] != null)
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);              // Close dialog
-                  // Navigate to reset password screen with the token pre-filled
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ResetPasswordScreen(
-                        token: result['resetToken'],
-                      ),
-                    ),
-                  );
-                },
-                child: const Text('Enter Token'),
-              ),
-
             // "Back to Login" button
-            ElevatedButton(
+            TextButton(
               onPressed: () {
                 Navigator.pop(context);                // Close dialog
                 Navigator.pop(context);                // Go back to login screen
+              },
+              child: const Text('Back to Login'),
+            ),
+
+            // "Enter Token" button — always shown so user can paste token from email
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);                // Close dialog
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ResetPasswordScreen(),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Back to Login'),
+              child: const Text('Enter Token'),
             ),
           ],
         ),

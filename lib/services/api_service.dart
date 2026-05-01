@@ -176,10 +176,15 @@ class ApiService {
     return prefs.getInt('userId');       // Returns null if key doesn't exist
   }
 
-  // Logout by clearing ALL saved data (user info, tokens, everything)
+  // Logout by clearing only auth data — preserves onboarding flag and avatar path
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();                // Removes all key-value pairs from storage
+    await prefs.remove('userId');
+    await prefs.remove('userEmail');
+    await prefs.remove('userFullName');
+    await prefs.remove('accessToken');
+    await prefs.remove('refreshToken');
+    // onboarding_completed and avatarPath are intentionally kept across logout
   }
 
   // ============================================================================

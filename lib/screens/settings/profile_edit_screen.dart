@@ -193,11 +193,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       return;
     }
 
-    // Send the updated profile data to the backend API
+    // Send the updated profile data to the backend API (email is excluded — cannot be changed)
     final result = await ApiService.updateUserProfile(userId, {
-      'fullName': _fullNameController.text,   // Current text in the name field
-      'email': _emailController.text,          // Current text in the email field
-      'phoneNumber': _phoneController.text,    // Current text in the phone field
+      'fullName': _fullNameController.text,
+      'phoneNumber': _phoneController.text,
     });
 
     setState(() => _isSaving = false); // Re-enable the Save button
@@ -208,9 +207,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     if (result['success']) {
       // Profile saved successfully - also update the local device storage
-      final prefs = await SharedPreferences.getInstance(); // Access local storage
-      await prefs.setString('userFullName', _fullNameController.text); // Cache the name locally
-      await prefs.setString('userEmail', _emailController.text); // Cache the email locally
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userFullName', _fullNameController.text);
 
       // Show snackbar BEFORE popping — context becomes invalid after Navigator.pop
       ScaffoldMessenger.of(context).showSnackBar(
@@ -337,29 +335,19 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Email text field with format validation
+                    // Email — read-only, cannot be changed here
                     TextFormField(
                       controller: _emailController,
+                      readOnly: true,
                       decoration: InputDecoration(
-                        labelText: 'Email',
+                        labelText: 'Email (cannot be changed)',
                         prefixIcon: const Icon(Icons.email),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      keyboardType: TextInputType.emailAddress, // Shows email keyboard (with @ key)
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        // RegExp is a regular expression - a pattern for matching text
-                        // This pattern checks for the format: text@text.text
-                        final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-                        if (!emailRegex.hasMatch(value)) {
-                          return 'Please enter a valid email address';
-                        }
-                        return null;
-                      },
                     ),
                     const SizedBox(height: 16),
 

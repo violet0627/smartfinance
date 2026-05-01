@@ -41,6 +41,7 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static bool _initialized = false;    // Track if plugin has been initialized
+  static final Set<int> _sentThisSession = {}; // Tracks IDs shown this app session — prevents repeat popups
 
   // ==============================================================================
   // initialize - Set Up the Notification Plugin
@@ -102,6 +103,10 @@ class NotificationService {
     required String body,
     required int notificationId,
   }) async {
+    // Skip if this exact notification was already shown this session
+    if (_sentThisSession.contains(notificationId)) return;
+    _sentThisSession.add(notificationId);
+
     await initialize();                 // Ensure plugin is initialized
 
     // Android-specific notification appearance

@@ -21,7 +21,7 @@
 | 1.1 | Onboarding shows on first launch | Fresh install → open app | Onboarding slides appear, NOT the login screen |
 | 1.2 | Can swipe through slides | Swipe left on each slide | Each slide advances correctly, last slide shows "Get Started" or similar button |
 | 1.3 | Get Started navigates to login | Press Get Started / final button | Navigates to Login screen |
-| 1.4 | Onboarding skipped on second launch | Close and reopen app | Goes straight to Login screen, NOT onboarding again |
+| 1.4 | Onboarding skipped on second launch | Close app → reopen | Goes straight to Login screen (NOT onboarding again). Note: logout does NOT reset onboarding. |
 
 ---
 
@@ -57,7 +57,7 @@
 | 3.4 | Correct token verifies | Check your email inbox → copy the real token → paste → press Verify Email | Success dialog: "Your email has been verified successfully!" with "Go to Dashboard" button |
 | 3.5 | Go to Dashboard works and user is logged in | Press "Go to Dashboard" after successful verification | Dashboard loads with your actual account data (not empty, not "user not logged in") |
 | 3.6 | Resend verification works | Press "Didn't receive the email? Resend" | SnackBar: "Verification email sent" (check inbox for new email) |
-| 3.7 | Resend does NOT auto-fill token | Press Resend → wait for success message | Token field stays empty after resend (user must still manually enter token from email) |
+| 3.7 | Old token is invalidated after resend | Press Resend → try using the old token | Old token should be rejected (only the newest token works) |
 | 3.8 | Back to Login works | Press "Back to Login" | Returns to Login screen |
 
 ---
@@ -81,12 +81,12 @@
 
 | # | Test Case | Steps | Expected Result |
 |---|---|---|---|
-| 5.1 | Forgot password form accepts email | Press "Forgot Password?" → enter email → submit | Success message: "Reset email sent" or similar |
+| 5.1 | Forgot password form accepts email | Press "Forgot Password?" → enter email → submit | Success dialog appears with "Back to Login" and "Enter Token" buttons |
 | 5.2 | Nonexistent email handled | Enter email not in database → submit | App shows a message (should NOT confirm whether email exists — security best practice) |
 | 5.3 | Invalid email format blocked | Enter "notanemail" → submit | Error about valid email format |
 | 5.4 | Empty email blocked | Leave email empty → submit | Error shown |
-| 5.5 | Reset link/token received in email | Check inbox after step 5.1 | Email arrives with reset token or link |
-| 5.6 | Valid reset token accepted | Enter token from email + new password + confirm → submit | Success: password changed, navigate to login |
+| 5.5 | Reset token received in email | Check inbox after step 5.1 | Email arrives with reset token |
+| 5.6 | Valid reset token accepted | Press "Enter Token" → paste token from email + new password + confirm → submit | Success: password changed, navigate to login |
 | 5.7 | Weak new password blocked | Enter password that fails strength rules | Same password strength errors as registration |
 | 5.8 | Password mismatch blocked | Enter different passwords → submit | Error: passwords do not match |
 | 5.9 | Invalid reset token rejected | Type random text as token → submit | Error: "Invalid or expired token" |
@@ -124,7 +124,7 @@
 | 7A.6 | Empty category blocked | Leave category empty → Save | Error: category is required |
 | 7A.7 | Default date is today | Open add transaction | Date field shows today's date |
 | 7A.8 | Can change date | Press date field → select a past date | Date updates to selected date |
-| 7A.9 | Future date allowed or blocked | Select a future date | Clearly handled (either allowed or blocked with a message) |
+| 7A.9 | Future date is blocked | Open date picker | Cannot select any date after today — future dates are greyed out |
 | 7A.10 | Notes are optional | Leave notes empty → Save | Transaction saves successfully |
 | 7A.11 | Cancel/back discards | Press Cancel or back arrow | Returns to previous screen, nothing saved |
 
@@ -272,7 +272,7 @@
 | 15A.3 | Edit phone number works | Change phone → Save | New number saved |
 | 15A.4 | Empty full name blocked | Clear full name → Save | Error: name is required |
 | 15A.5 | Invalid phone format blocked | Enter "123" → Save | Error about phone format |
-| 15A.6 | Email field read-only | Try to edit email field | Field is disabled or read-only (email cannot be changed here) |
+| 15A.6 | Email field is read-only | Try to tap/edit the email field | Field shows "Email (cannot be changed)" label — greyed out, cannot be edited |
 
 ### 15B — Security Settings
 
@@ -314,9 +314,9 @@
 | # | Test Case | Steps | Expected Result |
 |---|---|---|---|
 | 15D.1 | Settings screen loads | Navigate to Settings | Screen loads with all sections visible |
-| 15D.2 | Dark mode toggle works | Toggle dark mode | App UI switches to dark theme |
-| 15D.3 | Light mode toggle works | Toggle back to light mode | App UI switches back to light theme |
-| 15D.4 | Theme persists on relaunch | Enable dark mode → close and reopen app | App still in dark mode |
+| 15D.2 | ~~Dark mode~~ | ~~Removed~~ | Dark mode feature was removed — app is always light mode. Skip this test. |
+| 15D.3 | ~~Light mode~~ | ~~Removed~~ | Skip. |
+| 15D.4 | ~~Theme persist~~ | ~~Removed~~ | Skip. |
 | 15D.5 | Logout works | Press Logout → confirm | Clears session, navigates to Login screen |
 | 15D.6 | After logout, can't go back | Logout → press Android back button | Stays on Login screen (or exits app), doesn't go back to Dashboard |
 

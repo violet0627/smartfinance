@@ -94,9 +94,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,          // Start at current selection
-      firstDate: DateTime(2020),           // Earliest selectable date
-      lastDate: DateTime(2100),            // Latest selectable date
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),            // Cannot record future transactions
     );
     // Only update if the user actually picked a date (didn't cancel)
     if (picked != null && picked != _selectedDate) {

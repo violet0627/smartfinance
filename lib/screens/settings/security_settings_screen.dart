@@ -390,22 +390,22 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   if (value == null || value.isEmpty) {
                     return 'Please enter new password';
                   }
+                  if (value == currentPasswordController.text) {
+                    return 'New password must be different from current password';
+                  }
                   if (value.length < 8) {
                     return 'Password must be at least 8 characters';
                   }
-                  // RegExp — regular expression pattern matching
-                  // r'[A-Z]' — any uppercase letter in range A-Z
                   if (!value.contains(RegExp(r'[A-Z]'))) {
                     return 'Must contain at least one uppercase letter';
                   }
                   if (!value.contains(RegExp(r'[a-z]'))) {
                     return 'Must contain at least one lowercase letter';
                   }
-                  // r'[!@#$%^&*(),.?":{}|<>]' — any of these special characters
                   if (!value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
                     return 'Must contain at least one symbol';
                   }
-                  return null; // All checks passed — valid password
+                  return null;
                 },
               ),
               const SizedBox(height: 16),

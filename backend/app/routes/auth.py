@@ -535,6 +535,9 @@ def resend_verification():
                 'message': 'Email is already verified'
             }), 200
 
+        # --- Invalidate all previous unused tokens for this user ---
+        EmailVerification.query.filter_by(UserId=user.UserId, Used=False).update({'Used': True})
+
         # --- Generate new verification token ---
         verification_token = generate_email_verification_token(user.UserId, user.Email)
 
@@ -551,8 +554,7 @@ def resend_verification():
         send_verification_email(user.Email, user.FullName, verification_token)
 
         return jsonify({
-            'message': 'Verification email sent successfully',
-            'verificationToken': verification_token  # For development only
+            'message': 'Verification email sent successfully'
         }), 200
 
     except Exception as e:
