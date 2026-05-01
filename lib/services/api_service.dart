@@ -87,12 +87,19 @@ class ApiService {
       final data = json.decode(response.body);              // Parse JSON response string to Dart Map
 
       if (response.statusCode == 201) {                     // 201 = Created (success)
-        // Return verificationToken alongside user so the register screen
-        // can pass it to VerifyEmailScreen for auto-fill (dev mode convenience)
+        // Save user data and tokens to SharedPreferences so the user is immediately
+        // logged in after registration (same as login() does)
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('userId', data['user']['userId']);
+        await prefs.setString('userEmail', data['user']['email']);
+        await prefs.setString('userFullName', data['user']['fullName']);
+        await prefs.setString('accessToken', data['accessToken']);
+        await prefs.setString('refreshToken', data['refreshToken']);
+
         return {
           'success': true,
           'user': UserModel.fromJson(data['user']),
-          'verificationToken': data['verificationToken'],   // null in production, token string in dev
+          'verificationToken': data['verificationToken'],
         };
       } else {
         return {'success': false, 'error': data['error'] ?? 'Registration failed'};

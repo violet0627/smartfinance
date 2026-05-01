@@ -336,11 +336,12 @@ def get_financial_insights(user_id):
                 })
             else:
                 in_progress = total_goals - goals_completed
+                goal_suffix = "s" if in_progress > 1 else ""
                 insights.append({
                     'type': 'info',
                     'icon': 'flag',
-                    'title': f'{in_progress} goal{"s" if in_progress > 1 else ""} in progress',
-                    'message': f"You have {in_progress} active goal{"s" if in_progress > 1 else ""} "
+                    'title': f'{in_progress} goal{goal_suffix} in progress',
+                    'message': f"You have {in_progress} active goal{goal_suffix} "
                                f"and {goals_completed} completed. Keep contributing to stay on track.",
                 })
         else:

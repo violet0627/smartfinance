@@ -16,6 +16,9 @@ import '../auth/verify_email_screen.dart';
 // Import the 2FA setup screen — navigates here when enabling Two-Factor Authentication
 import 'two_factor_setup_screen.dart';
 
+// Import the login screen — navigated to after successful account deletion
+import '../auth/login_screen.dart';
+
 
 // SecuritySettingsScreen — shows the full security dashboard for the user's account
 // Includes: security score, email verification, 2FA toggle, active sessions, security log, danger zone
@@ -314,16 +317,17 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     if (!mounted) return;
 
     if (result['success']) {
-      // Navigate to the login screen and remove ALL routes from the stack
-      // pushNamedAndRemoveUntil — named route version of pushAndRemoveUntil
-      // (route) => false — removes all routes (can't go back)
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      // Capture navigator before the async gap — after await, mounted may be false
+      // but the navigator reference remains valid and usable
+      final navigator = Navigator.of(context);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account deleted successfully'),
-          backgroundColor: AppColors.success,
-        ),
+      // Clear all saved session data (tokens, userId)
+      await ApiService.logout();
+
+      // Navigate to login and remove ALL routes from the stack so user can't go back
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

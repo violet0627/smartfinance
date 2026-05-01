@@ -41,8 +41,19 @@ class ProductionConfig(Config):
     FLASK_ENV = 'production'
 
 
+class TestingConfig(Config):
+    # Uses SQLite in-memory database — no MySQL required to run tests.
+    # TESTING=True disables error catching so exceptions propagate to pytest.
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    # Disable CSRF and email sending during tests
+    WTF_CSRF_ENABLED = False
+    MAIL_SUPPRESS_SEND = True
+
+
 config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
+    'testing': TestingConfig,
     'default': DevelopmentConfig
 }

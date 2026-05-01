@@ -355,7 +355,7 @@ def forgot_password():
         db.session.commit()
 
         # Send the reset token to the user's email
-        send_password_reset_email(user.Email, user.Name, reset_token)
+        send_password_reset_email(user.Email, user.FullName, reset_token)
 
         return jsonify({
             'message': 'If the email exists, a password reset link has been sent'

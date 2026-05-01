@@ -26,7 +26,7 @@ class AppConfig {
   // ==========================================================================
   // ⚠️  CHANGE THIS IP ON DEMO DAY
   // ==========================================================================
-  static const String _serverIp = '192.168.1.38'; // ← UPDATE THIS
+  static const String _serverIp = '10.0.2.2'; // Android emulator → maps to host machine (Docker runs on host)
   static const int _serverPort = 5000;
 
   // Full base URL — used by ApiService for all API calls

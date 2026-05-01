@@ -1,0 +1,91 @@
+# docker-compose.yml — defines and wires together all services for SmartFinance.
+#
+# Services:
+#   db      — MySQL 8.0 database
+#   backend — Flask API server
+#
+# HOW TO USE:
+#   Start everything:  docker-compose up
+#   Start in background: docker-compose up -d
+#   Stop everything:   docker-compose down
+#   Stop + delete data: docker-compose down -v
+#   View logs:         docker-compose logs -f backend
+#   Run tests:         docker-compose exec backend pytest tests/
+
+version: '3.8'
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # MySQL Database
+  # ---------------------------------------------------------------------------
+  db:
+    image: mysql:8.0          # Official MySQL 8.0 image from Docker Hub
+    container_name: smartfinance_db
+
+    environment:
+      # These environment variables configure the MySQL instance on first start.
+      # They match the values in backend/.env — change both together.
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: smartfinance
+      MYSQL_USER: smartfinance_user
+      MYSQL_PASSWORD: smartfinance_pass
+
+    ports:
+      # Map host port 3307 -> container port 3306.
+      # We use 3307 on the host to avoid conflicts if you already have MySQL installed locally.
+      - "3307:3306"
+
+    volumes:
+      # Persist database data on your machine so it survives container restarts.
+      # 'mysql_data' is a named volume managed by Docker.
+      # Table creation is handled entirely by db.create_all() when Flask starts.
+      - mysql_data:/var/lib/mysql
+
+    healthcheck:
+      # Docker waits for MySQL to be ready before starting the backend.
+      # mysqladmin ping checks if MySQL is accepting connections.
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Flask Backend
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend    # Build using backend/Dockerfile
+      dockerfile: Dockerfile
+
+    container_name: smartfinance_backend
+
+    ports:
+      # Map host port 5000 -> container port 5000
+      - "5000:5000"
+
+    environment:
+      # Override .env values so the backend connects to the Docker db service.
+      # 'db' is the service name above — Docker's internal DNS resolves it automatically.
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: smartfinance_user
+      DB_PASSWORD: smartfinance_pass
+      DB_NAME: smartfinance
+      SECRET_KEY: change-this-in-production
+      FLASK_ENV: development
+
+    depends_on:
+      db:
+        condition: service_healthy   # Don't start until MySQL is ready
+
+    volumes:
+      # Mount source code so code changes reflect immediately without rebuilding.
+      # Remove this in production (you want the image to be self-contained).
+      - ./backend:/app
+
+# ---------------------------------------------------------------------------
+# Named volumes (managed by Docker, persisted on your machine)
+# ---------------------------------------------------------------------------
+volumes:
+  mysql_data:

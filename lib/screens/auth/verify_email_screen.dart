@@ -58,9 +58,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.token != null) {
-      _tokenController.text = widget.token!;    // ! asserts token is not null
-    }
+    // Token is intentionally NOT auto-filled — users must copy it from their email
   }
 
   @override
@@ -178,13 +176,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         ),
       );
 
-      // In development mode, the API returns the token directly
-      // Auto-fill it for convenience
-      if (result['verificationToken'] != null) {
-        setState(() {
-          _tokenController.text = result['verificationToken'];
-        });
-      }
+      // Token is intentionally NOT auto-filled — user must check their email
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
