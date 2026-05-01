@@ -1,0 +1,956 @@
+{
+  "info": {
+    "name": "SmartFinance API",
+    "description": "Complete API documentation for SmartFinance — a personal finance management app.\n\n**How to use:**\n1. Import this file into Postman (File → Import)\n2. Import the SmartFinance.postman_environment.json file too\n3. Select the 'SmartFinance - Local' environment (top-right dropdown)\n4. Start by running 'Register' or 'Login' — the test script auto-saves your token and userId\n5. All other endpoints use {{accessToken}} and {{userId}} automatically\n\n**Base URL:** http://localhost:5000/api (Docker) or http://10.0.2.2:5000/api (emulator)\n\n**Authentication:** Bearer token in Authorization header. Login/Register auto-sets it via test scripts.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api"
+    }
+  ],
+  "item": [
+
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json();",
+                  "  pm.environment.set('accessToken', data.accessToken);",
+                  "  pm.environment.set('refreshToken', data.refreshToken);",
+                  "  pm.environment.set('userId', data.user.userId);",
+                  "  console.log('Tokens saved. userId:', data.user.userId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"TestPass123!\",\n  \"fullName\": \"Test User\",\n  \"phoneNumber\": \"012-3456789\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"]},
+            "description": "Create a new user account. Returns accessToken and refreshToken.\n\n**Required:** email, password, fullName\n**Optional:** phoneNumber\n\nPassword rules: 8+ chars, uppercase, lowercase, symbol\n\nThe test script auto-saves accessToken, refreshToken, and userId to the environment."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.environment.set('accessToken', data.accessToken);",
+                  "  pm.environment.set('refreshToken', data.refreshToken);",
+                  "  pm.environment.set('userId', data.user.userId);",
+                  "  console.log('Logged in. userId:', data.user.userId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"TestPass123!\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"]},
+            "description": "Authenticate with email and password. Returns JWT tokens.\n\nThe test script auto-saves accessToken, refreshToken, and userId so all other requests work immediately."
+          }
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/auth/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["auth", "user", "{{userId}}"]},
+            "description": "Get user profile by ID. Requires Authorization header."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.environment.set('accessToken', data.accessToken);",
+                  "  console.log('Access token refreshed');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"]},
+            "description": "Get a new access token using the refresh token. Access tokens expire in 1 hour; refresh tokens last 30 days."
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/forgot-password", "host": ["{{baseUrl}}"], "path": ["auth", "forgot-password"]},
+            "description": "Request a password reset email. Always returns 200 regardless of whether the email exists (prevents email enumeration attacks)."
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"PASTE_RESET_TOKEN_FROM_EMAIL\",\n  \"newPassword\": \"NewPass123!\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["auth", "reset-password"]},
+            "description": "Set a new password using the reset token received by email. Token expires in 1 hour."
+          }
+        },
+        {
+          "name": "Verify Reset Token",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"PASTE_RESET_TOKEN_HERE\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/verify-reset-token", "host": ["{{baseUrl}}"], "path": ["auth", "verify-reset-token"]},
+            "description": "Check if a password reset token is valid and return the associated email."
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"PASTE_VERIFICATION_TOKEN_FROM_EMAIL\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/verify-email", "host": ["{{baseUrl}}"], "path": ["auth", "verify-email"]},
+            "description": "Mark the user's email as verified using the token sent to their inbox."
+          }
+        },
+        {
+          "name": "Resend Verification Email",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/resend-verification", "host": ["{{baseUrl}}"], "path": ["auth", "resend-verification"]},
+            "description": "Send a new verification email. Invalidates any previously issued verification tokens."
+          }
+        },
+        {
+          "name": "Check Email Verification Status",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/auth/check-verification/{{userId}}", "host": ["{{baseUrl}}"], "path": ["auth", "check-verification", "{{userId}}"]},
+            "description": "Returns whether the user's email has been verified."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔑 Two-Factor Auth",
+      "item": [
+        {
+          "name": "Setup 2FA",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}}\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/2fa/setup", "host": ["{{baseUrl}}"], "path": ["auth", "2fa", "setup"]},
+            "description": "Start 2FA setup. Returns a QR code (base64 image) to scan with an authenticator app (e.g. Google Authenticator) and a list of backup codes."
+          }
+        },
+        {
+          "name": "Verify 2FA Setup",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"code\": \"123456\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/2fa/verify-setup", "host": ["{{baseUrl}}"], "path": ["auth", "2fa", "verify-setup"]},
+            "description": "Enable 2FA by confirming the first 6-digit code from the authenticator app. Must be called after Setup 2FA."
+          }
+        },
+        {
+          "name": "Verify 2FA Code (during login)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"code\": \"123456\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/2fa/verify", "host": ["{{baseUrl}}"], "path": ["auth", "2fa", "verify"]},
+            "description": "Verify the 6-digit TOTP code during login (after email/password step)."
+          }
+        },
+        {
+          "name": "Verify Backup Code",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"backupCode\": \"XXXX-XXXX\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/2fa/verify-backup", "host": ["{{baseUrl}}"], "path": ["auth", "2fa", "verify-backup"]},
+            "description": "Use a one-time backup code instead of the authenticator app. Each code can only be used once."
+          }
+        },
+        {
+          "name": "Disable 2FA",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"password\": \"TestPass123!\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/2fa/disable", "host": ["{{baseUrl}}"], "path": ["auth", "2fa", "disable"]},
+            "description": "Disable 2FA. Requires the account password for verification."
+          }
+        },
+        {
+          "name": "Get 2FA Status",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/auth/2fa/status/{{userId}}", "host": ["{{baseUrl}}"], "path": ["auth", "2fa", "status", "{{userId}}"]},
+            "description": "Check if 2FA is enabled and when backup codes were last used."
+          }
+        },
+        {
+          "name": "Regenerate Backup Codes",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"password\": \"TestPass123!\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/auth/2fa/regenerate-backup-codes", "host": ["{{baseUrl}}"], "path": ["auth", "2fa", "regenerate-backup-codes"]},
+            "description": "Generate a fresh set of backup codes (invalidates all old ones). Requires password."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "💸 Transactions",
+      "item": [
+        {
+          "name": "Add Transaction",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"amount\": 25.50,\n  \"category\": \"Food & Dining\",\n  \"transactionType\": \"expense\",\n  \"transactionDate\": \"2026-05-01\",\n  \"description\": \"Lunch at mamak\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/transactions/", "host": ["{{baseUrl}}"], "path": ["transactions", ""]},
+            "description": "Create a new transaction.\n\n**transactionType:** `income` or `expense`\n**transactionDate:** YYYY-MM-DD format\n**description:** optional"
+          }
+        },
+        {
+          "name": "Get All Transactions",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/user/{{userId}}?type=expense&startDate=2026-01-01&endDate=2026-12-31&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions", "user", "{{userId}}"],
+              "query": [
+                {"key": "type", "value": "expense", "description": "Filter: income or expense"},
+                {"key": "startDate", "value": "2026-01-01", "description": "YYYY-MM-DD"},
+                {"key": "endDate", "value": "2026-12-31", "description": "YYYY-MM-DD"},
+                {"key": "limit", "value": "50", "description": "Max results"}
+              ]
+            },
+            "description": "Get all transactions for a user. All query params are optional — remove them to get all transactions without filtering."
+          }
+        },
+        {
+          "name": "Get Single Transaction",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/transactions/1", "host": ["{{baseUrl}}"], "path": ["transactions", "1"]},
+            "description": "Get one transaction by its ID. Replace '1' with the actual transaction ID."
+          }
+        },
+        {
+          "name": "Update Transaction",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 30.00,\n  \"category\": \"Food & Dining\",\n  \"description\": \"Updated description\",\n  \"transactionDate\": \"2026-05-01\",\n  \"transactionType\": \"expense\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/transactions/1", "host": ["{{baseUrl}}"], "path": ["transactions", "1"]},
+            "description": "Update an existing transaction. All fields are optional — only send what you want to change. Replace '1' with the actual transaction ID."
+          }
+        },
+        {
+          "name": "Delete Transaction",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/transactions/1", "host": ["{{baseUrl}}"], "path": ["transactions", "1"]},
+            "description": "Permanently delete a transaction. Replace '1' with the actual transaction ID."
+          }
+        },
+        {
+          "name": "Get Financial Summary",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/user/{{userId}}/summary?startDate=2026-05-01&endDate=2026-05-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions", "user", "{{userId}}", "summary"],
+              "query": [
+                {"key": "startDate", "value": "2026-05-01"},
+                {"key": "endDate", "value": "2026-05-31"}
+              ]
+            },
+            "description": "Get total income, total expense, balance, and expense breakdown by category for a date range."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📊 Budgets",
+      "item": [
+        {
+          "name": "Create Budget",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"monthYear\": \"2026-05\",\n  \"totalBudget\": 2000.00,\n  \"categories\": [\n    {\"categoryName\": \"Food & Dining\", \"allocatedAmount\": 500},\n    {\"categoryName\": \"Transportation\", \"allocatedAmount\": 300},\n    {\"categoryName\": \"Entertainment\", \"allocatedAmount\": 200}\n  ]\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/budgets/", "host": ["{{baseUrl}}"], "path": ["budgets", ""]},
+            "description": "Create a budget for a specific month. Categories are optional — you can create a budget with just a total."
+          }
+        },
+        {
+          "name": "Get All Budgets",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/budgets/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["budgets", "user", "{{userId}}"]},
+            "description": "Get all budgets for a user across all months."
+          }
+        },
+        {
+          "name": "Get Current Month Budget",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/budgets/user/{{userId}}/current", "host": ["{{baseUrl}}"], "path": ["budgets", "user", "{{userId}}", "current"]},
+            "description": "Get this month's budget with live spending data. Returns null if no budget is set for the current month."
+          }
+        },
+        {
+          "name": "Get Budget by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/budgets/1", "host": ["{{baseUrl}}"], "path": ["budgets", "1"]},
+            "description": "Get a specific budget by ID. Replace '1' with actual budget ID."
+          }
+        },
+        {
+          "name": "Update Budget",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"totalBudget\": 2500.00,\n  \"categories\": [\n    {\"categoryName\": \"Food & Dining\", \"allocatedAmount\": 600},\n    {\"categoryName\": \"Transportation\", \"allocatedAmount\": 350}\n  ]\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/budgets/1", "host": ["{{baseUrl}}"], "path": ["budgets", "1"]},
+            "description": "Update budget limit or category allocations. Replace '1' with actual budget ID."
+          }
+        },
+        {
+          "name": "Delete Budget",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/budgets/1", "host": ["{{baseUrl}}"], "path": ["budgets", "1"]},
+            "description": "Delete a budget permanently. Replace '1' with actual budget ID."
+          }
+        },
+        {
+          "name": "Refresh Budget Spending",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/budgets/1/refresh", "host": ["{{baseUrl}}"], "path": ["budgets", "1", "refresh"]},
+            "description": "Recalculate spending totals from actual transactions. Call this if spending numbers look stale."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📈 Investments",
+      "item": [
+        {
+          "name": "Add Investment",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"assetName\": \"Maybank\",\n  \"assetsType\": \"Stocks\",\n  \"quantity\": 100,\n  \"purchasePrice\": 8.50,\n  \"purchaseDate\": \"2026-01-15\",\n  \"stockSymbol\": \"MAYBANK\",\n  \"currentPrice\": 9.10,\n  \"notes\": \"Long term hold\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/investments/", "host": ["{{baseUrl}}"], "path": ["investments", ""]},
+            "description": "Add a new investment to the portfolio.\n\n**assetsType examples:** Stocks, Crypto, Unit Trust, Fixed Deposit, Property, Cash\n**Optional:** stockSymbol, currentPrice, notes"
+          }
+        },
+        {
+          "name": "Get All Investments",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/investments/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["investments", "user", "{{userId}}"]},
+            "description": "Get all investments for a user."
+          }
+        },
+        {
+          "name": "Get Portfolio Summary",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/investments/user/{{userId}}/portfolio", "host": ["{{baseUrl}}"], "path": ["investments", "user", "{{userId}}", "portfolio"]},
+            "description": "Get total portfolio value, profit/loss, asset type breakdown, and top/bottom performers."
+          }
+        },
+        {
+          "name": "Update Investment",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPrice\": 9.50,\n  \"notes\": \"Updated notes\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/investments/1", "host": ["{{baseUrl}}"], "path": ["investments", "1"]},
+            "description": "Update investment details. Commonly used to update current price."
+          }
+        },
+        {
+          "name": "Quick Price Update",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPrice\": 9.80\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/investments/1/update-price", "host": ["{{baseUrl}}"], "path": ["investments", "1", "update-price"]},
+            "description": "Quickly update just the current price and get back the new profit/loss calculation."
+          }
+        },
+        {
+          "name": "Delete Investment",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/investments/1", "host": ["{{baseUrl}}"], "path": ["investments", "1"]},
+            "description": "Remove an investment from the portfolio."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🎯 Goals",
+      "item": [
+        {
+          "name": "Create Goal",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"goalName\": \"Emergency Fund\",\n  \"targetAmount\": 10000.00,\n  \"deadline\": \"2026-12-31\",\n  \"description\": \"6 months of expenses\",\n  \"currentAmount\": 0,\n  \"category\": \"Savings\",\n  \"priority\": \"high\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/goals/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["goals", "user", "{{userId}}"]},
+            "description": "Create a new financial goal.\n\n**priority:** low, medium, high\n**category:** Savings, Travel, Education, Home, Car, Emergency, Retirement, Other"
+          }
+        },
+        {
+          "name": "Get All Goals",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/goals/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["goals", "user", "{{userId}}"]},
+            "description": "Get all goals for a user. Add ?status=active to filter."
+          }
+        },
+        {
+          "name": "Get Goals Summary",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/goals/user/{{userId}}/summary", "host": ["{{baseUrl}}"], "path": ["goals", "user", "{{userId}}", "summary"]},
+            "description": "Get overview stats: total goals, active, completed, total saved, total remaining, overall progress %."
+          }
+        },
+        {
+          "name": "Contribute to Goal",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500.00\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/goals/1/contribute", "host": ["{{baseUrl}}"], "path": ["goals", "1", "contribute"]},
+            "description": "Add money toward a goal. Updates currentAmount and recalculates progress."
+          }
+        },
+        {
+          "name": "Update Goal",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"goalName\": \"Updated Name\",\n  \"targetAmount\": 12000.00,\n  \"deadline\": \"2027-06-30\",\n  \"status\": \"active\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/goals/1", "host": ["{{baseUrl}}"], "path": ["goals", "1"]},
+            "description": "Update goal details. **status:** active, completed, paused"
+          }
+        },
+        {
+          "name": "Delete Goal",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/goals/1", "host": ["{{baseUrl}}"], "path": ["goals", "1"]},
+            "description": "Permanently delete a goal."
+          }
+        },
+        {
+          "name": "Get Goal Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/goals/categories", "host": ["{{baseUrl}}"], "path": ["goals", "categories"]},
+            "description": "Get the predefined list of goal categories with icons. No auth required."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🏆 Gamification",
+      "item": [
+        {
+          "name": "Get All Achievements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/gamification/achievements", "host": ["{{baseUrl}}"], "path": ["gamification", "achievements"]},
+            "description": "Get the master list of all achievements (not user-specific). No auth required."
+          }
+        },
+        {
+          "name": "Get User Achievements",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/gamification/user/{{userId}}/achievements", "host": ["{{baseUrl}}"], "path": ["gamification", "user", "{{userId}}", "achievements"]},
+            "description": "Get all achievements with the user's progress (locked/unlocked, progress %)."
+          }
+        },
+        {
+          "name": "Get User Stats (XP & Level)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/gamification/user/{{userId}}/stats", "host": ["{{baseUrl}}"], "path": ["gamification", "user", "{{userId}}", "stats"]},
+            "description": "Get XP total, current level, XP needed for next level, achievements unlocked count, streak data."
+          }
+        },
+        {
+          "name": "Check & Unlock Achievements",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/gamification/user/{{userId}}/check-achievements", "host": ["{{baseUrl}}"], "path": ["gamification", "user", "{{userId}}", "check-achievements"]},
+            "description": "Evaluate all achievement criteria and unlock any the user has earned. Returns a list of newly unlocked achievements. Call this after adding a transaction, budget, or investment."
+          }
+        },
+        {
+          "name": "Get Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/gamification/leaderboard", "host": ["{{baseUrl}}"], "path": ["gamification", "leaderboard"]},
+            "description": "Get top 10 users ranked by total XP. No auth required."
+          }
+        },
+        {
+          "name": "Get User Streaks",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/gamification/user/{{userId}}/streaks", "host": ["{{baseUrl}}"], "path": ["gamification", "user", "{{userId}}", "streaks"]},
+            "description": "Get the user's habit tracking streaks (e.g. daily logging streak)."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📋 Reports",
+      "item": [
+        {
+          "name": "Spending Report",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/reports/user/{{userId}}/spending-report?period=this_month",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "user", "{{userId}}", "spending-report"],
+              "query": [{"key": "period", "value": "this_month", "description": "Options: this_month, last_month, last_3_months, last_6_months, this_year, last_year, custom"}]
+            },
+            "description": "Generate an income/expense/savings report for a period. For custom period, add startDate and endDate query params."
+          }
+        },
+        {
+          "name": "Budget Report",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/reports/user/{{userId}}/budget-report?period=this_month",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "user", "{{userId}}", "budget-report"],
+              "query": [{"key": "period", "value": "this_month"}]
+            },
+            "description": "Generate a report showing budget adherence — how much was budgeted vs. actually spent per category."
+          }
+        },
+        {
+          "name": "Category Analysis",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/reports/user/{{userId}}/category-analysis?period=last_3_months",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "user", "{{userId}}", "category-analysis"],
+              "query": [{"key": "period", "value": "last_3_months"}]
+            },
+            "description": "Deep analysis by spending category: total, count, average, min, max, % of total, and monthly trend."
+          }
+        },
+        {
+          "name": "Export Transactions (CSV)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/reports/user/{{userId}}/export/transactions?period=this_month",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "user", "{{userId}}", "export", "transactions"],
+              "query": [{"key": "period", "value": "this_month"}]
+            },
+            "description": "Download transactions as a CSV file. In Postman: Send → Save Response → Save to File."
+          }
+        },
+        {
+          "name": "Export Spending Report (CSV)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/reports/user/{{userId}}/export/spending-report?period=this_month",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "user", "{{userId}}", "export", "spending-report"],
+              "query": [{"key": "period", "value": "this_month"}]
+            },
+            "description": "Download the spending summary as a CSV file."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "⚙️ Settings",
+      "item": [
+        {
+          "name": "Get User Settings",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/settings/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["settings", "user", "{{userId}}"]},
+            "description": "Get notification preferences, alert thresholds, and privacy settings."
+          }
+        },
+        {
+          "name": "Update Settings",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enableNotifications\": true,\n  \"enableBudgetAlerts\": true,\n  \"budgetWarningThreshold\": 80,\n  \"budgetDangerThreshold\": 90,\n  \"showInLeaderboard\": true\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/settings/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["settings", "user", "{{userId}}"]},
+            "description": "Update notification and privacy settings. Only send the fields you want to change."
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/settings/user/{{userId}}/profile", "host": ["{{baseUrl}}"], "path": ["settings", "user", "{{userId}}", "profile"]},
+            "description": "Get the user's display name, email, and phone number."
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Updated Name\",\n  \"phoneNumber\": \"016-9876543\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/settings/user/{{userId}}/profile", "host": ["{{baseUrl}}"], "path": ["settings", "user", "{{userId}}", "profile"]},
+            "description": "Update display name and phone number. Email cannot be changed."
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"TestPass123!\",\n  \"newPassword\": \"NewPass456!\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/settings/user/{{userId}}/change-password", "host": ["{{baseUrl}}"], "path": ["settings", "user", "{{userId}}", "change-password"]},
+            "description": "Change the account password. Requires the current password for verification."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔒 Security",
+      "item": [
+        {
+          "name": "Get Active Sessions",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/security/sessions/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["security", "sessions", "user", "{{userId}}"]},
+            "description": "Get all active login sessions for the user (device, IP, last seen)."
+          }
+        },
+        {
+          "name": "Revoke Session",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}}\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/security/sessions/1/revoke", "host": ["{{baseUrl}}"], "path": ["security", "sessions", "1", "revoke"]},
+            "description": "Revoke a specific session by session ID. Replace '1' with the actual session ID."
+          }
+        },
+        {
+          "name": "Get Security Log",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/security/activity/user/{{userId}}?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["security", "activity", "user", "{{userId}}"],
+              "query": [
+                {"key": "limit", "value": "20"},
+                {"key": "offset", "value": "0"}
+              ]
+            },
+            "description": "Get the security event log: logins, password changes, 2FA events, etc. Supports pagination."
+          }
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"password\": \"TestPass123!\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/security/account/delete", "host": ["{{baseUrl}}"], "path": ["security", "account", "delete"]},
+            "description": "⚠️ PERMANENT. Deletes the account and all associated data. Requires password confirmation."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔁 Recurring Transactions",
+      "item": [
+        {
+          "name": "Create Recurring Transaction",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Netflix Subscription\",\n  \"transactionType\": \"expense\",\n  \"category\": \"Entertainment\",\n  \"amount\": 54.90,\n  \"frequency\": \"monthly\",\n  \"startDate\": \"2026-05-01\",\n  \"description\": \"Monthly streaming subscription\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/recurring/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["recurring", "user", "{{userId}}"]},
+            "description": "Create a recurring transaction template.\n\n**frequency:** daily, weekly, monthly, yearly\n**endDate:** optional — leave out for indefinite recurring"
+          }
+        },
+        {
+          "name": "Get All Recurring Transactions",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/recurring/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["recurring", "user", "{{userId}}"]},
+            "description": "Get all recurring transaction rules. Add ?active=true to filter for active ones only."
+          }
+        },
+        {
+          "name": "Execute Due Recurring Transactions",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/recurring/user/{{userId}}/execute-due", "host": ["{{baseUrl}}"], "path": ["recurring", "user", "{{userId}}", "execute-due"]},
+            "description": "Run all recurring transactions that are due today. Creates actual transaction records for each one."
+          }
+        },
+        {
+          "name": "Toggle Recurring (Pause/Resume)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/recurring/1/toggle", "host": ["{{baseUrl}}"], "path": ["recurring", "1", "toggle"]},
+            "description": "Pause an active recurring transaction, or resume a paused one."
+          }
+        },
+        {
+          "name": "Delete Recurring Transaction",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/recurring/1", "host": ["{{baseUrl}}"], "path": ["recurring", "1"]},
+            "description": "Delete a recurring transaction rule. Does NOT delete previously generated transaction history."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "💡 Financial Insights",
+      "item": [
+        {
+          "name": "Get Financial Health Report",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/insights/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["insights", "user", "{{userId}}"]},
+            "description": "Get the user's financial health score (0-100) with four pillars: Savings Rate, Budget Adherence, Spending Consistency, Goal Progress. Includes insight cards with personalised tips."
+          }
+        }
+      ]
+    }
+
+  ]
+}
