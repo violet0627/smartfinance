@@ -18,6 +18,9 @@ from flask import Blueprint, request, jsonify      # Blueprint for grouping rout
 from app import db                                  # Database instance
 from app.models.transaction import Transaction      # Transaction model (database table)
 from datetime import datetime, date                 # For parsing and working with dates
+import logging                                      # Standard Python logging
+
+logger = logging.getLogger(__name__)
 
 # --- Create the Blueprint ---
 # All routes in this file are grouped under 'transactions'.
@@ -40,6 +43,8 @@ def create_transaction():
         # {"amount": 45.50, "category": "Food", "transactionDate": "2025-01-15",
         #  "transactionType": "expense", "userId": 1, "description": "Lunch at KFC"}
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         # --- Step 2: Validate all required fields are present ---
         required_fields = ['amount', 'category', 'transactionDate', 'transactionType', 'userId']
@@ -90,6 +95,7 @@ def create_transaction():
         }), 201  # 201 = Created
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()   # Undo any partial database changes
         return jsonify({'error': 'Failed to create transaction'}), 500
 
@@ -155,6 +161,7 @@ def get_user_transactions(user_id):
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch transactions'}), 500
 
 
@@ -175,6 +182,7 @@ def get_transaction(transaction_id):
         return jsonify({'transaction': transaction.to_dict()}), 200
 
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch transaction'}), 500
 
 
@@ -195,6 +203,8 @@ def update_transaction(transaction_id):
             return jsonify({'error': 'Transaction not found'}), 404
 
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         # --- Step 2: Update each field IF it was provided in the request ---
         # This allows partial updates (only change what's needed)
@@ -233,6 +243,7 @@ def update_transaction(transaction_id):
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to update transaction'}), 500
 
@@ -257,6 +268,7 @@ def delete_transaction(transaction_id):
         return jsonify({'message': 'Transaction deleted successfully'}), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to delete transaction'}), 500
 
@@ -315,4 +327,5 @@ def get_transaction_summary(user_id):
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to generate summary'}), 500

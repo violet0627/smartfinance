@@ -18,6 +18,9 @@ from app import db                                  # Database instance
 from app.models.user import User                    # User model
 from app.models.user_settings import UserSettings   # UserSettings model
 from datetime import datetime, time                 # For timestamps and quiet hours
+import logging                                      # Standard Python logging
+
+logger = logging.getLogger(__name__)
 
 # --- Create the Blueprint ---
 settings_bp = Blueprint('settings', __name__)
@@ -47,6 +50,7 @@ def get_user_settings(user_id):
             'settings': settings.to_dict()
         }), 200
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch settings'}), 500
 
 
@@ -61,6 +65,8 @@ def update_user_settings(user_id):
     """Update user settings"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         # Get existing settings or create new ones
         settings = UserSettings.query.filter_by(UserId=user_id).first()
@@ -117,6 +123,7 @@ def update_user_settings(user_id):
             'settings': settings.to_dict()
         }), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to update settings'}), 500
 
@@ -146,6 +153,7 @@ def get_user_profile(user_id):
             }
         }), 200
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch profile'}), 500
 
 
@@ -160,6 +168,8 @@ def update_user_profile(user_id):
     """Update user profile information"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         user = User.query.get(user_id)
 
         if not user:
@@ -192,6 +202,7 @@ def update_user_profile(user_id):
             }
         }), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to update profile'}), 500
 
@@ -207,6 +218,8 @@ def change_password(user_id):
     """Change user password"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         user = User.query.get(user_id)
 
         if not user:
@@ -230,6 +243,7 @@ def change_password(user_id):
             'message': 'Password changed successfully'
         }), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to change password'}), 500
 

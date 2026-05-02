@@ -35,6 +35,9 @@ from app.models.budget import Budget, BudgetCategory  # Budgets and their catego
 from app.models.investment import Investment        # Investments
 from app.models.goal import Goal                   # Savings goals
 from datetime import datetime                        # For timestamps
+import logging                                       # Standard Python logging
+
+logger = logging.getLogger(__name__)
 
 # --- Create the Blueprint ---
 security_bp = Blueprint('security', __name__)
@@ -63,6 +66,7 @@ def get_user_sessions(user_id):
             'total': len(sessions)
         }), 200
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch sessions'}), 500
 
 
@@ -78,6 +82,8 @@ def revoke_session(session_id):
     """Revoke a specific session"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         user_id = data.get('userId')
 
         # Find the session (must belong to this user for security)
@@ -104,6 +110,7 @@ def revoke_session(session_id):
 
         return jsonify({'message': 'Session revoked successfully'}), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to revoke session'}), 500
 
@@ -120,6 +127,8 @@ def revoke_all_sessions(user_id):
     """Revoke all sessions except current one"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         current_session_id = data.get('currentSessionId')   # Keep this session active (optional)
 
         if current_session_id:
@@ -150,6 +159,7 @@ def revoke_all_sessions(user_id):
 
         return jsonify({'message': 'All sessions revoked successfully'}), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to revoke sessions'}), 500
 
@@ -186,6 +196,7 @@ def get_security_activity(user_id):
             'offset': offset         # Current offset
         }), 200
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch activity log'}), 500
 
 
@@ -200,6 +211,8 @@ def create_security_log():
     """Create a new security log entry"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         # Create a new log entry
         log = SecurityLog(
@@ -219,6 +232,7 @@ def create_security_log():
             'log': log.to_dict()
         }), 201
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to create security log'}), 500
 
@@ -241,6 +255,8 @@ def delete_account():
     """Delete user account (requires password confirmation)"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         user_id = data.get('userId')
         password = data.get('password')      # Must confirm password
 
@@ -314,6 +330,7 @@ def delete_account():
 
         return jsonify({'message': 'Account deleted successfully'}), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to delete account'}), 500
 
@@ -347,5 +364,5 @@ def log_security_event(user_id, event_type, description, ip_address=None, device
         db.session.add(log)
         db.session.commit()
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
-        print(f"Error logging security event: {e}")   # Print error but don't crash

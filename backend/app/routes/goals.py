@@ -18,6 +18,9 @@ from flask import Blueprint, request, jsonify      # Blueprint for grouping, req
 from app import db                                  # Database instance
 from app.models.goal import Goal                    # Goal model (database table)
 from datetime import datetime                       # For date operations
+import logging                                      # Standard Python logging
+
+logger = logging.getLogger(__name__)
 
 # --- Create the Blueprint ---
 goals_bp = Blueprint('goals', __name__)
@@ -54,6 +57,7 @@ def get_user_goals(user_id):
             'count': len(goals)
         }), 200
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch goals'}), 500
 
 
@@ -67,6 +71,8 @@ def create_goal(user_id):
     """Create a new goal"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         # --- Step 1: Validate required fields ---
         if not data.get('goalName') or not str(data.get('goalName', '')).strip():
@@ -113,6 +119,7 @@ def create_goal(user_id):
             'goal': new_goal.to_dict()
         }), 201
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to create goal'}), 500
 
@@ -133,6 +140,7 @@ def get_goal(goal_id):
 
         return jsonify({'goal': goal.to_dict()}), 200
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch goal'}), 500
 
 
@@ -153,6 +161,8 @@ def update_goal(goal_id):
             return jsonify({'error': 'Goal not found'}), 404
 
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         # --- Update each field if provided ---
         if 'goalName' in data:
@@ -183,6 +193,7 @@ def update_goal(goal_id):
             'goal': goal.to_dict()
         }), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to update goal'}), 500
 
@@ -206,6 +217,7 @@ def delete_goal(goal_id):
 
         return jsonify({'message': 'Goal deleted successfully'}), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to delete goal'}), 500
 
@@ -229,6 +241,8 @@ def contribute_to_goal(goal_id):
             return jsonify({'error': 'Goal not found'}), 404
 
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         amount = data.get('amount', 0)
 
         # Validate contribution amount
@@ -255,6 +269,7 @@ def contribute_to_goal(goal_id):
             'goal': goal.to_dict()
         }), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to process contribution'}), 500
 
@@ -303,6 +318,7 @@ def get_goals_summary(user_id):
             'closestDeadline': closest_goal.to_dict() if closest_goal else None # Nearest deadline goal
         }), 200
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch goals summary'}), 500
 
 

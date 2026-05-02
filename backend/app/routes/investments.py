@@ -18,6 +18,9 @@ from flask import Blueprint, request, jsonify      # Blueprint for grouping, req
 from app import db                                  # Database instance
 from app.models.investment import Investment        # Investment model (database table)
 from datetime import datetime                       # For timestamps
+import logging                                      # Standard Python logging
+
+logger = logging.getLogger(__name__)
 
 # --- Create the Blueprint ---
 investments_bp = Blueprint('investments', __name__)
@@ -34,6 +37,8 @@ def create_investment():
     """Create a new investment entry"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         # --- Step 1: Validate required fields ---
         required_fields = ['assetName', 'assetsType', 'quantity', 'purchasePrice', 'purchaseDate', 'userId']
@@ -86,6 +91,7 @@ def create_investment():
         }), 201
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to create investment'}), 500
 
@@ -117,6 +123,7 @@ def get_user_investments(user_id):
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch investments'}), 500
 
 
@@ -137,6 +144,7 @@ def get_investment(investment_id):
         return jsonify({'investment': investment.to_dict()}), 200
 
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch investment'}), 500
 
 
@@ -156,6 +164,8 @@ def update_investment(investment_id):
             return jsonify({'error': 'Investment not found'}), 404
 
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         # --- Update only the fields that were provided ---
         if 'currentPrice' in data:
@@ -176,6 +186,7 @@ def update_investment(investment_id):
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to update investment'}), 500
 
@@ -200,6 +211,7 @@ def delete_investment(investment_id):
         return jsonify({'message': 'Investment deleted successfully'}), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to delete investment'}), 500
 
@@ -309,6 +321,7 @@ def get_portfolio_summary(user_id):
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch portfolio summary'}), 500
 
 
@@ -328,6 +341,8 @@ def update_investment_price(investment_id):
             return jsonify({'error': 'Investment not found'}), 404
 
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         if 'currentPrice' not in data:
             return jsonify({'error': 'currentPrice is required'}), 400
@@ -351,5 +366,6 @@ def update_investment_price(investment_id):
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to update investment price'}), 500

@@ -22,6 +22,10 @@ from app.models.budget import Budget                    # Budget model (to check
 from app.models.investment import Investment            # Investment model (to check milestones)
 from datetime import datetime, date, timedelta          # For date operations
 from sqlalchemy import func                             # SQL aggregate functions (SUM, COUNT)
+import logging                                          # Standard Python logging — writes errors to console/file
+
+# logger for this module — each route file has its own logger named after the file
+logger = logging.getLogger(__name__)
 
 # --- Create the Blueprint ---
 gamification_bp = Blueprint('gamification', __name__)
@@ -82,7 +86,8 @@ def get_all_achievements():
             'count': len(achievements)
         }), 200
     except Exception as e:
-        return jsonify({'error': 'Failed to fetch user stats'}), 500
+        logger.error(str(e))
+        return jsonify({'error': 'Failed to fetch achievements'}), 500
 
 
 # ==============================================================================
@@ -132,7 +137,8 @@ def get_user_achievements(user_id):
             'count': len(result)
         }), 200
     except Exception as e:
-        return jsonify({'error': 'Failed to fetch achievements'}), 500
+        logger.error(str(e))
+        return jsonify({'error': 'Failed to fetch user achievements'}), 500
 
 
 # ==============================================================================
@@ -199,7 +205,8 @@ def get_user_stats(user_id):
             'currentStreaks': current_streaks                   # Current active streaks
         }), 200
     except Exception as e:
-        return jsonify({'error': 'Failed to fetch leaderboard'}), 500
+        logger.error(str(e))
+        return jsonify({'error': 'Failed to fetch user stats'}), 500
 
 
 # ==============================================================================
@@ -320,8 +327,9 @@ def check_and_unlock_achievements(user_id):
             'count': len(newly_unlocked)            # How many new achievements
         }), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
-        return jsonify({'error': 'Failed to update streak'}), 500
+        return jsonify({'error': 'Failed to check achievements'}), 500
 
 
 # ==============================================================================
@@ -340,7 +348,8 @@ def get_user_streaks(user_id):
             'count': len(streaks)
         }), 200
     except Exception as e:
-        return jsonify({'error': 'Failed to add XP'}), 500
+        logger.error(str(e))
+        return jsonify({'error': 'Failed to fetch streaks'}), 500
 
 
 # ==============================================================================
@@ -357,7 +366,7 @@ def get_user_streaks(user_id):
 def update_streak(user_id):
     """Update user's streak (called when transaction is added)"""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}   # default to empty dict if body is missing
         streak_type = data.get('streakType', 'daily_tracking')  # Default to daily tracking
 
         # --- Step 1: Get or create the streak record ---
@@ -411,8 +420,9 @@ def update_streak(user_id):
             'streak': streak.to_dict()
         }), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
-        return jsonify({'error': 'Failed to check achievements'}), 500
+        return jsonify({'error': 'Failed to update streak'}), 500
 
 
 # ==============================================================================
@@ -465,4 +475,5 @@ def get_leaderboard():
             'count': len(leaderboard)
         }), 200
     except Exception as e:
-        return jsonify({'error': 'Failed to reset daily streak'}), 500
+        logger.error(str(e))
+        return jsonify({'error': 'Failed to fetch leaderboard'}), 500

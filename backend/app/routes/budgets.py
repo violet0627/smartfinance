@@ -23,6 +23,9 @@ from app.models.budget import Budget, BudgetCategory # Budget and BudgetCategory
 from app.models.transaction import Transaction       # Transaction model (to calculate actual spending)
 from datetime import datetime                        # For date operations
 from sqlalchemy import func                          # SQL aggregate functions (SUM, COUNT, etc.)
+import logging                                       # Standard Python logging
+
+logger = logging.getLogger(__name__)
 
 # --- Create the Blueprint ---
 budgets_bp = Blueprint('budgets', __name__)
@@ -39,6 +42,8 @@ def create_budget():
     """Create a new budget with categories"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         # --- Step 1: Validate required fields ---
         required_fields = ['monthYear', 'totalBudget', 'userId', 'categories']
@@ -64,7 +69,10 @@ def create_budget():
 
         # --- Step 4: Validate that category amounts add up to total ---
         # e.g., if totalBudget = 2000, then Food(500) + Transport(300) + ... must = 2000
-        category_total = sum(float(cat['allocatedAmount']) for cat in data['categories'])
+        try:
+            category_total = sum(float(cat['allocatedAmount']) for cat in data['categories'])
+        except (KeyError, TypeError, ValueError):
+            return jsonify({'error': 'Each category must have categoryName and allocatedAmount'}), 400
         if abs(category_total - float(data['totalBudget'])) > 0.01:   # Allow tiny floating-point difference
             return jsonify({'error': 'Category allocations must sum to total budget'}), 400
 
@@ -99,6 +107,7 @@ def create_budget():
         }), 201
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to create budget'}), 500
 
@@ -120,6 +129,7 @@ def get_user_budgets(user_id):
             'count': len(budgets)
         }), 200
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch budgets'}), 500
 
 
@@ -151,6 +161,7 @@ def get_current_budget(user_id):
 
         return jsonify({'budget': budget.to_dict()}), 200
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch current budget'}), 500
 
 
@@ -172,6 +183,7 @@ def get_budget(budget_id):
 
         return jsonify({'budget': budget.to_dict()}), 200
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch budget'}), 500
 
 
@@ -190,6 +202,8 @@ def update_budget(budget_id):
             return jsonify({'error': 'Budget not found'}), 404
 
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         # --- Update budget-level fields ---
         if 'totalBudget' in data:
@@ -219,6 +233,7 @@ def update_budget(budget_id):
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to update budget'}), 500
 
@@ -242,6 +257,7 @@ def delete_budget(budget_id):
 
         return jsonify({'message': 'Budget deleted successfully'}), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to delete budget'}), 500
 
@@ -268,6 +284,7 @@ def refresh_budget_spending(budget_id):
             'budget': budget.to_dict()
         }), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to refresh budget'}), 500
 
@@ -323,5 +340,6 @@ def _update_budget_spending(budget):
         # --- Step 5: Save the updates ---
         db.session.commit()
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         raise e   # Re-raise the error so the calling route can handle it

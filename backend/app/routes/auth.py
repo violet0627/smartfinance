@@ -33,6 +33,9 @@ from app.utils.jwt_utils import (                  # JWT (JSON Web Token) utilit
 from app.utils.email_service import send_verification_email, send_password_reset_email  # Email sending functions
 from datetime import datetime, timedelta           # For timestamps and calculating expiry times
 import re                                          # Regular expressions for email/password validation
+import logging                                     # Standard Python logging
+
+logger = logging.getLogger(__name__)
 
 # --- Create the Blueprint ---
 # Blueprint('auth', __name__) creates a group of routes named 'auth'.
@@ -111,6 +114,8 @@ def register():
         # The Flutter app sends something like:
         # {"email": "user@gmail.com", "password": "MyPass123!", "fullName": "John Doe"}
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         # --- Step 2: Check that all required fields are present ---
         # If any field is missing or empty, return error with HTTP 400 (Bad Request)
@@ -186,6 +191,7 @@ def register():
         }), 201
 
     except Exception as e:
+        logger.error(str(e))
         # If ANYTHING goes wrong, undo all database changes (rollback)
         db.session.rollback()
         return jsonify({'error': 'Registration failed'}), 500  # 500 = Server Error
@@ -202,6 +208,8 @@ def login():
     """Login user"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         # --- Step 1: Check required fields ---
         if not data.get('email') or not data.get('password'):
@@ -236,6 +244,7 @@ def login():
         }), 200  # 200 = OK
 
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Login failed'}), 500
 
 
@@ -258,6 +267,7 @@ def get_user(user_id):
         return jsonify({'user': user.to_dict()}), 200
 
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch user'}), 500
 
 
@@ -278,6 +288,8 @@ def refresh_token():
     """Refresh access token using refresh token"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         refresh_token = data.get('refreshToken')
 
         if not refresh_token:
@@ -309,6 +321,7 @@ def refresh_token():
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Token refresh failed'}), 500
 
 
@@ -323,6 +336,8 @@ def forgot_password():
     """Request password reset"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         email = data.get('email', '').strip().lower()
 
         if not email:
@@ -362,6 +377,7 @@ def forgot_password():
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Password reset request failed'}), 500
 
@@ -377,6 +393,8 @@ def reset_password():
     """Reset password using token"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         reset_token = data.get('token')
         new_password = data.get('newPassword')
 
@@ -412,6 +430,7 @@ def reset_password():
         return jsonify({'message': 'Password reset successfully'}), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Password reset failed'}), 500
 
@@ -427,6 +446,8 @@ def verify_reset_token():
     """Verify if reset token is valid"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         reset_token = data.get('token')
 
         if not reset_token:
@@ -449,6 +470,7 @@ def verify_reset_token():
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Token verification failed'}), 500
 
 
@@ -463,6 +485,8 @@ def verify_email():
     """Verify email address using token"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         verification_token = data.get('token')
 
         if not verification_token:
@@ -497,6 +521,7 @@ def verify_email():
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Email verification failed'}), 500
 
@@ -512,6 +537,8 @@ def resend_verification():
     """Resend verification email"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         email = data.get('email', '').strip().lower()
 
         if not email:
@@ -558,6 +585,7 @@ def resend_verification():
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to resend verification email'}), 500
 
@@ -583,4 +611,5 @@ def check_verification_status(user_id):
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to check verification status'}), 500

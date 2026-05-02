@@ -19,6 +19,9 @@ from app import db                                          # Database instance
 from app.models.recurring_transaction import RecurringTransaction  # RecurringTransaction model
 from app.models.transaction import Transaction              # Transaction model (to create actual transactions)
 from datetime import datetime                               # For date operations
+import logging                                              # Standard Python logging
+
+logger = logging.getLogger(__name__)
 
 # --- Create the Blueprint ---
 recurring_bp = Blueprint('recurring', __name__)
@@ -37,6 +40,8 @@ def create_recurring_transaction(user_id):
     """Create a new recurring transaction"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
 
         # --- Validate required fields before any parsing ---
         required_fields = ['name', 'transactionType', 'category', 'amount', 'frequency', 'startDate']
@@ -97,6 +102,7 @@ def create_recurring_transaction(user_id):
             'recurring': recurring.to_dict()
         }), 201
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to create recurring transaction'}), 500
 
@@ -131,6 +137,7 @@ def get_recurring_transactions(user_id):
             'total': len(recurring)
         }), 200
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch recurring transactions'}), 500
 
 
@@ -150,6 +157,7 @@ def get_recurring_transaction(recurring_id):
 
         return jsonify(recurring.to_dict()), 200
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to fetch recurring transaction'}), 500
 
 
@@ -166,6 +174,8 @@ def update_recurring_transaction(recurring_id):
     """Update a recurring transaction"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         recurring = RecurringTransaction.query.get(recurring_id)
 
         if not recurring:
@@ -199,6 +209,7 @@ def update_recurring_transaction(recurring_id):
             'recurring': recurring.to_dict()
         }), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to update recurring transaction'}), 500
 
@@ -231,6 +242,7 @@ def delete_recurring_transaction(recurring_id):
 
         return jsonify({'message': 'Recurring transaction deleted successfully'}), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to delete recurring transaction'}), 500
 
@@ -294,6 +306,7 @@ def execute_recurring_transaction(recurring_id):
             'recurring': recurring.to_dict()              # Updated recurring template
         }), 201
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to execute recurring transaction'}), 500
 
@@ -355,6 +368,7 @@ def execute_due_recurring_transactions(user_id):
             'executed': executed
         }), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to execute recurring transactions'}), 500
 
@@ -398,5 +412,6 @@ def toggle_recurring_transaction(recurring_id):
             'recurring': recurring.to_dict()
         }), 200
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to toggle recurring transaction'}), 500

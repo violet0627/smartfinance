@@ -27,6 +27,9 @@ from app.models.goal import Goal                 # ORM model for the Goals table
 from datetime import datetime, date              # For working with dates and the current month
 from collections import defaultdict              # defaultdict(float) avoids KeyError on missing keys
 from sqlalchemy import extract                   # SQLAlchemy helper to filter by year/month
+import logging                                   # Standard Python logging
+
+logger = logging.getLogger(__name__)
 
 # --- Create the Blueprint ---
 # All routes in this file are grouped under the name 'insights'.
@@ -389,5 +392,5 @@ def get_financial_insights(user_id):
         }), 200
 
     except Exception as e:
-        # Return a structured error — never let unhandled exceptions reach the client
+        logger.error(str(e))
         return jsonify({'error': 'Failed to generate insights'}), 500

@@ -20,6 +20,9 @@ from app.models.user import User                            # User model
 from app.models.two_factor_auth import TwoFactorAuth        # TwoFactorAuth model (stores secrets/backup codes)
 from app.utils.two_factor_utils import TwoFactorUtils       # Utility class for 2FA operations
 from datetime import datetime                                # For timestamps
+import logging                                              # Standard Python logging
+
+logger = logging.getLogger(__name__)
 
 # --- Create the Blueprint ---
 two_factor_bp = Blueprint('two_factor', __name__)
@@ -40,6 +43,8 @@ def setup_2fa():
     """Initialize 2FA setup for a user - returns QR code and secret"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         user_id = data.get('userId')
 
         if not user_id:
@@ -104,6 +109,7 @@ def setup_2fa():
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to set up 2FA'}), 500
 
@@ -119,6 +125,8 @@ def verify_2fa_setup():
     """Verify the 2FA setup by validating the first TOTP code - this enables 2FA"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         user_id = data.get('userId')
         code = data.get('code')              # The 6-digit code from the authenticator app
 
@@ -154,6 +162,7 @@ def verify_2fa_setup():
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to verify 2FA setup'}), 500
 
@@ -169,6 +178,8 @@ def verify_2fa_code():
     """Verify a 2FA code during login or sensitive operations"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         user_id = data.get('userId')
         code = data.get('code')
 
@@ -206,6 +217,7 @@ def verify_2fa_code():
             }), 200
 
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to verify 2FA code'}), 500
 
 
@@ -220,6 +232,8 @@ def verify_backup_code():
     """Verify a backup code (one-time use)"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         user_id = data.get('userId')
         backup_code = data.get('backupCode')     # e.g., "A1B2-C3D4"
 
@@ -264,6 +278,7 @@ def verify_backup_code():
             }), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to verify backup code'}), 500
 
@@ -279,6 +294,8 @@ def disable_2fa():
     """Disable 2FA for a user (requires password confirmation)"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         user_id = data.get('userId')
         password = data.get('password')      # Must confirm password to disable 2FA
 
@@ -313,6 +330,7 @@ def disable_2fa():
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to disable 2FA'}), 500
 
@@ -341,6 +359,7 @@ def get_2fa_status(user_id):
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         return jsonify({'error': 'Failed to get 2FA status'}), 500
 
 
@@ -356,6 +375,8 @@ def regenerate_backup_codes():
     """Regenerate backup codes for a user"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
         user_id = data.get('userId')
         password = data.get('password')
 
@@ -392,5 +413,6 @@ def regenerate_backup_codes():
         }), 200
 
     except Exception as e:
+        logger.error(str(e))
         db.session.rollback()
         return jsonify({'error': 'Failed to regenerate backup codes'}), 500
