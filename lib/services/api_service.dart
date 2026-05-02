@@ -49,6 +49,24 @@ class ApiService {
   // ==============================================================================
   static const String baseUrl = AppConfig.baseUrl; // Reads from lib/config.dart
 
+  // ==============================================================================
+  // _tryDecodeJson — Safe JSON Decode Helper
+  // ==============================================================================
+  // json.decode(body) throws a FormatException if the server returns HTML instead
+  // of JSON (e.g., a 500 error page from Flask when debug=False, or a proxy error).
+  // Wrapping it here means callers get null on failure rather than an unhandled
+  // exception, and can return a clean 'Unexpected server response' error to the UI.
+  // ==============================================================================
+  static Map<String, dynamic>? _tryDecodeJson(String body) {
+    try {
+      final decoded = json.decode(body);
+      if (decoded is Map<String, dynamic>) return decoded;
+      return null;   // Body was valid JSON but not an object (e.g., a list or primitive)
+    } catch (_) {
+      return null;   // Body was not valid JSON (e.g., HTML error page)
+    }
+  }
+
   // ============================================================================
   // AUTHENTICATION ENDPOINTS
   // ============================================================================
@@ -84,7 +102,10 @@ class ApiService {
         }),
       ).timeout(const Duration(seconds: 10));               // Cancel if no response in 10 seconds
 
-      final data = json.decode(response.body);              // Parse JSON response string to Dart Map
+      final data = _tryDecodeJson(response.body);           // Safe decode — returns null if server returns HTML
+      if (data == null) {
+        return {'success': false, 'error': 'Unexpected server response. Please try again.'};
+      }
 
       if (response.statusCode == 201) {                     // 201 = Created (success)
         // Save user data and tokens to SharedPreferences so the user is immediately
@@ -137,7 +158,10 @@ class ApiService {
         }),
       ).timeout(const Duration(seconds: 10));
 
-      final data = json.decode(response.body);
+      final data = _tryDecodeJson(response.body);           // Safe decode — returns null if server returns HTML
+      if (data == null) {
+        return {'success': false, 'error': 'Unexpected server response. Please try again.'};
+      }
 
       if (response.statusCode == 200) {                     // 200 = OK (success)
         // Save user data and tokens to device storage for future use
